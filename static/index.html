@@ -31,28 +31,77 @@
         </div>
 
         <div class="expenses-list">
-            <h2>Recent Expenses</h2>
+            <div class="expenses-header">
+                <h2>Recent Expenses</h2>
+                <button onclick="deleteLastExpense()" id="deleteLastButton" class="delete-button" disabled>Delete Last</button>
+            </div>
             <div id="expenses"></div>
+            <div class="expenses-total">
+                <span class="total-label">Total</span>
+                <span class="total-amount" id="totalAmount">$0.00</span>
+            </div>
         </div>
     </div>
     <div class="toast-container" id="toastContainer"></div>
     <div class="safe-area-bottom"></div>
 
     <script>
-        function showToast(message, duration = 3000) {
+        let lastDeletedExpense = null;
+
+        function showToast(message, duration = 3000, type = 'success', undoCallback = null) {
             const toastContainer = document.getElementById('toastContainer');
             const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.innerHTML = message;
+            toast.className = `toast toast-${type}`;
+            
+            let toastContent = `<span>${message}</span>`;
+            if (undoCallback) {
+                const undoButton = document.createElement('button');
+                undoButton.className = 'toast-undo';
+                undoButton.textContent = 'Undo';
+                undoButton.addEventListener('click', () => {
+                    undoCallback();
+                    // Remove the toast immediately after clicking undo
+                    if (toast.timeoutId) {
+                        clearTimeout(toast.timeoutId);
+                    }
+                    if (toastContainer.contains(toast)) {
+                        toastContainer.removeChild(toast);
+                    }
+                });
+                
+                toastContent = `<span>${message}</span>`;
+                toast.innerHTML = toastContent;
+                toast.appendChild(undoButton);
+            } else {
+                toast.innerHTML = toastContent;
+            }
             
             toastContainer.appendChild(toast);
             
-            setTimeout(() => {
+            const timeoutId = setTimeout(() => {
                 toast.style.animation = 'slideIn 0.3s ease reverse forwards';
                 setTimeout(() => {
-                    toastContainer.removeChild(toast);
+                    if (toastContainer.contains(toast)) {
+                        toastContainer.removeChild(toast);
+                    }
                 }, 300);
             }, duration);
+
+            // Store the timeout ID on the toast element
+            toast.timeoutId = timeoutId;
+
+            if (undoCallback) {
+                // Replace any existing undo toast
+                const existingToasts = document.querySelectorAll('.toast-delete');
+                existingToasts.forEach(t => {
+                    if (t !== toast && t.timeoutId) {
+                        clearTimeout(t.timeoutId);
+                        if (toastContainer.contains(t)) {
+                            toastContainer.removeChild(t);
+                        }
+                    }
+                });
+            }
         }
 
         // Prevent double-tap zoom on iOS
@@ -112,12 +161,90 @@
             }
         }
 
+        async function deleteLastExpense() {
+            try {
+                const response = await fetch('/api/expenses');
+                const expenses = await response.json();
+                
+                if (expenses.length === 0) {
+                    showToast('No expenses to delete');
+                    return;
+                }
+
+                const lastExpense = expenses[0];
+                const deleteResponse = await fetch(`/api/expenses/${lastExpense.id}`, {
+                    method: 'DELETE'
+                });
+
+                if (deleteResponse.ok) {
+                    lastDeletedExpense = {
+                        amount: lastExpense.amount,
+                        date: lastExpense.date
+                    };
+                    loadExpenses();
+                    const amount = parseFloat(lastExpense.amount).toFixed(2);
+                    showToast(
+                        `Deleted expense: $${amount}`,
+                        5000,
+                        'delete',
+                        async () => {
+                            if (!lastDeletedExpense) return;
+                            
+                            try {
+                                const response = await fetch('/api/expenses', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({ amount: lastDeletedExpense.amount })
+                                });
+
+                                if (response.ok) {
+                                    loadExpenses();
+                                    showToast('Expense restored', 3000, 'success');
+                                    lastDeletedExpense = null;
+                                    // Provide haptic feedback on success
+                                    if (window.navigator && window.navigator.vibrate) {
+                                        window.navigator.vibrate([50]);
+                                    }
+                                } else {
+                                    showToast('Failed to restore expense');
+                                }
+                            } catch (error) {
+                                console.error('Error:', error);
+                                showToast('Failed to restore expense');
+                            }
+                        }
+                    );
+                    // Provide haptic feedback on success
+                    if (window.navigator && window.navigator.vibrate) {
+                        window.navigator.vibrate([50]);
+                    }
+                } else {
+                    showToast('Failed to delete expense');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Failed to delete expense');
+            }
+        }
+
         async function loadExpenses() {
             try {
                 const response = await fetch('/api/expenses');
                 const expenses = await response.json();
                 
                 const expensesDiv = document.getElementById('expenses');
+                const deleteLastButton = document.getElementById('deleteLastButton');
+                const totalAmountElement = document.getElementById('totalAmount');
+                
+                // Enable/disable delete button based on expenses
+                deleteLastButton.disabled = expenses.length === 0;
+                
+                // Calculate total
+                const total = expenses.reduce((sum, expense) => sum + parseFloat(expense.amount), 0);
+                totalAmountElement.textContent = `$${total.toFixed(2)}`;
+                
                 expensesDiv.innerHTML = expenses.map(expense => `
                     <div class="expense-item">
                         <span class="amount">$${parseFloat(expense.amount).toFixed(2)}</span>

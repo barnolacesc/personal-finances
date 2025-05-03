@@ -200,9 +200,41 @@ h2 {
     align-items: center;
     justify-content: space-between;
     animation: slideIn 0.3s ease forwards;
+    font-weight: 500;
+    gap: 12px;
+}
+
+.toast-success {
     background-color: #edfbf0;
     color: #037b39;
     border-left: 4px solid var(--primary-color);
+}
+
+.toast-delete {
+    background-color: #f3f4f6;
+    color: #1f2937;
+    border-left: 4px solid #9ca3af;
+    font-size: 0.95rem;
+}
+
+.toast-undo {
+    background: none;
+    color: var(--primary-color);
+    padding: 4px 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.toast-undo:hover {
+    background-color: rgba(77, 124, 15, 0.1);
+}
+
+.toast-undo:active {
+    background-color: rgba(77, 124, 15, 0.2);
+    transform: scale(0.98);
 }
 
 @keyframes slideIn {
@@ -237,4 +269,61 @@ h2 {
 
 .expense-item {
     animation: fadeIn 0.2s ease-out;
+}
+
+.expenses-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.expenses-header h2 {
+    margin: 0;
+}
+
+.delete-button {
+    background-color: #ff9900;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color 0.2s, opacity 0.2s;
+}
+
+.delete-button:hover {
+    background-color: #ff8800;
+}
+
+.delete-button:active {
+    background-color: #e68a00;
+}
+
+.delete-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: #ff9900;
+}
+
+.expenses-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0.5rem;
+    margin-top: 0.5rem;
+    border-top: 2px solid var(--input-border);
+}
+
+.total-label {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 1.125rem;
+}
+
+.total-amount {
+    font-weight: 700;
+    color: var(--primary-color);
+    font-size: 1.25rem;
 } 
