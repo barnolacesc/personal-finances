@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#f9fafb">
-    <title>Expenses</title>
+    <title>Monthly Spends</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
@@ -14,9 +14,32 @@
 <body>
     <div class="safe-area-top"></div>
     <div class="container">
-        <h1>Daily Expenses</h1>
+        <h1>Monthly Spends</h1>
         
         <div class="input-section">
+            <select 
+                id="category" 
+                required
+                aria-label="Expense category">
+                <option value="">Select Category</option>
+                <option value="groceries">Groceries</option>
+                <option value="housing">Housing & Utilities</option>
+                <option value="transport">Transportation</option>
+                <option value="health">Healthcare</option>
+                <option value="entertainment">Entertainment</option>
+                <option value="dining">Dining Out</option>
+                <option value="shopping">Shopping</option>
+                <option value="education">Education</option>
+                <option value="savings">Savings & Investments</option>
+                <option value="misc">Miscellaneous</option>
+            </select>
+            <input 
+                type="text"
+                id="description"
+                placeholder="Description"
+                required
+                maxlength="50"
+                aria-label="Expense description">
             <input 
                 type="number" 
                 id="amount" 
@@ -25,6 +48,7 @@
                 placeholder="Enter amount" 
                 step="0.01" 
                 min="0"
+                required
                 autocomplete="off"
                 aria-label="Expense amount">
             <button onclick="addExpense()" id="addButton">Add</button>
@@ -120,26 +144,43 @@
 
         async function addExpense() {
             const amountInput = document.getElementById('amount');
+            const categorySelect = document.getElementById('category');
+            const descriptionInput = document.getElementById('description');
+            
             const amount = amountInput.value;
+            const category = categorySelect.value;
+            const description = descriptionInput.value;
+            
+            if (!amount || !category || !description) {
+                showToast('Please fill in all fields', 3000, 'error');
+                return;
+            }
+
             const addButton = document.getElementById('addButton');
             
-            if (!amount) return;
-
             try {
-                // Disable button and input while processing
+                // Disable inputs while processing
                 addButton.disabled = true;
                 amountInput.disabled = true;
+                categorySelect.disabled = true;
+                descriptionInput.disabled = true;
                 
                 const response = await fetch('/api/expenses', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ amount }),
+                    body: JSON.stringify({ 
+                        amount,
+                        category,
+                        description
+                    }),
                 });
                 
                 if (response.ok) {
                     amountInput.value = '';
+                    categorySelect.value = '';
+                    descriptionInput.value = '';
                     loadExpenses();
                     showToast('Expense added successfully');
                     // Provide haptic feedback on success
@@ -154,9 +195,11 @@
                 console.error('Error:', error);
                 showToast('Failed to add expense');
             } finally {
-                // Re-enable button and input
+                // Re-enable inputs
                 addButton.disabled = false;
                 amountInput.disabled = false;
+                categorySelect.disabled = false;
+                descriptionInput.disabled = false;
                 amountInput.focus();
             }
         }
@@ -247,7 +290,11 @@
                 
                 expensesDiv.innerHTML = expenses.map(expense => `
                     <div class="expense-item">
-                        <span class="amount">$${parseFloat(expense.amount).toFixed(2)}</span>
+                        <div class="expense-details">
+                            <span class="amount">$${parseFloat(expense.amount).toFixed(2)}</span>
+                            <span class="category">${expense.category}</span>
+                            <span class="description">${expense.description}</span>
+                        </div>
                         <span class="date">${formatDate(new Date(expense.date))}</span>
                     </div>
                 `).join('');

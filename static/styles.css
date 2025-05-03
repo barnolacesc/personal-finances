@@ -72,44 +72,71 @@ h1 {
 }
 
 .input-section {
-    background: var(--card-background);
-    padding: 1.2rem;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow);
-    margin-bottom: 1.5rem;
     display: flex;
-    gap: 0.75rem;
-    transition: var(--transition);
-    border-top: 3px solid var(--primary-color);
+    flex-direction: column;
+    gap: 10px;
+    margin: 20px 0;
+    padding: 15px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-input[type="number"] {
-    flex: 1;
+.input-section input,
+.input-section select {
     padding: 12px;
-    border: 1px solid var(--input-border);
-    border-radius: var(--border-radius);
-    font-size: 1rem;
-    transition: var(--transition);
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 16px;
+    transition: border-color 0.2s;
+}
+
+.input-section input:focus,
+.input-section select:focus {
     outline: none;
-    color: var(--text-primary);
-    background-color: var(--input-background);
-    -webkit-appearance: none;
+    border-color: #10b981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1);
 }
 
-input[type="number"]:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(77, 124, 15, 0.1);
+.input-section select {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23007CB2%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 12px;
+    padding-right: 40px;
 }
 
-input[type="number"]::placeholder {
-    color: var(--text-secondary);
+.expense-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid #e5e7eb;
 }
 
-/* Hide number input spinners */
-input[type="number"]::-webkit-outer-spin-button,
-input[type="number"]::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
+.expense-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.expense-details .amount {
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.expense-details .category {
+    font-size: 14px;
+    color: #059669;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.expense-details .description {
+    font-size: 14px;
+    color: #6b7280;
 }
 
 button {
@@ -153,27 +180,12 @@ h2 {
     padding: 0 0.5rem;
 }
 
-.expense-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 0.5rem;
-    border-bottom: 1px solid var(--input-border);
-    transition: var(--transition);
-}
-
 .expense-item:last-child {
     border-bottom: none;
 }
 
 .expense-item:active {
     background-color: var(--input-background);
-}
-
-.amount {
-    font-weight: 600;
-    color: var(--text-primary);
-    font-size: 1.125rem;
 }
 
 .date {

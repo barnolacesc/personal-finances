@@ -37,12 +37,16 @@ db = SQLAlchemy(app)
 class Expense(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     amount = db.Column(db.Float, nullable=False)
+    category = db.Column(db.String(50), nullable=False)
+    description = db.Column(db.String(50), nullable=False)
     date = db.Column(db.DateTime, default=datetime.utcnow)
 
     def to_dict(self):
         return {
             'id': self.id,
             'amount': self.amount,
+            'category': self.category,
+            'description': self.description,
             'date': self.date.isoformat()
         }
 
@@ -79,9 +83,12 @@ def handle_expenses():
                 logger.error("No JSON data received")
                 return jsonify({'error': 'No JSON data received'}), 400
             
-            if 'amount' not in data:
-                logger.error("No amount field in JSON data")
-                return jsonify({'error': 'Amount field is required'}), 400
+            # Validate required fields
+            required_fields = ['amount', 'category', 'description']
+            for field in required_fields:
+                if field not in data:
+                    logger.error(f"Missing required field: {field}")
+                    return jsonify({'error': f'{field.capitalize()} field is required'}), 400
             
             try:
                 amount = float(data['amount'])
@@ -89,10 +96,20 @@ def handle_expenses():
                 logger.error(f"Invalid amount value: {data.get('amount')}")
                 return jsonify({'error': 'Invalid amount value'}), 400
             
-            expense = Expense(amount=amount)
+            category = data['category'].strip()
+            description = data['description'].strip()
+            
+            if not category or not description:
+                return jsonify({'error': 'Category and description cannot be empty'}), 400
+            
+            expense = Expense(
+                amount=amount,
+                category=category,
+                description=description
+            )
             db.session.add(expense)
             db.session.commit()
-            logger.info(f"Added new expense: ${amount:.2f}")
+            logger.info(f"Added new expense: ${amount:.2f} ({category})")
             return jsonify(expense.to_dict()), 201
             
         except Exception as e:
