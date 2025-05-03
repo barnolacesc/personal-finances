@@ -2,17 +2,32 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Personal Expenses Tracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#f9fafb">
+    <title>Expenses</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
 </head>
 <body>
+    <div class="safe-area-top"></div>
     <div class="container">
-        <h1>Personal Expenses Tracker</h1>
+        <h1>Daily Expenses</h1>
         
         <div class="input-section">
-            <input type="number" id="amount" placeholder="Enter amount" step="0.01" min="0">
-            <button onclick="addExpense()">Add Expense</button>
+            <input 
+                type="number" 
+                id="amount" 
+                inputmode="decimal"
+                pattern="[0-9]*"
+                placeholder="Enter amount" 
+                step="0.01" 
+                min="0"
+                autocomplete="off"
+                aria-label="Expense amount">
+            <button onclick="addExpense()" id="addButton">Add</button>
         </div>
 
         <div class="expenses-list">
@@ -20,13 +35,52 @@
             <div id="expenses"></div>
         </div>
     </div>
+    <div class="toast-container" id="toastContainer"></div>
+    <div class="safe-area-bottom"></div>
 
     <script>
+        function showToast(message, duration = 3000) {
+            const toastContainer = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = message;
+            
+            toastContainer.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideIn 0.3s ease reverse forwards';
+                setTimeout(() => {
+                    toastContainer.removeChild(toast);
+                }, 300);
+            }, duration);
+        }
+
+        // Prevent double-tap zoom on iOS
+        document.addEventListener('touchend', function(event) {
+            if (event.target.tagName !== 'INPUT') {
+                event.preventDefault();
+            }
+        }, false);
+
+        // Add keyboard support
+        document.getElementById('amount').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addExpense();
+            }
+        });
+
         async function addExpense() {
-            const amount = document.getElementById('amount').value;
+            const amountInput = document.getElementById('amount');
+            const amount = amountInput.value;
+            const addButton = document.getElementById('addButton');
+            
             if (!amount) return;
 
             try {
+                // Disable button and input while processing
+                addButton.disabled = true;
+                amountInput.disabled = true;
+                
                 const response = await fetch('/api/expenses', {
                     method: 'POST',
                     headers: {
@@ -36,11 +90,25 @@
                 });
 
                 if (response.ok) {
-                    document.getElementById('amount').value = '';
+                    amountInput.value = '';
                     loadExpenses();
+                    showToast('Expense added successfully');
+                    // Provide haptic feedback on success
+                    if (window.navigator && window.navigator.vibrate) {
+                        window.navigator.vibrate(50);
+                    }
+                } else {
+                    const error = await response.json();
+                    showToast(error.error || 'Failed to add expense');
                 }
             } catch (error) {
                 console.error('Error:', error);
+                showToast('Failed to add expense');
+            } finally {
+                // Re-enable button and input
+                addButton.disabled = false;
+                amountInput.disabled = false;
+                amountInput.focus();
             }
         }
 
@@ -52,17 +120,47 @@
                 const expensesDiv = document.getElementById('expenses');
                 expensesDiv.innerHTML = expenses.map(expense => `
                     <div class="expense-item">
-                        <span class="amount">$${expense.amount.toFixed(2)}</span>
-                        <span class="date">${new Date(expense.date).toLocaleDateString()}</span>
+                        <span class="amount">$${parseFloat(expense.amount).toFixed(2)}</span>
+                        <span class="date">${formatDate(new Date(expense.date))}</span>
                     </div>
                 `).join('');
             } catch (error) {
                 console.error('Error:', error);
+                showToast('Failed to load expenses');
+            }
+        }
+
+        function formatDate(date) {
+            const now = new Date();
+            const yesterday = new Date(now);
+            yesterday.setDate(yesterday.getDate() - 1);
+
+            if (date.toDateString() === now.toDateString()) {
+                return 'Today ' + date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+            } else if (date.toDateString() === yesterday.toDateString()) {
+                return 'Yesterday ' + date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+            } else {
+                return date.toLocaleDateString([], { 
+                    month: 'short', 
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit'
+                });
             }
         }
 
         // Load expenses when page loads
-        document.addEventListener('DOMContentLoaded', loadExpenses);
+        document.addEventListener('DOMContentLoaded', () => {
+            loadExpenses();
+            document.getElementById('amount').focus();
+        });
+
+        // Handle PWA installation
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js');
+            });
+        }
     </script>
 </body>
 </html> 
