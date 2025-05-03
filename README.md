@@ -11,17 +11,29 @@ A simple web application to track daily expenses. Built with Flask and SQLite, d
 
 ## Setup
 
-1. Install Python dependencies:
+1. Create and activate a virtual environment:
+```bash
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# On Linux/Mac:
+source venv/bin/activate
+# On Windows:
+# venv\Scripts\activate
+```
+
+2. Install Python dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Run the application:
+3. Run the application:
 ```bash
 python app.py
 ```
 
-3. Access the application at `http://localhost:5000` or `http://<your-raspberry-pi-ip>:5000`
+4. Access the application at `http://localhost:5000` or `http://<your-raspberry-pi-ip>:5000`
 
 ## Usage
 
@@ -34,9 +46,16 @@ python app.py
 To run this application on your Raspberry Pi Zero 2W:
 
 1. Clone this repository to your Raspberry Pi
-2. Install the requirements as shown above
-3. Run the application
-4. Access it from any device on your local network using the Raspberry Pi's IP address
+2. Create and activate virtual environment as shown in Setup step 1
+3. Install the requirements as shown in Setup step 2
+4. Run the application
+5. Access it from any device on your local network using the Raspberry Pi's IP address
+
+Note: Make sure you have Python and venv installed on your Raspberry Pi:
+```bash
+sudo apt-get update
+sudo apt-get install python3-venv
+```
 
 ## Development
 
