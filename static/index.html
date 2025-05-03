@@ -7,140 +7,117 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#f9fafb">
     <title>Monthly Spends</title>
+    <!-- Framework7 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/framework7@7.1.5/framework7-bundle.min.css">
     <link rel="stylesheet" href="styles.css">
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
 </head>
 <body>
-    <div class="safe-area-top"></div>
-    <div class="container">
-        <h1>Monthly Spends</h1>
-        
-        <div class="input-section">
-            <select 
-                id="category" 
-                required
-                aria-label="Expense category">
-                <option value="">Select Category</option>
-                <option value="groceries">Groceries</option>
-                <option value="housing">Housing & Utilities</option>
-                <option value="transport">Transportation</option>
-                <option value="health">Healthcare</option>
-                <option value="entertainment">Entertainment</option>
-                <option value="dining">Dining Out</option>
-                <option value="shopping">Shopping</option>
-                <option value="education">Education</option>
-                <option value="savings">Savings & Investments</option>
-                <option value="misc">Miscellaneous</option>
-            </select>
-            <input 
-                type="text"
-                id="description"
-                placeholder="Description"
-                required
-                maxlength="50"
-                aria-label="Expense description">
-            <input 
-                type="number" 
-                id="amount" 
-                inputmode="decimal"
-                pattern="[0-9]*"
-                placeholder="Enter amount" 
-                step="0.01" 
-                min="0"
-                required
-                autocomplete="off"
-                aria-label="Expense amount">
-            <button onclick="addExpense()" id="addButton">Add</button>
-        </div>
+    <div id="app">
+        <div class="view view-main">
+            <div class="page">
+                <div class="safe-area-top"></div>
+                <div class="container">
+                    <h1>Monthly Spends</h1>
+                    
+                    <div class="input-section list">
+                        <ul>
+                            <li class="item-content item-input">
+                                <div class="item-inner">
+                                    <div class="item-input-wrap">
+                                        <select id="category" required>
+                                            <option value="" disabled selected>Select Category</option>
+                                            <option value="groceries">Groceries</option>
+                                            <option value="housing">Housing & Utilities</option>
+                                            <option value="transport">Transportation</option>
+                                            <option value="health">Healthcare</option>
+                                            <option value="entertainment">Entertainment</option>
+                                            <option value="dining">Dining Out</option>
+                                            <option value="shopping">Shopping</option>
+                                            <option value="education">Education</option>
+                                            <option value="savings">Savings & Investments</option>
+                                            <option value="misc">Miscellaneous</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </li>
+                            <li class="item-content item-input">
+                                <div class="item-inner">
+                                    <div class="item-input-wrap">
+                                        <input 
+                                            type="text"
+                                            id="description"
+                                            placeholder="Description"
+                                            required
+                                            maxlength="50">
+                                    </div>
+                                </div>
+                            </li>
+                            <li class="item-content item-input">
+                                <div class="item-inner">
+                                    <div class="item-input-wrap">
+                                        <input 
+                                            type="number" 
+                                            id="amount" 
+                                            inputmode="decimal"
+                                            pattern="[0-9]*"
+                                            placeholder="Enter amount" 
+                                            step="0.01" 
+                                            min="0"
+                                            required>
+                                    </div>
+                                </div>
+                            </li>
+                        </ul>
+                        <div class="padding">
+                            <button class="button button-large button-fill" onclick="addExpense()" id="addButton">Add</button>
+                        </div>
+                    </div>
 
-        <div class="expenses-list">
-            <div class="expenses-header">
-                <h2>Recent Expenses</h2>
-                <button onclick="deleteLastExpense()" id="deleteLastButton" class="delete-button" disabled>Delete Last</button>
-            </div>
-            <div id="expenses"></div>
-            <div class="expenses-total">
-                <span class="total-label">Total</span>
-                <span class="total-amount" id="totalAmount">$0.00</span>
+                    <div class="expenses-list card">
+                        <div class="card-header expenses-header">
+                            <h2>Recent Expenses</h2>
+                            <button onclick="deleteLastExpense()" id="deleteLastButton" class="button button-small button-fill delete-button" disabled>Delete Last</button>
+                        </div>
+                        <div class="card-content">
+                            <div id="expenses"></div>
+                        </div>
+                        <div class="card-footer expenses-total">
+                            <span class="total-label">Total</span>
+                            <span class="total-amount" id="totalAmount">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="safe-area-bottom"></div>
             </div>
         </div>
     </div>
-    <div class="toast-container" id="toastContainer"></div>
-    <div class="safe-area-bottom"></div>
 
+    <!-- Framework7 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/framework7@7.1.5/framework7-bundle.min.js"></script>
+    
     <script>
-        let lastDeletedExpense = null;
-
-        function showToast(message, duration = 3000, type = 'success', undoCallback = null) {
-            const toastContainer = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            toast.className = `toast toast-${type}`;
-            
-            let toastContent = `<span>${message}</span>`;
-            if (undoCallback) {
-                const undoButton = document.createElement('button');
-                undoButton.className = 'toast-undo';
-                undoButton.textContent = 'Undo';
-                undoButton.addEventListener('click', () => {
-                    undoCallback();
-                    // Remove the toast immediately after clicking undo
-                    if (toast.timeoutId) {
-                        clearTimeout(toast.timeoutId);
-                    }
-                    if (toastContainer.contains(toast)) {
-                        toastContainer.removeChild(toast);
-                    }
-                });
-                
-                toastContent = `<span>${message}</span>`;
-                toast.innerHTML = toastContent;
-                toast.appendChild(undoButton);
-            } else {
-                toast.innerHTML = toastContent;
-            }
-            
-            toastContainer.appendChild(toast);
-            
-            const timeoutId = setTimeout(() => {
-                toast.style.animation = 'slideIn 0.3s ease reverse forwards';
-                setTimeout(() => {
-                    if (toastContainer.contains(toast)) {
-                        toastContainer.removeChild(toast);
-                    }
-                }, 300);
-            }, duration);
-
-            // Store the timeout ID on the toast element
-            toast.timeoutId = timeoutId;
-
-            if (undoCallback) {
-                // Replace any existing undo toast
-                const existingToasts = document.querySelectorAll('.toast-delete');
-                existingToasts.forEach(t => {
-                    if (t !== toast && t.timeoutId) {
-                        clearTimeout(t.timeoutId);
-                        if (toastContainer.contains(t)) {
-                            toastContainer.removeChild(t);
-                        }
-                    }
-                });
-            }
-        }
-
-        // Prevent double-tap zoom on iOS
-        document.addEventListener('touchend', function(event) {
-            if (event.target.tagName !== 'INPUT' && event.target.tagName !== 'BUTTON') {
-                event.preventDefault();
-            }
-        }, false);
-
-        // Add keyboard support
-        document.getElementById('amount').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                addExpense();
-            }
+        // Initialize Framework7
+        const app = new Framework7({
+            el: '#app',
+            theme: 'ios',
+            touch: {
+                tapHold: true,
+                disableContextMenu: false,
+            },
         });
+
+        function showToast(message, type = 'success') {
+            const icon = type === 'error' ? '❌' : '✓';
+            app.toast.create({
+                text: message,
+                position: 'top',
+                closeTimeout: 3000,
+                cssClass: `toast-${type}`,
+                icon: `<i class="icon">${icon}</i>`
+            }).open();
+        }
 
         async function addExpense() {
             const amountInput = document.getElementById('amount');
@@ -152,7 +129,7 @@
             const description = descriptionInput.value;
             
             if (!amount || !category || !description) {
-                showToast('Please fill in all fields', 3000, 'error');
+                showToast('Please fill in all fields', 'error');
                 return;
             }
 
@@ -189,11 +166,11 @@
                     }
                 } else {
                     const error = await response.json();
-                    showToast(error.error || 'Failed to add expense');
+                    showToast(error.error || 'Failed to add expense', 'error');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                showToast('Failed to add expense');
+                showToast('Failed to add expense', 'error');
             } finally {
                 // Re-enable inputs
                 addButton.disabled = false;
@@ -210,7 +187,7 @@
                 const expenses = await response.json();
                 
                 if (expenses.length === 0) {
-                    showToast('No expenses to delete');
+                    showToast('No expenses to delete', 'error');
                     return;
                 }
 
@@ -222,53 +199,64 @@
                 if (deleteResponse.ok) {
                     lastDeletedExpense = {
                         amount: lastExpense.amount,
-                        date: lastExpense.date
+                        date: lastExpense.date,
+                        category: lastExpense.category,
+                        description: lastExpense.description
                     };
                     loadExpenses();
                     const amount = parseFloat(lastExpense.amount).toFixed(2);
-                    showToast(
-                        `Deleted expense: $${amount}`,
-                        5000,
-                        'delete',
-                        async () => {
-                            if (!lastDeletedExpense) return;
-                            
-                            try {
-                                const response = await fetch('/api/expenses', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                    },
-                                    body: JSON.stringify({ amount: lastDeletedExpense.amount })
-                                });
+                    app.dialog.create({
+                        title: 'Expense Deleted',
+                        text: `Deleted expense: $${amount}`,
+                        buttons: [
+                            {
+                                text: 'Undo',
+                                onClick: async () => {
+                                    if (!lastDeletedExpense) return;
+                                    
+                                    try {
+                                        const response = await fetch('/api/expenses', {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                            },
+                                            body: JSON.stringify(lastDeletedExpense)
+                                        });
 
-                                if (response.ok) {
-                                    loadExpenses();
-                                    showToast('Expense restored', 3000, 'success');
-                                    lastDeletedExpense = null;
-                                    // Provide haptic feedback on success
-                                    if (window.navigator && window.navigator.vibrate) {
-                                        window.navigator.vibrate([50]);
+                                        if (response.ok) {
+                                            loadExpenses();
+                                            showToast('Expense restored');
+                                            lastDeletedExpense = null;
+                                            // Provide haptic feedback on success
+                                            if (window.navigator && window.navigator.vibrate) {
+                                                window.navigator.vibrate([50]);
+                                            }
+                                        } else {
+                                            showToast('Failed to restore expense', 'error');
+                                        }
+                                    } catch (error) {
+                                        console.error('Error:', error);
+                                        showToast('Failed to restore expense', 'error');
                                     }
-                                } else {
-                                    showToast('Failed to restore expense');
                                 }
-                            } catch (error) {
-                                console.error('Error:', error);
-                                showToast('Failed to restore expense');
+                            },
+                            {
+                                text: 'Close',
+                                color: 'red'
                             }
-                        }
-                    );
+                        ]
+                    }).open();
+                    
                     // Provide haptic feedback on success
                     if (window.navigator && window.navigator.vibrate) {
                         window.navigator.vibrate([50]);
                     }
                 } else {
-                    showToast('Failed to delete expense');
+                    showToast('Failed to delete expense', 'error');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                showToast('Failed to delete expense');
+                showToast('Failed to delete expense', 'error');
             }
         }
 
@@ -289,18 +277,22 @@
                 totalAmountElement.textContent = `$${total.toFixed(2)}`;
                 
                 expensesDiv.innerHTML = expenses.map(expense => `
-                    <div class="expense-item">
-                        <div class="expense-details">
-                            <span class="amount">$${parseFloat(expense.amount).toFixed(2)}</span>
-                            <span class="category">${expense.category}</span>
-                            <span class="description">${expense.description}</span>
+                    <div class="expense-item list">
+                        <div class="item-content">
+                            <div class="item-inner">
+                                <div class="item-title-row">
+                                    <div class="item-title amount">$${parseFloat(expense.amount).toFixed(2)}</div>
+                                    <div class="item-after date">${formatDate(new Date(expense.date))}</div>
+                                </div>
+                                <div class="item-subtitle category">${expense.category}</div>
+                                <div class="item-text description">${expense.description}</div>
+                            </div>
                         </div>
-                        <span class="date">${formatDate(new Date(expense.date))}</span>
                     </div>
                 `).join('');
             } catch (error) {
                 console.error('Error:', error);
-                showToast('Failed to load expenses');
+                showToast('Failed to load expenses', 'error');
             }
         }
 
