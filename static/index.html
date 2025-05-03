@@ -14,7 +14,29 @@
     <div class="container py-4">
         <div class="row justify-content-center">
             <div class="col-md-10 col-lg-8">
-                <h1 class="text-center mb-4">Monthly Spends</h1>
+                <div class="d-flex justify-content-center align-items-center gap-3 mb-2">
+                    <button id="prevMonthBtn" class="btn btn-link text-decoration-none p-0 fs-4">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+                    <h1 id="currentMonthBtn" class="mb-0 text-center" style="min-width: 200px">
+                        Loading...
+                    </h1>
+                    <button id="nextMonthBtn" class="btn btn-link text-decoration-none p-0 fs-4">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+
+                <div class="d-flex justify-content-center align-items-center gap-2 mb-4">
+                    <button id="prevWeekBtn" class="btn btn-link text-decoration-none p-0">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+                    <h4 id="currentWeekBtn" class="mb-0 text-center text-muted" style="min-width: 150px; font-size: 1.1rem;">
+                        All Month
+                    </h4>
+                    <button id="nextWeekBtn" class="btn btn-link text-decoration-none p-0">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
                 
                 <div class="card shadow-sm mb-4">
                     <div class="card-body">
@@ -23,7 +45,7 @@
                                 <div class="col-sm-6">
                                     <label for="amount" class="form-label">Amount</label>
                                     <div class="input-group">
-                                        <span class="input-group-text">$</span>
+                                        <span class="input-group-text">€</span>
                                         <input type="number" 
                                                class="form-control" 
                                                id="amount" 
@@ -38,16 +60,12 @@
                                     <label for="category" class="form-label">Category</label>
                                     <select class="form-select" id="category" name="category" required>
                                         <option value="">Select category...</option>
-                                        <option value="groceries">Groceries</option>
-                                        <option value="housing">Housing & Utilities</option>
-                                        <option value="transport">Transportation</option>
-                                        <option value="health">Healthcare</option>
-                                        <option value="entertainment">Entertainment</option>
-                                        <option value="dining">Dining Out</option>
-                                        <option value="shopping">Shopping</option>
-                                        <option value="education">Education</option>
-                                        <option value="savings">Savings & Investments</option>
-                                        <option value="misc">Miscellaneous</option>
+                                        <option value="super">Super</option>
+                                        <option value="xofa">Xofa</option>
+                                        <option value="food_drink">Food & Drink</option>
+                                        <option value="save_inv">Save & Inv</option>
+                                        <option value="recurrent">Recurrent</option>
+                                        <option value="other">Other</option>
                                     </select>
                                 </div>
                                 <div class="col-12">
@@ -100,6 +118,19 @@
                         </table>
                     </div>
                 </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <canvas id="categoryChart"></canvas>
+                            </div>
+                            <div class="col-md-6">
+                                <div id="chartLegend" class="d-flex flex-column gap-2 ps-md-4 mt-4 mt-md-0"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -125,65 +156,276 @@
 
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script>
+        // Current date state
+        let currentMonth = new Date().getMonth() + 1;
+        let currentYear = new Date().getFullYear();
+        let currentWeek = null; // null means show full month
+        
         // Format helpers
         const formatDate = date => {
             const d = new Date(date);
-            return d.toLocaleDateString() + ' ' + 
-                   d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            return d.toLocaleDateString(undefined, { 
+                weekday: 'short',
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit', 
+                minute: '2-digit'
+            });
+        };
+
+        const formatMonth = (month, year) => {
+            const date = new Date(year, month - 1);
+            return date.toLocaleDateString(undefined, { 
+                month: 'long', 
+                year: 'numeric'
+            }).toUpperCase();
+        };
+
+        const formatWeek = (weekStart) => {
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+            
+            if (weekStart.getMonth() === weekEnd.getMonth()) {
+                return `${weekStart.getDate()} - ${weekEnd.getDate()} ${weekStart.toLocaleDateString(undefined, { month: 'long' })}`;
+            } else {
+                return `${weekStart.getDate()} ${weekStart.toLocaleDateString(undefined, { month: 'short' })} - ${weekEnd.getDate()} ${weekEnd.toLocaleDateString(undefined, { month: 'short' })}`;
+            }
         };
 
         const formatAmount = amount => {
-            return new Intl.NumberFormat('en-US', {
+            return new Intl.NumberFormat('es-ES', {
                 style: 'currency',
-                currency: 'USD'
+                currency: 'EUR',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
             }).format(amount);
         };
 
-        // Toast notification using Bootstrap
-        function showToast(message, type = 'success') {
-            const toastContainer = document.getElementById('toastContainer') || (() => {
-                const container = document.createElement('div');
-                container.id = 'toastContainer';
-                container.className = 'toast-container position-fixed top-0 end-0 p-3';
-                document.body.appendChild(container);
-                return container;
-            })();
+        // Chart colors for categories
+        const categoryColors = {
+            super: '#2563eb',      // Blue
+            xofa: '#7c3aed',       // Purple
+            food_drink: '#059669',  // Green
+            save_inv: '#10b981',   // Emerald
+            recurrent: '#f59e0b',  // Orange
+            other: '#6b7280'       // Gray
+        };
 
-            const toast = document.createElement('div');
-            toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
-            toast.innerHTML = `
-                <div class="d-flex">
-                    <div class="toast-body">
-                        <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
-                        ${message}
-                    </div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                </div>
-            `;
-            
-            toastContainer.appendChild(toast);
-            const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
-            bsToast.show();
-            
-            toast.addEventListener('hidden.bs.toast', () => toast.remove());
+        let categoryChart = null;
+
+        function getCategoryColor(category) {
+            return categoryColors[category] || '#6b7280';
         }
+
+        function updateCategoryChart(expenses) {
+            // Group expenses by category and sum amounts
+            const categoryTotals = expenses.reduce((acc, exp) => {
+                const category = exp.category;
+                acc[category] = (acc[category] || 0) + parseFloat(exp.amount);
+                return acc;
+            }, {});
+
+            // Sort categories by amount (descending)
+            const sortedCategories = Object.entries(categoryTotals)
+                .sort(([,a], [,b]) => b - a);
+
+            // Prepare data for the chart
+            const data = {
+                labels: sortedCategories.map(([category]) => 
+                    category.charAt(0).toUpperCase() + category.slice(1)
+                ),
+                datasets: [{
+                    data: sortedCategories.map(([,amount]) => amount),
+                    backgroundColor: sortedCategories.map(([category]) => getCategoryColor(category)),
+                    borderWidth: 0,
+                    hoverOffset: 15
+                }]
+            };
+
+            // Update or create chart
+            if (categoryChart) {
+                categoryChart.data = data;
+                categoryChart.update();
+            } else {
+                const ctx = document.getElementById('categoryChart').getContext('2d');
+                categoryChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: data,
+                    options: {
+                        cutout: '60%',
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const value = context.raw;
+                                        return `${context.label}: ${formatAmount(value)}`;
+                                    }
+                                }
+                            }
+                        },
+                        animation: {
+                            animateRotate: true,
+                            animateScale: true
+                        }
+                    }
+                });
+            }
+
+            // Update custom legend
+            const legendContainer = document.getElementById('chartLegend');
+            legendContainer.innerHTML = sortedCategories.map(([category, amount]) => `
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <span class="color-dot me-2" style="background-color: ${getCategoryColor(category)}"></span>
+                        <span class="text-capitalize">${category}</span>
+                    </div>
+                    <strong>${formatAmount(amount)}</strong>
+                </div>
+            `).join('');
+        }
+
+        // Get week dates
+        function getWeeksInMonth(month, year) {
+            const weeks = [];
+            const firstDay = new Date(year, month - 1, 1);
+            const lastDay = new Date(year, month, 0);
+            
+            // Go to Monday of the first week
+            const start = new Date(firstDay);
+            start.setDate(start.getDate() - start.getDay() + 1);
+            
+            // Generate weeks until we pass the last day of the month
+            while (start <= lastDay) {
+                weeks.push(new Date(start));
+                start.setDate(start.getDate() + 7);
+            }
+            
+            return weeks;
+        }
+
+        // Update week selector
+        function updateWeekSelector() {
+            const weeks = getWeeksInMonth(currentMonth, currentYear);
+            const weekBtn = document.getElementById('currentWeekBtn');
+            const prevWeekBtn = document.getElementById('prevWeekBtn');
+            const nextWeekBtn = document.getElementById('nextWeekBtn');
+            
+            if (currentWeek === null) {
+                weekBtn.textContent = 'All Month';
+                weekBtn.classList.add('text-muted');
+            } else {
+                const weekStart = weeks[currentWeek];
+                weekBtn.textContent = formatWeek(weekStart);
+                weekBtn.classList.remove('text-muted');
+            }
+            
+            prevWeekBtn.disabled = currentWeek === 0;
+            nextWeekBtn.disabled = currentWeek === null || currentWeek === weeks.length - 1;
+        }
+
+        // Week navigation
+        document.getElementById('prevWeekBtn').addEventListener('click', () => {
+            const weeks = getWeeksInMonth(currentMonth, currentYear);
+            if (currentWeek === null) {
+                currentWeek = weeks.length - 1;
+            } else if (currentWeek > 0) {
+                currentWeek--;
+            }
+            updateWeekSelector();
+            loadExpenses();
+        });
+
+        document.getElementById('nextWeekBtn').addEventListener('click', () => {
+            const weeks = getWeeksInMonth(currentMonth, currentYear);
+            if (currentWeek === null) {
+                currentWeek = 0;
+            } else if (currentWeek < weeks.length - 1) {
+                currentWeek++;
+            }
+            updateWeekSelector();
+            loadExpenses();
+        });
+
+        document.getElementById('currentWeekBtn').addEventListener('click', () => {
+            currentWeek = null;
+            updateWeekSelector();
+            loadExpenses();
+        });
+
+        // Month navigation
+        document.getElementById('prevMonthBtn').addEventListener('click', () => {
+            currentMonth--;
+            if (currentMonth < 1) {
+                currentMonth = 12;
+                currentYear--;
+            }
+            currentWeek = null;
+            updateWeekSelector();
+            loadExpenses();
+        });
+
+        document.getElementById('nextMonthBtn').addEventListener('click', () => {
+            currentMonth++;
+            if (currentMonth > 12) {
+                currentMonth = 1;
+                currentYear++;
+            }
+            currentWeek = null;
+            updateWeekSelector();
+            loadExpenses();
+        });
 
         // Load and display expenses
         async function loadExpenses() {
             try {
-                const response = await fetch('/api/expenses');
-                const expenses = await response.json();
+                const response = await fetch(`/api/expenses?month=${currentMonth}&year=${currentYear}`);
+                const data = await response.json();
                 
+                if (!response.ok) throw new Error(data.error || 'Failed to load expenses');
+                
+                let { expenses } = data;
+                
+                // Filter by week if selected
+                if (currentWeek !== null) {
+                    const weeks = getWeeksInMonth(currentMonth, currentYear);
+                    const weekStart = weeks[currentWeek];
+                    const weekEnd = new Date(weekStart);
+                    weekEnd.setDate(weekStart.getDate() + 7);
+                    
+                    expenses = expenses.filter(exp => {
+                        const expDate = new Date(exp.date);
+                        return expDate >= weekStart && expDate < weekEnd;
+                    });
+                }
+
                 const expensesList = document.getElementById('expensesList');
                 const totalAmount = document.getElementById('totalAmount');
                 const deleteLastBtn = document.getElementById('deleteLastBtn');
+                const currentMonthBtn = document.getElementById('currentMonthBtn');
                 
+                // Update month display
+                currentMonthBtn.textContent = formatMonth(currentMonth, currentYear);
+                
+                // Update navigation buttons
+                document.getElementById('prevMonthBtn').disabled = false;
+                document.getElementById('nextMonthBtn').disabled = 
+                    currentMonth === new Date().getMonth() + 1 && 
+                    currentYear === new Date().getFullYear();
+                
+                // Update delete button state
                 deleteLastBtn.disabled = expenses.length === 0;
                 
+                // Calculate total
                 const total = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
                 totalAmount.textContent = formatAmount(total);
                 
+                // Generate table rows
                 expensesList.innerHTML = expenses.map(exp => `
                     <tr>
                         <td>${formatDate(exp.date)}</td>
@@ -193,109 +435,76 @@
                         <td>${exp.description}</td>
                         <td class="amount">${formatAmount(exp.amount)}</td>
                     </tr>
-                `).join('');
+                `).join('') || '<tr><td colspan="4" class="text-center text-muted py-4">No expenses this period</td></tr>';
+
+                // Update category chart
+                updateCategoryChart(expenses);
             } catch (error) {
                 console.error('Error:', error);
                 showToast('Failed to load expenses', 'error');
             }
         }
 
-        // Add new expense
-        document.getElementById('expenseForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const form = e.target;
-            const submitBtn = form.querySelector('button[type="submit"]');
-            const formData = new FormData(form);
-            const data = Object.fromEntries(formData);
-            
-            try {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Adding...';
-                
-                const response = await fetch('/api/expenses', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                
-                if (response.ok) {
-                    form.reset();
-                    await loadExpenses();
-                    showToast('Expense added successfully');
-                    document.getElementById('amount').focus();
-                } else {
-                    const error = await response.json();
-                    showToast(error.error || 'Failed to add expense', 'error');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                showToast('Failed to add expense', 'error');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="bi bi-plus-circle me-2"></i>Add Expense';
-            }
-        });
-
-        // Delete last expense
-        document.getElementById('deleteLastBtn').addEventListener('click', async () => {
-            try {
-                const response = await fetch('/api/expenses');
-                const expenses = await response.json();
-                
-                if (expenses.length === 0) {
-                    showToast('No expenses to delete', 'error');
-                    return;
-                }
-
-                const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-                const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
-                
-                const handleDelete = async () => {
-                    const lastExpense = expenses[0];
-                    const deleteBtn = document.getElementById('deleteLastBtn');
-                    const originalText = deleteBtn.innerHTML;
-                    
-                    try {
-                        deleteBtn.disabled = true;
-                        deleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deleting...';
-                        
-                        const deleteResponse = await fetch(`/api/expenses/${lastExpense.id}`, {
-                            method: 'DELETE'
-                        });
-
-                        if (deleteResponse.ok) {
-                            deleteModal.hide();
-                            await loadExpenses();
-                            showToast('Last expense deleted');
-                        } else {
-                            showToast('Failed to delete expense', 'error');
-                        }
-                    } finally {
-                        deleteBtn.disabled = false;
-                        deleteBtn.innerHTML = originalText;
-                    }
-                };
-
-                // Remove any existing event listeners
-                const oldConfirmBtn = confirmDeleteBtn.cloneNode(true);
-                confirmDeleteBtn.parentNode.replaceChild(oldConfirmBtn, confirmDeleteBtn);
-                
-                // Add new event listener
-                oldConfirmBtn.addEventListener('click', handleDelete);
-                
-                deleteModal.show();
-            } catch (error) {
-                console.error('Error:', error);
-                showToast('Failed to delete expense', 'error');
-            }
-        });
-
         // Initial load
         document.addEventListener('DOMContentLoaded', () => {
             loadExpenses();
+            updateWeekSelector();
             document.getElementById('amount').focus();
         });
+
+        // Add form submission handler
+        document.getElementById('expenseForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                amount: parseFloat(document.getElementById('amount').value),
+                category: document.getElementById('category').value,
+                description: document.getElementById('description').value
+            };
+            
+            try {
+                const response = await fetch('/api/expenses', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to add expense');
+                }
+                
+                // Clear form
+                document.getElementById('expenseForm').reset();
+                document.getElementById('amount').focus();
+                
+                // Reload expenses to show the new one
+                loadExpenses();
+                
+                // Show success message
+                showToast('Expense added successfully', 'success');
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showToast(error.message, 'error');
+            }
+        });
+
+        // Toast notification function
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            // Remove toast after 3 seconds
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
     </script>
 </body>
 </html> 

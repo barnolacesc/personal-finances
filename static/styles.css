@@ -310,4 +310,69 @@ body {
     .toast {
         width: 100%;
     }
+}
+
+/* Month selector */
+#currentMonthBtn {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #1a202c;
+}
+
+/* Week selector */
+#currentWeekBtn {
+    font-weight: 500;
+    transition: color 0.2s;
+    cursor: pointer;
+}
+
+#currentWeekBtn:hover {
+    color: #1a202c !important;
+}
+
+#prevWeekBtn,
+#nextWeekBtn,
+#prevMonthBtn,
+#nextMonthBtn {
+    color: #4a5568;
+    transition: color 0.2s;
+}
+
+#prevWeekBtn:hover,
+#nextWeekBtn:hover,
+#prevMonthBtn:hover,
+#nextMonthBtn:hover {
+    color: #1a202c;
+}
+
+#prevWeekBtn:disabled,
+#nextWeekBtn:disabled,
+#prevMonthBtn:disabled,
+#nextMonthBtn:disabled {
+    color: #cbd5e0;
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Chart styles */
+.color-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+#chartLegend {
+    font-size: 0.9rem;
+}
+
+#chartLegend strong {
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, monospace;
+}
+
+@media (max-width: 768px) {
+    #categoryChart {
+        max-height: 250px;
+        margin-bottom: 1rem;
+    }
 } 

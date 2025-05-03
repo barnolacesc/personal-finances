@@ -4,6 +4,7 @@ from datetime import datetime
 import os
 import logging
 from werkzeug.serving import run_simple
+from sqlalchemy import extract
 
 # Configure logging
 logging.basicConfig(
@@ -119,11 +120,43 @@ def handle_expenses():
     
     # GET request
     try:
-        expenses = Expense.query.order_by(Expense.date.desc()).all()
-        return jsonify([expense.to_dict() for expense in expenses])
+        # Get month and year from query parameters, default to current month
+        now = datetime.utcnow()
+        month = int(request.args.get('month', now.month))
+        year = int(request.args.get('year', now.year))
+        
+        # Filter expenses by month and year
+        expenses = Expense.query\
+            .filter(extract('year', Expense.date) == year)\
+            .filter(extract('month', Expense.date) == month)\
+            .order_by(Expense.date.desc())\
+            .all()
+        
+        return jsonify({
+            'expenses': [expense.to_dict() for expense in expenses],
+            'month': month,
+            'year': year
+        })
     except Exception as e:
         logger.error(f"Error processing GET request: {e}")
         return jsonify({'error': 'Server error fetching expenses'}), 500
+
+@app.route('/api/months', methods=['GET'])
+def get_months():
+    try:
+        # Get distinct months and years from expenses
+        results = db.session.query(
+            extract('year', Expense.date).label('year'),
+            extract('month', Expense.date).label('month')
+        ).distinct().order_by('year', 'month').all()
+        
+        # Format results
+        months = [{'year': int(r.year), 'month': int(r.month)} for r in results]
+        
+        return jsonify(months)
+    except Exception as e:
+        logger.error(f"Error fetching months: {e}")
+        return jsonify({'error': 'Server error fetching months'}), 500
 
 @app.route('/api/expenses/<int:expense_id>', methods=['DELETE'])
 def delete_expense(expense_id):
