@@ -24,8 +24,59 @@
 .container {
     max-width: 800px;
     margin: 0 auto;
+    padding: 20px;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+    padding-top: calc(1rem + env(safe-area-inset-top));
+}
+
+.amount {
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, monospace;
+    text-align: right !important;
+    white-space: nowrap;
+}
+
+.toast {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
     padding: 1rem;
-    padding-bottom: calc(1rem + var(--safe-area-bottom));
+    background: #333;
+    color: white;
+    border-radius: 4px;
+    z-index: 1000;
+}
+
+.error {
+    background: #dc2626;
+}
+
+.success {
+    background: #059669;
+}
+
+/* Table header alignment */
+article header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+/* Responsive grid for small screens */
+@media (max-width: 600px) {
+    .grid {
+        grid-template-columns: 1fr !important;
+    }
+    
+    table {
+        font-size: 0.9rem;
+    }
+    
+    .toast {
+        left: 1rem;
+        right: 1rem;
+        text-align: center;
+    }
 }
 
 h1 {
@@ -149,4 +200,114 @@ h1 {
 .toast .icon {
     margin-right: 8px;
     font-style: normal;
+}
+
+/* Custom styling on top of Bootstrap */
+
+/* Improve text readability */
+body {
+    color: #2d3748;
+}
+
+/* Consistent spacing */
+.container {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+    padding-top: calc(1rem + env(safe-area-inset-top));
+}
+
+/* Amount column styling */
+.amount {
+    font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, monospace;
+    text-align: right !important;
+    white-space: nowrap;
+}
+
+/* Category badges */
+.badge {
+    text-transform: capitalize;
+    font-weight: 500;
+}
+
+/* Table improvements */
+.table {
+    margin-bottom: 0;
+}
+
+.table > :not(caption) > * > * {
+    padding: 1rem 0.75rem;
+}
+
+/* Card refinements */
+.card {
+    border: none;
+    border-radius: 0.75rem;
+}
+
+.card-header {
+    border-bottom: 1px solid rgba(0,0,0,.05);
+}
+
+/* Button states */
+.btn:focus {
+    box-shadow: none;
+}
+
+.btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.btn-primary:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+}
+
+/* Form refinements */
+.form-control:focus,
+.form-select:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13,110,253,.25);
+}
+
+.input-group-text {
+    background-color: #f8f9fa;
+    border-right: none;
+}
+
+.input-group .form-control {
+    border-left: none;
+}
+
+.input-group .form-control:focus {
+    border-left: 1px solid #86b7fe;
+    border-right: 1px solid #86b7fe;
+}
+
+/* Mobile optimizations */
+@media (max-width: 576px) {
+    .table > :not(caption) > * > * {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    .badge {
+        font-size: 0.75rem;
+    }
+    
+    .btn-sm {
+        font-size: 0.75rem;
+    }
+    
+    .card-header {
+        padding: 0.75rem;
+    }
+    
+    .toast-container {
+        padding: 0.5rem;
+        width: 100%;
+    }
+    
+    .toast {
+        width: 100%;
+    }
 } 

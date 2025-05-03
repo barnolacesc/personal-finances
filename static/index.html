@@ -2,168 +2,228 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#f9fafb">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monthly Spends</title>
-    <!-- Framework7 CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/framework7@7.1.5/framework7-bundle.min.css">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💰</text></svg>">
 </head>
-<body>
-    <div id="app">
-        <div class="view view-main">
-            <div class="page">
-                <div class="safe-area-top"></div>
-                <div class="container">
-                    <h1>Monthly Spends</h1>
-                    
-                    <div class="input-section list">
-                        <ul>
-                            <li class="item-content item-input">
-                                <div class="item-inner">
-                                    <div class="item-input-wrap">
-                                        <select id="category" required>
-                                            <option value="" disabled selected>Select Category</option>
-                                            <option value="groceries">Groceries</option>
-                                            <option value="housing">Housing & Utilities</option>
-                                            <option value="transport">Transportation</option>
-                                            <option value="health">Healthcare</option>
-                                            <option value="entertainment">Entertainment</option>
-                                            <option value="dining">Dining Out</option>
-                                            <option value="shopping">Shopping</option>
-                                            <option value="education">Education</option>
-                                            <option value="savings">Savings & Investments</option>
-                                            <option value="misc">Miscellaneous</option>
-                                        </select>
+<body class="bg-light">
+    <div class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-md-10 col-lg-8">
+                <h1 class="text-center mb-4">Monthly Spends</h1>
+                
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <form id="expenseForm">
+                            <div class="row g-3">
+                                <div class="col-sm-6">
+                                    <label for="amount" class="form-label">Amount</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" 
+                                               class="form-control" 
+                                               id="amount" 
+                                               name="amount" 
+                                               step="0.01" 
+                                               min="0" 
+                                               required
+                                               inputmode="decimal">
                                     </div>
                                 </div>
-                            </li>
-                            <li class="item-content item-input">
-                                <div class="item-inner">
-                                    <div class="item-input-wrap">
-                                        <input 
-                                            type="text"
-                                            id="description"
-                                            placeholder="Description"
-                                            required
-                                            maxlength="50">
-                                    </div>
+                                <div class="col-sm-6">
+                                    <label for="category" class="form-label">Category</label>
+                                    <select class="form-select" id="category" name="category" required>
+                                        <option value="">Select category...</option>
+                                        <option value="groceries">Groceries</option>
+                                        <option value="housing">Housing & Utilities</option>
+                                        <option value="transport">Transportation</option>
+                                        <option value="health">Healthcare</option>
+                                        <option value="entertainment">Entertainment</option>
+                                        <option value="dining">Dining Out</option>
+                                        <option value="shopping">Shopping</option>
+                                        <option value="education">Education</option>
+                                        <option value="savings">Savings & Investments</option>
+                                        <option value="misc">Miscellaneous</option>
+                                    </select>
                                 </div>
-                            </li>
-                            <li class="item-content item-input">
-                                <div class="item-inner">
-                                    <div class="item-input-wrap">
-                                        <input 
-                                            type="number" 
-                                            id="amount" 
-                                            inputmode="decimal"
-                                            pattern="[0-9]*"
-                                            placeholder="Enter amount" 
-                                            step="0.01" 
-                                            min="0"
-                                            required>
-                                    </div>
+                                <div class="col-12">
+                                    <label for="description" class="form-label">Description</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="description" 
+                                           name="description" 
+                                           maxlength="50" 
+                                           required>
                                 </div>
-                            </li>
-                        </ul>
-                        <div class="padding">
-                            <button class="button button-large button-fill" onclick="addExpense()" id="addButton">Add</button>
-                        </div>
-                    </div>
-
-                    <div class="expenses-list card">
-                        <div class="card-header expenses-header">
-                            <h2>Recent Expenses</h2>
-                            <button onclick="deleteLastExpense()" id="deleteLastButton" class="button button-small button-fill delete-button" disabled>Delete Last</button>
-                        </div>
-                        <div class="card-content">
-                            <div id="expenses"></div>
-                        </div>
-                        <div class="card-footer expenses-total">
-                            <span class="total-label">Total</span>
-                            <span class="total-amount" id="totalAmount">$0.00</span>
-                        </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="bi bi-plus-circle me-2"></i>Add Expense
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
                     </div>
                 </div>
-                <div class="safe-area-bottom"></div>
+
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white py-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Recent Expenses</h5>
+                            <button id="deleteLastBtn" 
+                                    class="btn btn-outline-danger btn-sm" 
+                                    disabled>
+                                <i class="bi bi-trash me-1"></i>Delete Last
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Category</th>
+                                    <th>Description</th>
+                                    <th class="amount">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="expensesList"></tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="3"><strong>Total</strong></td>
+                                    <td class="amount" id="totalAmount">$0.00</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Framework7 JS -->
-    <script src="https://cdn.jsdelivr.net/npm/framework7@7.1.5/framework7-bundle.min.js"></script>
-    
-    <script>
-        // Initialize Framework7
-        const app = new Framework7({
-            el: '#app',
-            theme: 'ios',
-            touch: {
-                tapHold: true,
-                disableContextMenu: false,
-            },
-        });
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to delete the last expense?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Format helpers
+        const formatDate = date => {
+            const d = new Date(date);
+            return d.toLocaleDateString() + ' ' + 
+                   d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        };
+
+        const formatAmount = amount => {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD'
+            }).format(amount);
+        };
+
+        // Toast notification using Bootstrap
         function showToast(message, type = 'success') {
-            const icon = type === 'error' ? '❌' : '✓';
-            app.toast.create({
-                text: message,
-                position: 'top',
-                closeTimeout: 3000,
-                cssClass: `toast-${type}`,
-                icon: `<i class="icon">${icon}</i>`
-            }).open();
+            const toastContainer = document.getElementById('toastContainer') || (() => {
+                const container = document.createElement('div');
+                container.id = 'toastContainer';
+                container.className = 'toast-container position-fixed top-0 end-0 p-3';
+                document.body.appendChild(container);
+                return container;
+            })();
+
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0`;
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+            bsToast.show();
+            
+            toast.addEventListener('hidden.bs.toast', () => toast.remove());
         }
 
-        async function addExpense() {
-            const amountInput = document.getElementById('amount');
-            const categorySelect = document.getElementById('category');
-            const descriptionInput = document.getElementById('description');
-            
-            const amount = amountInput.value;
-            const category = categorySelect.value;
-            const description = descriptionInput.value;
-            
-            if (!amount || !category || !description) {
-                showToast('Please fill in all fields', 'error');
-                return;
+        // Load and display expenses
+        async function loadExpenses() {
+            try {
+                const response = await fetch('/api/expenses');
+                const expenses = await response.json();
+                
+                const expensesList = document.getElementById('expensesList');
+                const totalAmount = document.getElementById('totalAmount');
+                const deleteLastBtn = document.getElementById('deleteLastBtn');
+                
+                deleteLastBtn.disabled = expenses.length === 0;
+                
+                const total = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+                totalAmount.textContent = formatAmount(total);
+                
+                expensesList.innerHTML = expenses.map(exp => `
+                    <tr>
+                        <td>${formatDate(exp.date)}</td>
+                        <td>
+                            <span class="badge bg-secondary">${exp.category}</span>
+                        </td>
+                        <td>${exp.description}</td>
+                        <td class="amount">${formatAmount(exp.amount)}</td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Failed to load expenses', 'error');
             }
+        }
 
-            const addButton = document.getElementById('addButton');
+        // Add new expense
+        document.getElementById('expenseForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const form = e.target;
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData);
             
             try {
-                // Disable inputs while processing
-                addButton.disabled = true;
-                amountInput.disabled = true;
-                categorySelect.disabled = true;
-                descriptionInput.disabled = true;
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Adding...';
                 
                 const response = await fetch('/api/expenses', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ 
-                        amount,
-                        category,
-                        description
-                    }),
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
                 });
                 
                 if (response.ok) {
-                    amountInput.value = '';
-                    categorySelect.value = '';
-                    descriptionInput.value = '';
-                    loadExpenses();
+                    form.reset();
+                    await loadExpenses();
                     showToast('Expense added successfully');
-                    // Provide haptic feedback on success
-                    if (window.navigator && window.navigator.vibrate) {
-                        window.navigator.vibrate(50);
-                    }
+                    document.getElementById('amount').focus();
                 } else {
                     const error = await response.json();
                     showToast(error.error || 'Failed to add expense', 'error');
@@ -172,16 +232,13 @@
                 console.error('Error:', error);
                 showToast('Failed to add expense', 'error');
             } finally {
-                // Re-enable inputs
-                addButton.disabled = false;
-                amountInput.disabled = false;
-                categorySelect.disabled = false;
-                descriptionInput.disabled = false;
-                amountInput.focus();
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-plus-circle me-2"></i>Add Expense';
             }
-        }
+        });
 
-        async function deleteLastExpense() {
+        // Delete last expense
+        document.getElementById('deleteLastBtn').addEventListener('click', async () => {
             try {
                 const response = await fetch('/api/expenses');
                 const expenses = await response.json();
@@ -191,142 +248,54 @@
                     return;
                 }
 
-                const lastExpense = expenses[0];
-                const deleteResponse = await fetch(`/api/expenses/${lastExpense.id}`, {
-                    method: 'DELETE'
-                });
-
-                if (deleteResponse.ok) {
-                    lastDeletedExpense = {
-                        amount: lastExpense.amount,
-                        date: lastExpense.date,
-                        category: lastExpense.category,
-                        description: lastExpense.description
-                    };
-                    loadExpenses();
-                    const amount = parseFloat(lastExpense.amount).toFixed(2);
-                    app.dialog.create({
-                        title: 'Expense Deleted',
-                        text: `Deleted expense: $${amount}`,
-                        buttons: [
-                            {
-                                text: 'Undo',
-                                onClick: async () => {
-                                    if (!lastDeletedExpense) return;
-                                    
-                                    try {
-                                        const response = await fetch('/api/expenses', {
-                                            method: 'POST',
-                                            headers: {
-                                                'Content-Type': 'application/json',
-                                            },
-                                            body: JSON.stringify(lastDeletedExpense)
-                                        });
-
-                                        if (response.ok) {
-                                            loadExpenses();
-                                            showToast('Expense restored');
-                                            lastDeletedExpense = null;
-                                            // Provide haptic feedback on success
-                                            if (window.navigator && window.navigator.vibrate) {
-                                                window.navigator.vibrate([50]);
-                                            }
-                                        } else {
-                                            showToast('Failed to restore expense', 'error');
-                                        }
-                                    } catch (error) {
-                                        console.error('Error:', error);
-                                        showToast('Failed to restore expense', 'error');
-                                    }
-                                }
-                            },
-                            {
-                                text: 'Close',
-                                color: 'red'
-                            }
-                        ]
-                    }).open();
+                const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+                const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+                
+                const handleDelete = async () => {
+                    const lastExpense = expenses[0];
+                    const deleteBtn = document.getElementById('deleteLastBtn');
+                    const originalText = deleteBtn.innerHTML;
                     
-                    // Provide haptic feedback on success
-                    if (window.navigator && window.navigator.vibrate) {
-                        window.navigator.vibrate([50]);
+                    try {
+                        deleteBtn.disabled = true;
+                        deleteBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deleting...';
+                        
+                        const deleteResponse = await fetch(`/api/expenses/${lastExpense.id}`, {
+                            method: 'DELETE'
+                        });
+
+                        if (deleteResponse.ok) {
+                            deleteModal.hide();
+                            await loadExpenses();
+                            showToast('Last expense deleted');
+                        } else {
+                            showToast('Failed to delete expense', 'error');
+                        }
+                    } finally {
+                        deleteBtn.disabled = false;
+                        deleteBtn.innerHTML = originalText;
                     }
-                } else {
-                    showToast('Failed to delete expense', 'error');
-                }
+                };
+
+                // Remove any existing event listeners
+                const oldConfirmBtn = confirmDeleteBtn.cloneNode(true);
+                confirmDeleteBtn.parentNode.replaceChild(oldConfirmBtn, confirmDeleteBtn);
+                
+                // Add new event listener
+                oldConfirmBtn.addEventListener('click', handleDelete);
+                
+                deleteModal.show();
             } catch (error) {
                 console.error('Error:', error);
                 showToast('Failed to delete expense', 'error');
             }
-        }
+        });
 
-        async function loadExpenses() {
-            try {
-                const response = await fetch('/api/expenses');
-                const expenses = await response.json();
-                
-                const expensesDiv = document.getElementById('expenses');
-                const deleteLastButton = document.getElementById('deleteLastButton');
-                const totalAmountElement = document.getElementById('totalAmount');
-                
-                // Enable/disable delete button based on expenses
-                deleteLastButton.disabled = expenses.length === 0;
-                
-                // Calculate total
-                const total = expenses.reduce((sum, expense) => sum + parseFloat(expense.amount), 0);
-                totalAmountElement.textContent = `$${total.toFixed(2)}`;
-                
-                expensesDiv.innerHTML = expenses.map(expense => `
-                    <div class="expense-item list">
-                        <div class="item-content">
-                            <div class="item-inner">
-                                <div class="item-title-row">
-                                    <div class="item-title amount">$${parseFloat(expense.amount).toFixed(2)}</div>
-                                    <div class="item-after date">${formatDate(new Date(expense.date))}</div>
-                                </div>
-                                <div class="item-subtitle category">${expense.category}</div>
-                                <div class="item-text description">${expense.description}</div>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-            } catch (error) {
-                console.error('Error:', error);
-                showToast('Failed to load expenses', 'error');
-            }
-        }
-
-        function formatDate(date) {
-            const now = new Date();
-            const yesterday = new Date(now);
-            yesterday.setDate(yesterday.getDate() - 1);
-
-            if (date.toDateString() === now.toDateString()) {
-                return 'Today ' + date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-            } else if (date.toDateString() === yesterday.toDateString()) {
-                return 'Yesterday ' + date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-            } else {
-                return date.toLocaleDateString([], { 
-                    month: 'short', 
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: '2-digit'
-                });
-            }
-        }
-
-        // Load expenses when page loads
+        // Initial load
         document.addEventListener('DOMContentLoaded', () => {
             loadExpenses();
             document.getElementById('amount').focus();
         });
-
-        // Handle PWA installation
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js');
-            });
-        }
     </script>
 </body>
 </html> 
