@@ -2,7 +2,15 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import os
+import logging
 from werkzeug.serving import run_simple
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__, static_folder='static')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///expenses.db'
@@ -26,8 +34,13 @@ class Expense(db.Model):
             'date': self.date.isoformat()
         }
 
-with app.app_context():
-    db.create_all()
+# Initialize database
+try:
+    with app.app_context():
+        db.create_all()
+        logger.info("Database initialized successfully")
+except Exception as e:
+    logger.error(f"Error initializing database: {e}")
 
 @app.after_request
 def add_header(response):
@@ -48,26 +61,53 @@ def serve_css():
 @app.route('/api/expenses', methods=['GET', 'POST'])
 def handle_expenses():
     if request.method == 'POST':
-        data = request.get_json()
         try:
-            amount = float(data['amount'])
+            data = request.get_json()
+            if data is None:
+                logger.error("No JSON data received")
+                return jsonify({'error': 'No JSON data received'}), 400
+            
+            if 'amount' not in data:
+                logger.error("No amount field in JSON data")
+                return jsonify({'error': 'Amount field is required'}), 400
+            
+            try:
+                amount = float(data['amount'])
+            except (ValueError, TypeError):
+                logger.error(f"Invalid amount value: {data.get('amount')}")
+                return jsonify({'error': 'Invalid amount value'}), 400
+            
             expense = Expense(amount=amount)
             db.session.add(expense)
             db.session.commit()
+            logger.info(f"Added new expense: ${amount:.2f}")
             return jsonify(expense.to_dict()), 201
-        except (ValueError, KeyError):
-            return jsonify({'error': 'Invalid amount'}), 400
+            
+        except Exception as e:
+            logger.error(f"Error processing POST request: {e}")
+            db.session.rollback()
+            return jsonify({'error': 'Server error processing request'}), 500
     
     # GET request
-    expenses = Expense.query.order_by(Expense.date.desc()).all()
-    return jsonify([expense.to_dict() for expense in expenses])
+    try:
+        expenses = Expense.query.order_by(Expense.date.desc()).all()
+        return jsonify([expense.to_dict() for expense in expenses])
+    except Exception as e:
+        logger.error(f"Error processing GET request: {e}")
+        return jsonify({'error': 'Server error fetching expenses'}), 500
 
 @app.route('/api/expenses/<int:expense_id>', methods=['DELETE'])
 def delete_expense(expense_id):
-    expense = Expense.query.get_or_404(expense_id)
-    db.session.delete(expense)
-    db.session.commit()
-    return '', 204
+    try:
+        expense = Expense.query.get_or_404(expense_id)
+        db.session.delete(expense)
+        db.session.commit()
+        logger.info(f"Deleted expense {expense_id}")
+        return '', 204
+    except Exception as e:
+        logger.error(f"Error deleting expense {expense_id}: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Server error deleting expense'}), 500
 
 def run_dev_server():
     extra_files = []
