@@ -106,7 +106,7 @@
 
         // Prevent double-tap zoom on iOS
         document.addEventListener('touchend', function(event) {
-            if (event.target.tagName !== 'INPUT') {
+            if (event.target.tagName !== 'INPUT' && event.target.tagName !== 'BUTTON') {
                 event.preventDefault();
             }
         }, false);
@@ -137,7 +137,7 @@
                     },
                     body: JSON.stringify({ amount }),
                 });
-
+                
                 if (response.ok) {
                     amountInput.value = '';
                     loadExpenses();
