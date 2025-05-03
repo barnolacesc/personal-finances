@@ -11,12 +11,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 def init_database():
-    # Get the absolute path for the database
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    db_path = os.path.join(current_dir, 'expenses.db')
+    # Get the database path from Flask's instance folder
+    db_path = os.path.join(app.instance_path, 'expenses.db')
     
     logger.info(f"Database path: {db_path}")
     logger.info(f"Current working directory: {os.getcwd()}")
+    logger.info(f"Flask instance path: {app.instance_path}")
     
     # Remove existing database if it exists
     if os.path.exists(db_path):
@@ -27,8 +27,9 @@ def init_database():
             logger.error(f"Error removing existing database: {e}")
             return False
 
-    # Create the database directory if it doesn't exist
-    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    # Ensure instance folder exists
+    os.makedirs(app.instance_path, exist_ok=True)
+    logger.info(f"Ensured instance directory exists: {app.instance_path}")
 
     # Create the database
     try:
@@ -43,8 +44,10 @@ def init_database():
             if not os.path.exists(db_path):
                 logger.error(f"Database file not found at expected path: {db_path}")
                 # Try to list directory contents to debug
-                dir_contents = os.listdir(current_dir)
-                logger.info(f"Directory contents: {dir_contents}")
+                dir_contents = os.listdir(app.instance_path)
+                logger.info(f"Instance directory contents: {dir_contents}")
+                parent_contents = os.listdir(os.path.dirname(app.instance_path))
+                logger.info(f"Parent directory contents: {parent_contents}")
                 return False
                 
             # Set proper permissions
@@ -69,8 +72,8 @@ def init_database():
         logger.error(f"Error creating database: {e}")
         # Try to list directory contents to debug
         try:
-            dir_contents = os.listdir(current_dir)
-            logger.info(f"Directory contents after error: {dir_contents}")
+            dir_contents = os.listdir(app.instance_path)
+            logger.info(f"Instance directory contents after error: {dir_contents}")
         except Exception as list_err:
             logger.error(f"Error listing directory: {list_err}")
         return False
