@@ -12,8 +12,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Get the absolute path for the database
+current_dir = os.path.dirname(os.path.abspath(__file__))
+db_path = os.path.join(current_dir, 'expenses.db')
+logger.info(f"Configuring database at: {db_path}")
+
 app = Flask(__name__, static_folder='static')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///expenses.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Development settings
