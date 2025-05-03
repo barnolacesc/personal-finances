@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, redirect
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import os
@@ -70,6 +70,14 @@ def add_header(response):
 @app.route('/')
 def serve_index():
     return send_from_directory('static', 'index.html')
+
+@app.route('/add')
+def serve_add():
+    return redirect('/expenses#add')
+
+@app.route('/expenses')
+def serve_expenses():
+    return send_from_directory('static', 'expenses.html')
 
 @app.route('/styles.css')
 def serve_css():
