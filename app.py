@@ -18,7 +18,9 @@ db_path = os.path.join(current_dir, 'expenses.db')
 logger.info(f"Configuring database at: {db_path}")
 
 app = Flask(__name__, static_folder='static')
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+# SQLite URLs are relative to the app's root path by default
+# Using /// for absolute path, // for relative path
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////' + db_path
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Development settings
