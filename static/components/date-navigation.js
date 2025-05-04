@@ -1,0 +1,144 @@
+class DateNavigation extends HTMLElement {
+    constructor() {
+        super();
+        this.currentDate = new Date();
+        this.currentWeek = 'all';
+    }
+
+    connectedCallback() {
+        this.render();
+        this.setupEventListeners();
+        // Dispatch initial date state
+        this.dispatchDateChange();
+    }
+
+    render() {
+        this.innerHTML = `
+            <div class="d-flex flex-column align-items-center">
+                <div class="d-flex justify-content-center align-items-center gap-3 mb-2">
+                    <button id="prevMonthBtn" class="btn btn-link text-decoration-none p-0 fs-4">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+                    <h1 id="currentMonthBtn" class="mb-0 text-center" style="min-width: 200px">
+                        ${this.formatMonth()}
+                    </h1>
+                    <button id="nextMonthBtn" class="btn btn-link text-decoration-none p-0 fs-4">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+
+                <div class="d-flex justify-content-center align-items-center gap-2 mb-4">
+                    <button id="prevWeekBtn" class="btn btn-link text-decoration-none p-0">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+                    <h4 id="currentWeekBtn" class="mb-0 text-center text-muted" style="min-width: 150px; font-size: 1.1rem;">
+                        All Month
+                    </h4>
+                    <button id="nextWeekBtn" class="btn btn-link text-decoration-none p-0">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Update navigation button states
+        this.updateNavigationState();
+    }
+
+    setupEventListeners() {
+        this.querySelector('#prevMonthBtn').addEventListener('click', () => this.changeMonth(-1));
+        this.querySelector('#nextMonthBtn').addEventListener('click', () => this.changeMonth(1));
+        this.querySelector('#prevWeekBtn').addEventListener('click', () => this.changeWeek(-1));
+        this.querySelector('#nextWeekBtn').addEventListener('click', () => this.changeWeek(1));
+        this.querySelector('#currentWeekBtn').addEventListener('click', () => {
+            this.currentWeek = 'all';
+            this.updateWeekDisplay();
+            this.dispatchDateChange();
+        });
+    }
+
+    formatMonth() {
+        return this.currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+    }
+
+    changeMonth(delta) {
+        // Create a new date object to avoid modifying the original
+        const newDate = new Date(this.currentDate);
+        newDate.setMonth(newDate.getMonth() + delta);
+        
+        // Update the current date
+        this.currentDate = newDate;
+        this.currentWeek = 'all';
+        
+        // Re-render and notify
+        this.render();
+        this.setupEventListeners(); // Reattach event listeners after render
+        this.dispatchDateChange();
+    }
+
+    changeWeek(delta) {
+        const weeks = ['week1', 'week2', 'week3', 'week4', 'week5', 'all'];
+        let currentIndex = weeks.indexOf(this.currentWeek);
+        
+        // If current week is not found (shouldn't happen), default to first week
+        if (currentIndex === -1) currentIndex = 0;
+        
+        // Calculate new index with wrapping
+        currentIndex = (currentIndex + delta + weeks.length) % weeks.length;
+        this.currentWeek = weeks[currentIndex];
+        
+        this.updateWeekDisplay();
+        this.dispatchDateChange();
+    }
+
+    updateWeekDisplay() {
+        const weekBtn = this.querySelector('#currentWeekBtn');
+        weekBtn.textContent = this.currentWeek === 'all' ? 'All Month' : `Week ${this.currentWeek.slice(-1)}`;
+        
+        // Update week navigation buttons
+        const prevWeekBtn = this.querySelector('#prevWeekBtn');
+        const nextWeekBtn = this.querySelector('#nextWeekBtn');
+        
+        // Always enable both buttons since we have circular navigation
+        prevWeekBtn.disabled = false;
+        nextWeekBtn.disabled = false;
+    }
+
+    updateNavigationState() {
+        const now = new Date();
+        const currentMonth = now.getMonth();
+        const currentYear = now.getFullYear();
+        
+        const nextMonthBtn = this.querySelector('#nextMonthBtn');
+        nextMonthBtn.disabled = 
+            this.currentDate.getMonth() >= currentMonth && 
+            this.currentDate.getFullYear() >= currentYear;
+
+        const prevMonthBtn = this.querySelector('#prevMonthBtn');
+        prevMonthBtn.disabled = false; // Allow navigating to past months
+    }
+
+    dispatchDateChange() {
+        const event = new CustomEvent('datechange', {
+            bubbles: true,
+            composed: true,
+            detail: {
+                month: this.currentDate.getMonth() + 1,
+                year: this.currentDate.getFullYear(),
+                week: this.currentWeek
+            }
+        });
+        this.dispatchEvent(event);
+        // Also dispatch to document for components that might be in different shadow DOMs
+        document.dispatchEvent(event);
+
+        // Log the date change for debugging
+        console.log('Date changed:', {
+            month: this.currentDate.getMonth() + 1,
+            year: this.currentDate.getFullYear(),
+            week: this.currentWeek
+        });
+    }
+}
+
+customElements.define('date-navigation', DateNavigation); 
