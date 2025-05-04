@@ -86,6 +86,10 @@
         .badge.category-transport { background-color: #6366f1 !important; }
         .badge.category-health { background-color: #06b6d4 !important; }
         .badge.category-other { background-color: #6b7280 !important; }
+        #chartCenterTotal {
+            pointer-events: none;
+            z-index: 1;
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -262,15 +266,19 @@
                                     data-bs-toggle="collapse" 
                                     data-bs-target="#chartSection">
                                 <span><i class="bi bi-pie-chart me-2"></i>Expense Distribution</span>
-                                <i class="bi bi-chevron-down"></i>
+                                <span id="chartTotal" class="text-primary"></span>
                             </button>
                         </h5>
                     </div>
                     <div id="chartSection" class="collapse show">
                         <div class="card-body">
                             <div class="row align-items-center">
-                                <div class="col-md-6">
+                                <div class="col-md-6 position-relative">
                                     <canvas id="categoryChart"></canvas>
+                                    <div id="chartCenterTotal" class="position-absolute top-50 start-50 translate-middle text-center">
+                                        <div class="fs-5 text-muted mb-1">Total</div>
+                                        <div class="fs-4 fw-bold"></div>
+                                    </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div id="chartLegend" class="d-flex flex-column gap-2 ps-md-4 mt-4 mt-md-0"></div>
@@ -471,6 +479,13 @@
         }
 
         function updateCategoryChart(expenses) {
+            // Calculate total
+            const total = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+            
+            // Update totals display
+            document.getElementById('chartTotal').textContent = formatAmount(total);
+            document.getElementById('chartCenterTotal').querySelector('.fw-bold').textContent = formatAmount(total);
+            
             // Group expenses by category and sum amounts
             const categoryTotals = expenses.reduce((acc, exp) => {
                 const category = exp.category;
