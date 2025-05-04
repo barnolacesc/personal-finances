@@ -277,6 +277,33 @@
                                 </div>
                             </div>
                         </div>
+                        <!-- Category Details Section -->
+                        <div id="categoryDetails" class="collapse">
+                            <div class="card-header border-top bg-white">
+                                <h6 class="mb-0 d-flex justify-content-between align-items-center">
+                                    <span id="categoryDetailsTitle">Category Details</span>
+                                    <button type="button" class="btn-close" aria-label="Close"></button>
+                                </h6>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Description</th>
+                                            <th class="amount">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="categoryExpensesList"></tbody>
+                                    <tfoot class="table-light">
+                                        <tr>
+                                            <td colspan="2"><strong>Category Total</strong></td>
+                                            <td class="amount" id="categoryTotal">€0.00</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -455,10 +482,13 @@
             const sortedCategories = Object.entries(categoryTotals)
                 .sort(([,a], [,b]) => b - a);
 
+            // Store sorted categories globally for click handling
+            window.currentCategories = sortedCategories;
+
             // Prepare data for the chart
             const data = {
                 labels: sortedCategories.map(([category]) => 
-                    category.charAt(0).toUpperCase() + category.slice(1)
+                    category.charAt(0).toUpperCase() + category.slice(1).replace('_', ' & ')
                 ),
                 datasets: [{
                     data: sortedCategories.map(([,amount]) => amount),
@@ -468,49 +498,66 @@
                 }]
             };
 
+            // Chart configuration
+            const config = {
+                type: 'doughnut',
+                data: data,
+                options: {
+                    cutout: '60%',
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw;
+                                    return `${context.label}: ${formatAmount(value)}`;
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        animateRotate: true,
+                        animateScale: true
+                    },
+                    onClick: (e, elements) => {
+                        if (elements && elements.length > 0) {
+                            const category = window.currentCategories[elements[0].index][0];
+                            showCategoryDetails(category, expenses);
+                        }
+                    }
+                }
+            };
+
             // Update or create chart
             if (categoryChart) {
                 categoryChart.data = data;
                 categoryChart.update();
             } else {
                 const ctx = document.getElementById('categoryChart').getContext('2d');
-                categoryChart = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: data,
-                    options: {
-                        cutout: '60%',
-                        plugins: {
-                            legend: {
-                                display: false
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        const value = context.raw;
-                                        return `${context.label}: ${formatAmount(value)}`;
-                                    }
-                                }
-                            }
-                        },
-                        animation: {
-                            animateRotate: true,
-                            animateScale: true
-                        }
-                    }
-                });
+                categoryChart = new Chart(ctx, config);
             }
 
-            // Update custom legend
+            // Update custom legend with click handlers
             const legendContainer = document.getElementById('chartLegend');
             legendContainer.innerHTML = sortedCategories.map(([category, amount]) => `
-                <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center justify-content-between legend-item" data-category="${category}" style="cursor: pointer">
                     <div class="d-flex align-items-center">
                         <span class="color-dot me-2" style="background-color: ${getCategoryColor(category)}"></span>
-                        <span class="text-capitalize">${category}</span>
+                        <span class="text-capitalize">${category.replace('_', ' & ')}</span>
                     </div>
                     <strong>${formatAmount(amount)}</strong>
                 </div>
             `).join('');
+
+            // Add click handlers to legend items
+            legendContainer.querySelectorAll('.legend-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const category = item.dataset.category;
+                    showCategoryDetails(category, expenses);
+                });
+            });
         }
 
         // Get week dates
@@ -806,6 +853,38 @@
                 console.error('Error:', error);
                 showAlert(error.message, 'danger');
             }
+        });
+
+        // Function to show category details
+        function showCategoryDetails(category, expenses) {
+            const categoryExpenses = expenses.filter(exp => exp.category === category);
+            const total = categoryExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+            
+            // Update title and total
+            document.getElementById('categoryDetailsTitle').textContent = 
+                `${category.charAt(0).toUpperCase() + category.slice(1).replace('_', ' & ')} Expenses`;
+            document.getElementById('categoryTotal').textContent = formatAmount(total);
+            
+            // Update expenses list
+            document.getElementById('categoryExpensesList').innerHTML = categoryExpenses
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .map(exp => `
+                    <tr>
+                        <td>${formatDate(exp.date)}</td>
+                        <td>${exp.description}</td>
+                        <td class="amount">${formatAmount(exp.amount)}</td>
+                    </tr>
+                `).join('');
+            
+            // Show the section
+            const categoryDetails = document.getElementById('categoryDetails');
+            bootstrap.Collapse.getOrCreateInstance(categoryDetails).show();
+        }
+
+        // Add close button handler
+        document.querySelector('#categoryDetails .btn-close').addEventListener('click', () => {
+            const categoryDetails = document.getElementById('categoryDetails');
+            bootstrap.Collapse.getOrCreateInstance(categoryDetails).hide();
         });
     </script>
 </body>
