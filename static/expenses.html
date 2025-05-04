@@ -75,6 +75,17 @@
                 opacity: 0;
             }
         }
+        .badge.category-super { background-color: #2563eb !important; }
+        .badge.category-xofa { background-color: #7c3aed !important; }
+        .badge.category-food_drink { background-color: #059669 !important; }
+        .badge.category-save_inv { background-color: #10b981 !important; }
+        .badge.category-recurrent { background-color: #f59e0b !important; }
+        .badge.category-clothing { background-color: #ec4899 !important; }
+        .badge.category-personal { background-color: #8b5cf6 !important; }
+        .badge.category-taxes { background-color: #dc2626 !important; }
+        .badge.category-transport { background-color: #6366f1 !important; }
+        .badge.category-health { background-color: #06b6d4 !important; }
+        .badge.category-other { background-color: #6b7280 !important; }
     </style>
 </head>
 <body class="bg-light">
@@ -168,6 +179,11 @@
                                             <option value="food_drink">Food & Drink</option>
                                             <option value="save_inv">Save & Inv</option>
                                             <option value="recurrent">Recurrent</option>
+                                            <option value="clothing">Clothing</option>
+                                            <option value="personal">Personal</option>
+                                            <option value="taxes">Taxes</option>
+                                            <option value="transport">Transport</option>
+                                            <option value="health">Health</option>
                                             <option value="other">Other</option>
                                         </select>
                                     </div>
@@ -413,6 +429,11 @@
             food_drink: '#059669',  // Green
             save_inv: '#10b981',   // Emerald
             recurrent: '#f59e0b',  // Orange
+            clothing: '#ec4899',   // Pink
+            personal: '#8b5cf6',   // Purple
+            taxes: '#dc2626',      // Red
+            transport: '#6366f1',  // Indigo
+            health: '#06b6d4',     // Cyan
             other: '#6b7280'       // Gray
         };
 
@@ -668,7 +689,7 @@
                     <tr>
                         <td>${formatDate(exp.date)}</td>
                         <td>
-                            <span class="badge bg-secondary">${exp.category}</span>
+                            <span class="badge category-${exp.category}">${exp.category}</span>
                         </td>
                         <td>${exp.description}</td>
                         <td class="amount">${formatAmount(exp.amount)}</td>
