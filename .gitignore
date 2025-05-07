@@ -5,6 +5,9 @@ env/
 .venv
 ENV/
 
+# Database
+expenses.db
+
 # Python
 __pycache__/
 *.py[cod]
