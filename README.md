@@ -8,6 +8,7 @@ A simple web application to track daily expenses. Built with Flask and SQLite, d
 - Real-time expense tracking
 - Responsive design
 - SQLite database for data persistence
+- Sample data generator for testing
 
 ## Setup
 
@@ -28,18 +29,32 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-3. Run the application:
+3. Generate a sample database (optional):
+```bash
+python create_sample_db.py
+```
+This will create a sample database with 3 months of random expense data in the `instance/` directory.
+
+4. Run the application:
 ```bash
 python app.py
 ```
 
-4. Access the application at `http://localhost:5000` or `http://<your-raspberry-pi-ip>:5000`
+5. Access the application at `http://localhost:5000` or `http://<your-raspberry-pi-ip>:5000`
 
 ## Usage
 
 1. Enter an amount in the input field
 2. Click "Add Expense" to record the expense
 3. View your recent expenses in the list below
+
+## Database Management
+
+The application uses SQLite for data storage:
+- The database file is stored in the `instance/` directory
+- A backup script (`backup.sh`) is included to export data to CSV
+- The database file is gitignored to prevent accidental commits
+- Use `create_sample_db.py` to generate test data
 
 ## Running on Raspberry Pi
 
@@ -63,6 +78,8 @@ The application consists of:
 - `app.py`: Flask backend with SQLite database
 - `static/index.html`: Frontend interface
 - `static/styles.css`: Styling
+- `create_sample_db.py`: Sample data generator
+- `backup.sh`: Database backup script
 
 ## License
 
