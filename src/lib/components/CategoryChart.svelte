@@ -18,6 +18,8 @@
   let chartComponent = null;
   /** @type {function|null} */
   let unsubscribe = null;
+  /** @type {boolean} */
+  let chartInitialized = false;
   
   /**
    * Dynamically import chart components to prevent SSR issues
@@ -25,18 +27,25 @@
    */
   const importChartComponents = async () => {
     if (browser) {
-      const { Doughnut } = await import('svelte-chartjs');
-      const ChartJS = await import('chart.js');
-      
-      ChartJS.Chart.register(
-        ChartJS.ArcElement,
-        ChartJS.Title,
-        ChartJS.Tooltip,
-        ChartJS.Legend,
-        ChartJS.CategoryScale
-      );
-      
-      return { Doughnut, ChartJS };
+      try {
+        const { Doughnut } = await import('svelte-chartjs');
+        const ChartJS = await import('chart.js');
+        
+        ChartJS.Chart.register(
+          ChartJS.ArcElement,
+          ChartJS.Title,
+          ChartJS.Tooltip,
+          ChartJS.Legend,
+          ChartJS.CategoryScale
+        );
+        
+        console.log('Chart components loaded successfully');
+        return { Doughnut, ChartJS };
+      } catch (err) {
+        console.error('Failed to load chart components:', err);
+        error = 'Failed to load chart components';
+        return null;
+      }
     }
     return null;
   };
@@ -71,7 +80,7 @@
   $: chartOptions = {
     plugins: {
       legend: {
-        position: 'right',
+        display: false // Hide default legend for mobile
       },
       tooltip: {
         callbacks: {
@@ -88,7 +97,7 @@
         }
       }
     },
-    cutout: '70%',
+    cutout: '65%',
     responsive: true,
     maintainAspectRatio: false
   };
@@ -96,19 +105,38 @@
   // Initialize on the client side
   onMount(() => {
     const initializeChart = async () => {
-      // Import chart components on the client side
-      chartComponent = await importChartComponents();
+      loading = true;
       
-      if ($currentDate) {
+      if (!browser) {
+        console.log('Not in browser environment');
+        loading = false;
+        return;
+      }
+      
+      // Import chart components on the client side
+      try {
+        console.log('Importing chart components');
+        chartComponent = await importChartComponents();
+        chartInitialized = chartComponent !== null;
+        console.log('Chart initialization:', chartInitialized ? 'success' : 'failed');
+      } catch (err) {
+        console.error('Error initializing chart:', err);
+        error = 'Failed to initialize chart component';
+      }
+      
+      if ($currentDate && chartInitialized) {
+        console.log('Loading chart data', $currentDate);
         loadChartData();
       }
       
       // Watch for date changes
       unsubscribe = currentDate.subscribe(value => {
-        if (value) {
+        if (value && chartInitialized) {
           loadChartData();
         }
       });
+      
+      loading = false;
     };
     
     initializeChart();
@@ -138,10 +166,13 @@
       }
       
       const data = await response.json();
+      console.log('Chart data received:', data);
       
       // Ensure data is an array
       chartData = Array.isArray(data) ? data : [];
       totalAmount = chartData.reduce((sum, item) => sum + item.amount, 0);
+      
+      console.log('Chart data processed:', chartData.length, 'categories, total:', totalAmount);
     } catch (err) {
       console.error('Error loading chart data:', err);
       error = err instanceof Error ? err.message : 'Failed to load chart data';
@@ -152,9 +183,9 @@
   }
 </script>
 
-<div class="card mb-4">
-  <div class="card-body">
-    <h3 class="card-title mb-4">Category Distribution</h3>
+<div class="card mb-3">
+  <div class="card-body p-3">
+    <h3 class="card-title mb-3">Category Distribution</h3>
     
     {#if loading}
       <div class="text-center">
@@ -171,8 +202,8 @@
       </div>
     {:else if chartData.length === 0}
       <p class="text-center text-muted">No expense data for this month</p>
-    {:else if browser && chartComponent}
-      <div class="chart-container" style="position: relative; height: 300px;">
+    {:else if browser && chartComponent && chartInitialized}
+      <div class="chart-container" style="position: relative; height: 250px;">
         <svelte:component this={chartComponent.Doughnut} data={chartDataConfig} options={chartOptions} />
         
         <!-- Center text overlay -->
@@ -181,6 +212,26 @@
           <div class="total-label">Total</div>
         </div>
       </div>
+      
+      <!-- Custom mobile-friendly legend -->
+      <div class="chart-legend mt-3">
+        {#each chartData as item, i}
+          <div class="legend-item d-flex justify-content-between align-items-center py-1">
+            <div class="d-flex align-items-center">
+              <span class="color-dot me-2" style="background-color: {backgroundColors[i % backgroundColors.length]};"></span>
+              <span class="legend-label">{item.category}</span>
+            </div>
+            <div class="d-flex flex-column align-items-end">
+              <span class="legend-value">${item.amount.toFixed(2)}</span>
+              <span class="legend-percent text-muted">{((item.amount / totalAmount) * 100).toFixed(1)}%</span>
+            </div>
+          </div>
+        {/each}
+      </div>
+    {:else if browser && !chartInitialized}
+      <div class="alert alert-warning">
+        Chart library failed to initialize. Try refreshing the page.
+      </div>
     {/if}
   </div>
 </div>
@@ -188,6 +239,8 @@
 <style>
   .chart-container {
     position: relative;
+    max-width: 100%;
+    margin: 0 auto;
   }
   
   .chart-center-total {
@@ -201,12 +254,62 @@
   }
   
   .total-amount {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     font-weight: bold;
   }
   
   .total-label {
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     color: #6b7280;
+  }
+  
+  .chart-legend {
+    font-size: 0.9rem;
+    max-height: 250px;
+    overflow-y: auto;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 0.5rem;
+  }
+  
+  .legend-item {
+    padding: 0.25rem 0;
+    border-bottom: 1px solid #f3f4f6;
+  }
+  
+  .color-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  
+  .legend-label {
+    text-transform: capitalize;
+  }
+  
+  .legend-percent {
+    font-size: 0.75rem;
+  }
+  
+  /* iPhone-specific optimizations */
+  @media (max-width: 428px) {
+    .card-body {
+      padding: 0.75rem;
+    }
+    
+    .chart-container {
+      height: 220px !important;
+    }
+    
+    .total-amount {
+      font-size: 1.1rem;
+    }
+    
+    .legend-label {
+      max-width: 140px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   }
 </style> 

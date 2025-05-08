@@ -1,0 +1,17 @@
+{
+	"/": [],
+	"/api/csv": [
+		"src/routes/api/csv/+server.js"
+	],
+	"/api/expenses": [
+		"src/routes/api/expenses/+server.js"
+	],
+	"/api/expenses/summary": [
+		"src/routes/api/expenses/summary/+server.js"
+	],
+	"/api/expenses/[id]": [
+		"src/routes/api/expenses/[id]/+server.js"
+	],
+	"/expenses": [],
+	"/[...catchall]": []
+}
