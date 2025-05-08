@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { deleteExpense } from '$lib/stores/expenses';
+import { deleteExpense } from '$lib/server/db';
 
 /**
  * DELETE handler for removing an expense by ID - matches original Flask app
@@ -18,7 +18,7 @@ export async function DELETE(event) {
       return json({ error: 'Invalid expense ID' }, { status: 400 });
     }
     
-    const success = await deleteExpense(expenseId);
+    const success = deleteExpense(expenseId);
     
     if (!success) {
       return json({ error: 'Expense not found' }, { status: 404 });

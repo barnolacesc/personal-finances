@@ -1,9 +1,9 @@
 import { json } from '@sveltejs/kit';
 import { 
-  getFilteredExpenses,
+  getExpensesForMonth,
   getExpenseSummary,
-  addExpense,
-} from '$lib/stores/expenses';
+  addExpense
+} from '$lib/server/db';
 
 /**
  * GET handler for expenses - matches original Flask app
@@ -19,12 +19,12 @@ export async function GET({ url }) {
     
     // If route matches /api/expenses/summary
     if (url.pathname.endsWith('/summary')) {
-      const summary = await getExpenseSummary(year, month);
+      const summary = getExpenseSummary(year, month);
       return json(summary);
     }
     
     // Default route /api/expenses - match the original app's response format
-    const expenses = await getFilteredExpenses(year, month);
+    const expenses = getExpensesForMonth(year, month);
     return json({
       expenses: expenses,
       month: parseInt(String(month)),
@@ -73,7 +73,7 @@ export async function POST({ request }) {
     }
     
     // Create new expense
-    const newExpense = await addExpense({
+    const newExpense = addExpense({
       amount,
       description,
       category,
