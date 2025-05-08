@@ -1,0 +1,14 @@
+[Unit]
+Description=Personal Finances SvelteKit Application
+After=network.target
+
+[Service]
+User=cesc
+WorkingDirectory=/home/cesc/personal-finances
+Environment="NODE_ENV=production"
+ExecStart=/usr/bin/node build
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target 
