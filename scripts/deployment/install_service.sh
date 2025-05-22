@@ -10,7 +10,7 @@ fi
 systemctl stop personal-finances 2>/dev/null
 
 # Copy service file to systemd directory
-cp personal-finances.service /etc/systemd/system/
+cp "$(dirname "$0")/personal-finances.service" /etc/systemd/system/
 
 # Reload systemd to recognize new service
 systemctl daemon-reload

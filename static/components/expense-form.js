@@ -1,10 +1,10 @@
-class ExpenseForm extends HTMLElement {
+import { CONFIG, CategoryHelper, CurrencyHelper } from './config.js';
+import { ApiService, ErrorHandler } from './api-service.js';
+import { BaseComponent, EventManager } from './event-manager.js';
+
+class ExpenseForm extends BaseComponent {
     constructor() {
         super();
-        this.categories = [
-            'super', 'xofa', 'food_drink', 'save_inv', 'recurrent',
-            'clothing', 'personal', 'taxes', 'transport', 'health', 'other'
-        ];
     }
 
     connectedCallback() {
@@ -13,6 +13,10 @@ class ExpenseForm extends HTMLElement {
     }
 
     render() {
+        const categoryOptions = CategoryHelper.getAllCategories()
+            .map(cat => `<option value="${cat}">${CategoryHelper.getCategoryLabel(cat)}</option>`)
+            .join('');
+
         this.innerHTML = `
             <div class="card shadow-sm mb-4">
                 <div class="card-header py-3">
@@ -33,12 +37,12 @@ class ExpenseForm extends HTMLElement {
                                 <div class="col-sm-6">
                                     <label for="amount" class="form-label">Amount</label>
                                     <div class="input-group">
-                                        <span class="input-group-text">€</span>
+                                        <span class="input-group-text">${CONFIG.CURRENCY.symbol}</span>
                                         <input type="text" 
                                                class="form-control" 
                                                id="amount" 
                                                name="amount" 
-                                               pattern="[0-9]*[.,]?[0-9]*"
+                                               pattern="${CONFIG.VALIDATION.AMOUNT_PATTERN}"
                                                inputmode="decimal"
                                                placeholder="0.00"
                                                required>
@@ -48,9 +52,7 @@ class ExpenseForm extends HTMLElement {
                                     <label for="category" class="form-label">Category</label>
                                     <select class="form-select" id="category" name="category" required>
                                         <option value="">Select category...</option>
-                                        ${this.categories.map(cat => `
-                                            <option value="${cat}">${this.formatCategory(cat)}</option>
-                                        `).join('')}
+                                        ${categoryOptions}
                                     </select>
                                 </div>
                                 <div class="col-12">
@@ -59,7 +61,7 @@ class ExpenseForm extends HTMLElement {
                                            class="form-control" 
                                            id="description" 
                                            name="description" 
-                                           maxlength="50" 
+                                           maxlength="${CONFIG.VALIDATION.DESCRIPTION_MAX_LENGTH}" 
                                            required>
                                 </div>
                                 <div class="col-12">
@@ -75,59 +77,41 @@ class ExpenseForm extends HTMLElement {
         `;
     }
 
-    formatCategory(category) {
-        return category
-            .split('_')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ');
-    }
-
     setupEventListeners() {
         const form = this.querySelector('#expenseForm');
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const formData = new FormData(form);
-            const data = {
-                amount: parseFloat(formData.get('amount').replace(',', '.')),
-                category: formData.get('category'),
-                description: formData.get('description')
-            };
-
-            try {
-                const response = await fetch('/api/expenses', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(data)
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to add expense');
-                }
-
-                form.reset();
-                window.showToast('Expense added successfully', 'success');
-                
-                // Only dispatch to document to avoid double events
-                const expenseAddedEvent = new CustomEvent('expenseadded', {
-                    bubbles: true,
-                    composed: true,
-                    detail: { success: true }
-                });
-                document.dispatchEvent(expenseAddedEvent);
-            } catch (error) {
-                window.showToast('Failed to add expense', 'error');
-                console.error('Error:', error);
-            }
-        });
+        this.addEventListenerWithCleanup(form, 'submit', this.handleSubmit.bind(this));
 
         // Add input handler for amount field to handle commas
         const amountInput = this.querySelector('#amount');
-        amountInput.addEventListener('input', (e) => {
-            e.target.value = e.target.value.replace(/[^0-9.,]/g, '');
-        });
+        this.addEventListenerWithCleanup(amountInput, 'input', this.handleAmountInput.bind(this));
+    }
+
+    handleAmountInput(e) {
+        // Only allow numbers, commas, and decimal points
+        e.target.value = e.target.value.replace(/[^0-9.,]/g, '');
+    }
+
+    async handleSubmit(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(e.target);
+        const data = {
+            amount: CurrencyHelper.parseAmount(formData.get('amount')),
+            category: formData.get('category'),
+            description: formData.get('description')
+        };
+
+        try {
+            const result = await ApiService.createExpense(data);
+            
+            e.target.reset();
+            window.showToast('Expense added successfully', 'success');
+            
+            // Emit event using the new event system
+            EventManager.emitExpenseAdded(result);
+        } catch (error) {
+            ErrorHandler.handle(error, 'ExpenseForm.handleSubmit');
+        }
     }
 }
 

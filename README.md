@@ -1,86 +1,182 @@
 # Personal Expenses Tracker
 
-A simple web application to track daily expenses. Built with Flask and SQLite, designed to run on a Raspberry Pi.
+A simple, modular web application to track daily expenses. Built with Flask backend and modern JavaScript frontend components, designed to run both locally and on a Raspberry Pi.
 
 ## Features
 
-- Simple expense input
-- Real-time expense tracking
-- Responsive design
-- SQLite database for data persistence
-- Sample data generator for testing
+- **Modular Architecture**: Clean separation of concerns with reusable components
+- **Dark/Light Theme**: Full theme support with automatic system preference detection
+- **Real-time Expense Tracking**: Add, edit, and delete expenses with instant feedback
+- **Interactive Charts**: Category-based expense visualization with clickable charts
+- **Mobile-First Design**: Responsive design optimized for mobile and desktop
+- **Category Management**: Predefined categories with color coding
+- **Data Export**: CSV export functionality for backup and analysis
+- **Service Deployment**: Ready for Raspberry Pi deployment with systemd
 
-## Setup
+## Quick Start
 
-1. Create and activate a virtual environment:
+1. **Clone and Setup**:
 ```bash
-# Create virtual environment
+git clone https://github.com/your-username/personal-finances.git
+cd personal-finances
+
+# Create and activate virtual environment
 python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Activate virtual environment
-# On Linux/Mac:
-source venv/bin/activate
-# On Windows:
-# venv\Scripts\activate
-```
-
-2. Install Python dependencies:
-```bash
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-3. Generate a sample database (optional):
+2. **Initialize Database**:
 ```bash
-python create_sample_db.py
+# Create database (optional sample data)
+python scripts/database/create_sample_db.py
 ```
-This will create a sample database with 3 months of random expense data in the `instance/` directory.
 
-4. Run the application:
+3. **Run Application**:
 ```bash
 python app.py
 ```
 
-5. Access the application at `http://localhost:5000` or `http://<your-raspberry-pi-ip>:5000`
+4. **Access**: Navigate to `http://localhost:5001` or `http://<your-ip>:5001`
 
-## Usage
+## Project Structure
 
-1. Enter an amount in the input field
-2. Click "Add Expense" to record the expense
-3. View your recent expenses in the list below
+```
+├── app.py                      # Flask backend application
+├── data/                       # Database and exports
+│   └── expenses.db            # SQLite database
+├── static/                     # Frontend assets
+│   ├── components/            # Modular JavaScript components
+│   │   ├── config.js         # Centralized configuration
+│   │   ├── api-service.js    # HTTP service layer  
+│   │   ├── event-manager.js  # Event system
+│   │   ├── expense-form.js   # Expense creation form
+│   │   ├── expense-list.js   # Expense listing/editing
+│   │   ├── category-chart.js # Interactive charts
+│   │   ├── date-navigation.js # Date/week navigation
+│   │   ├── navbar.js         # Navigation component
+│   │   └── toast.js          # Notification system
+│   ├── styles/
+│   │   └── theme.css         # Centralized styling & themes
+│   ├── index.html            # Home page
+│   ├── expenses.html         # Main application
+│   └── pficon.png           # App icon
+├── scripts/                   # Organized utility scripts
+│   ├── database/             # Database management
+│   │   ├── init_db.py       # Database initialization
+│   │   ├── create_sample_db.py # Sample data generator
+│   │   ├── restore_csv.py   # CSV import utility
+│   │   └── export_csv.py    # CSV export utility
+│   └── deployment/           # Deployment utilities
+│       ├── install_service.sh # Service installation
+│       ├── personal-finances.service # Systemd service
+│       └── backup.sh        # Database backup script
+├── ARCHITECTURE.md           # Detailed architecture documentation
+├── requirements.txt          # Python dependencies
+└── README.md                # This file
+```
+
+## Architecture
+
+This application uses a **modular architecture** for improved maintainability:
+
+- **Backend**: Flask with SQLite database
+- **Frontend**: Vanilla JavaScript with Web Components
+- **Configuration**: Centralized config management
+- **API Layer**: Structured HTTP service layer  
+- **Event System**: Component communication via custom events
+- **Styling**: CSS variables for theming, external stylesheets
+
+For detailed architecture information, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Database Management
 
-The application uses SQLite for data storage:
-- The database file is stored in the `instance/` directory
-- A backup script (`backup.sh`) is included to export data to CSV
-- The database file is gitignored to prevent accidental commits
-- Use `create_sample_db.py` to generate test data
+### Daily Usage
+- **Automatic Backups**: Export to CSV via the web interface
+- **Data Location**: `data/expenses.db` (SQLite)
+- **Manual Export**: `python scripts/database/export_csv.py`
 
-## Running on Raspberry Pi
+### Development
+- **Sample Data**: `python scripts/database/create_sample_db.py`
+- **Database Reset**: Delete `data/expenses.db` and restart app
+- **Import Data**: `python scripts/database/restore_csv.py <file.csv>`
 
-To run this application on your Raspberry Pi Zero 2W:
+## Deployment
 
-1. Clone this repository to your Raspberry Pi
-2. Create and activate virtual environment as shown in Setup step 1
-3. Install the requirements as shown in Setup step 2
-4. Run the application
-5. Access it from any device on your local network using the Raspberry Pi's IP address
-
-Note: Make sure you have Python and venv installed on your Raspberry Pi:
+### Local Development
 ```bash
-sudo apt-get update
-sudo apt-get install python3-venv
+python app.py  # Runs on http://localhost:5001
 ```
+
+### Raspberry Pi (Systemd Service)
+```bash
+# Install as system service
+sudo scripts/deployment/install_service.sh
+
+# Manual control
+sudo systemctl start personal-finances
+sudo systemctl enable personal-finances  # Auto-start on boot
+sudo systemctl status personal-finances  # Check status
+```
+
+### Manual Deployment
+1. Clone repository to target server
+2. Setup Python virtual environment
+3. Install dependencies
+4. Configure service or run manually
+5. Access via server IP on port 5001
+
+## Configuration
+
+### Adding Categories
+1. Edit `static/components/config.js` - add to `CONFIG.CATEGORIES`
+2. Add CSS styling to `static/styles/theme.css`
+3. Categories automatically appear in dropdowns
+
+### Theme Customization
+- Modify CSS variables in `static/styles/theme.css`
+- Both light and dark themes supported
+- Automatic system preference detection
+
+### API Endpoints
+- Configure in `static/components/config.js`
+- All HTTP requests centralized in `api-service.js`
 
 ## Development
 
-The application consists of:
-- `app.py`: Flask backend with SQLite database
-- `static/index.html`: Frontend interface
-- `static/styles.css`: Styling
-- `create_sample_db.py`: Sample data generator
-- `backup.sh`: Database backup script
+### Adding Features
+1. Follow the modular architecture patterns
+2. Use the centralized configuration system
+3. Implement proper error handling
+4. Add both light/dark theme support
+
+### Component Development
+```javascript
+import { BaseComponent, EventManager } from './event-manager.js';
+import { CONFIG, CategoryHelper } from './config.js';
+
+class MyComponent extends BaseComponent {
+    connectedCallback() {
+        this.render();
+        this.setupEventListeners();
+    }
+    
+    setupEventListeners() {
+        this.listenToGlobalEvent('expenseadded', this.handleUpdate.bind(this));
+    }
+}
+```
+
+## Contributing
+
+1. Follow the established modular architecture
+2. Update both light and dark theme styles
+3. Add proper error handling
+4. Update documentation for new features
+5. Test on both desktop and mobile
 
 ## License
 
-MIT 
+MIT License - See [LICENSE](LICENSE) file for details. 
