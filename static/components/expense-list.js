@@ -5,6 +5,10 @@ class ExpenseList extends HTMLElement {
         this.currentMonth = new Date().getMonth() + 1;
         this.currentYear = new Date().getFullYear();
         this.currentWeek = 'all';
+        this.categories = [
+            'super', 'xofa', 'food_drink', 'save_inv', 'recurrent',
+            'clothing', 'personal', 'taxes', 'transport', 'health', 'other'
+        ];
     }
 
     connectedCallback() {
@@ -40,42 +44,26 @@ class ExpenseList extends HTMLElement {
                     </div>
                 </div>
             </div>
-
-            <!-- Delete Confirmation Modal -->
-            <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            Are you sure you want to delete this expense?
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
         `;
     }
 
     setupEventListeners() {
-        const deleteModal = new bootstrap.Modal(this.querySelector('#deleteModal'));
-        const confirmDeleteBtn = this.querySelector('#confirmDeleteBtn');
-
-        // Use event delegation for the dynamically created delete button
+        // Listen for clicks on expense items for editing
         this.addEventListener('click', (e) => {
-            if (e.target.closest('#deleteLastBtn')) {
-                deleteModal.show();
+            const expenseItem = e.target.closest('.expense-item');
+            const saveBtn = e.target.closest('.save-expense-btn');
+            const cancelBtn = e.target.closest('.cancel-expense-btn');
+            
+            if (expenseItem && !expenseItem.classList.contains('editing') && !saveBtn && !cancelBtn) {
+                // Enter edit mode
+                this.editExpense(expenseItem);
+            } else if (saveBtn) {
+                // Save changes
+                this.saveExpenseEdit(saveBtn);
+            } else if (cancelBtn) {
+                // Cancel editing
+                this.cancelExpenseEdit(cancelBtn);
             }
-        });
-
-        confirmDeleteBtn.addEventListener('click', async () => {
-            await this.deleteLastExpense();
-            deleteModal.hide();
         });
 
         // Listen for date changes from date-navigation component
@@ -151,7 +139,9 @@ class ExpenseList extends HTMLElement {
             filteredExpenses.forEach((expense, index) => {
                 const isFirst = index === 0; // Most recent expense
                 const item = document.createElement('div');
-                item.className = 'list-group-item px-3 py-3';
+                item.className = 'list-group-item expense-item px-3 py-3';
+                item.style.cursor = 'pointer';
+                item.dataset.expenseId = expense.id;
                 item.innerHTML = `
                     <div class="d-flex justify-content-between align-items-start">
                         <div class="flex-grow-1">
@@ -162,17 +152,13 @@ class ExpenseList extends HTMLElement {
                                 <small class="text-muted">${this.formatDate(expense.date)}</small>
                                 ${isFirst ? '<span class="badge bg-light text-dark ms-2"><i class="bi bi-clock"></i> Latest</span>' : ''}
                             </div>
-                            <div class="fw-medium">${expense.description}</div>
+                            <div class="fw-medium expense-description">${expense.description}</div>
                         </div>
                         <div class="text-end ms-3 d-flex align-items-center gap-2">
-                            <span class="fw-bold fs-6">€${expense.amount.toFixed(2)}</span>
-                            ${isFirst ? `
-                                <button class="btn btn-outline-danger btn-sm" 
-                                        id="deleteLastBtn"
-                                        title="Delete this expense (quick fix)">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            ` : ''}
+                            <span class="fw-bold fs-6 expense-amount">€${expense.amount.toFixed(2)}</span>
+                            <small class="text-muted">
+                                <i class="bi bi-pencil-square"></i>
+                            </small>
                         </div>
                     </div>
                 `;
@@ -202,12 +188,164 @@ class ExpenseList extends HTMLElement {
             .join(' ');
     }
 
-    async deleteLastExpense() {
-        const lastExpense = this.expenses[0];
-        if (!lastExpense) return;
+    editExpense(expenseItem) {
+        if (expenseItem.classList.contains('editing')) return;
+
+        // Close any currently editing expense first
+        const currentlyEditing = this.querySelector('.expense-item.editing');
+        if (currentlyEditing && currentlyEditing !== expenseItem) {
+            this.cancelEditingItem(currentlyEditing);
+        }
+
+        const expenseId = expenseItem.dataset.expenseId;
+        const expense = this.expenses.find(e => e.id == expenseId);
+        if (!expense) return;
+
+        // Store original content before editing
+        expenseItem.dataset.originalContent = expenseItem.innerHTML;
+
+        // Add editing class for visual feedback
+        expenseItem.classList.add('editing');
+        // Don't set inline styles, let CSS handle the theming
+        expenseItem.style.border = '2px solid #007bff';
+
+        // Get current values
+        const amount = expense.amount;
+        const category = expense.category;
+        const description = expense.description;
+
+        // Create edit form
+        expenseItem.innerHTML = `
+            <div class="edit-form">
+                <div class="row g-3">
+                    <div class="col-sm-4">
+                        <label class="form-label small fw-bold">Amount</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">€</span>
+                            <input type="text" 
+                                   class="form-control edit-amount" 
+                                   value="${amount}"
+                                   pattern="[0-9]*[.,]?[0-9]*"
+                                   inputmode="decimal">
+                        </div>
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label small fw-bold">Category</label>
+                        <select class="form-select form-select-sm edit-category">
+                            ${this.categories.map(cat => `
+                                <option value="${cat}" ${cat === category ? 'selected' : ''}>
+                                    ${this.formatCategory(cat)}
+                                </option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label small fw-bold">Description</label>
+                        <input type="text" 
+                               class="form-control form-control-sm edit-description" 
+                               value="${description}"
+                               maxlength="50">
+                    </div>
+                </div>
+                <div class="d-flex gap-2 mt-3">
+                    <button class="btn btn-success btn-sm save-expense-btn" data-expense-id="${expenseId}">
+                        <i class="bi bi-check-lg"></i> Save
+                    </button>
+                    <button class="btn btn-secondary btn-sm cancel-expense-btn" data-expense-id="${expenseId}">
+                        <i class="bi bi-x-lg"></i> Cancel
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm ms-auto delete-expense-btn" data-expense-id="${expenseId}">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Add event listener for delete button
+        const deleteBtn = expenseItem.querySelector('.delete-expense-btn');
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.deleteExpense(expenseId);
+        });
+
+        // Focus on description field
+        setTimeout(() => {
+            expenseItem.querySelector('.edit-description').focus();
+        }, 100);
+    }
+
+    async saveExpenseEdit(saveBtn) {
+        const expenseId = saveBtn.dataset.expenseId;
+        const expenseItem = saveBtn.closest('.expense-item');
+        
+        const amount = parseFloat(expenseItem.querySelector('.edit-amount').value.replace(',', '.'));
+        const category = expenseItem.querySelector('.edit-category').value;
+        const description = expenseItem.querySelector('.edit-description').value.trim();
+
+        // Validation
+        if (!amount || amount <= 0) {
+            window.showToast('Please enter a valid amount', 'error');
+            return;
+        }
+        if (!category) {
+            window.showToast('Please select a category', 'error');
+            return;
+        }
+        if (!description) {
+            window.showToast('Please enter a description', 'error');
+            return;
+        }
 
         try {
-            const response = await fetch(`/api/expenses/${lastExpense.id}`, {
+            const response = await fetch(`/api/expenses/${expenseId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    amount,
+                    category,
+                    description
+                })
+            });
+
+            if (!response.ok) throw new Error('Failed to update expense');
+
+            window.showToast('Expense updated successfully', 'success');
+            this.loadExpenses(); // Reload to get fresh data
+        } catch (error) {
+            console.error('Error updating expense:', error);
+            window.showToast('Failed to update expense', 'error');
+        }
+    }
+
+    cancelExpenseEdit(cancelBtn) {
+        const expenseItem = cancelBtn.closest('.expense-item');
+        this.cancelEditingItem(expenseItem);
+    }
+
+    cancelEditingItem(expenseItem) {
+        // Remove editing state
+        expenseItem.classList.remove('editing');
+        expenseItem.style.border = '';
+        
+        // Restore original content if available
+        if (expenseItem.dataset.originalContent) {
+            expenseItem.innerHTML = expenseItem.dataset.originalContent;
+            delete expenseItem.dataset.originalContent;
+        } else {
+            // Fallback: reload expenses if original content not available
+            this.loadExpenses();
+        }
+    }
+
+    async deleteExpense(expenseId) {
+        if (!confirm('Are you sure you want to delete this expense?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/expenses/${expenseId}`, {
                 method: 'DELETE'
             });
 
