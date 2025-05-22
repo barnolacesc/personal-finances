@@ -105,6 +105,17 @@ For detailed architecture information, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Deployment
 
+### 🐳 Docker (Recommended)
+```bash
+# Quick start with Docker Compose
+docker compose up -d
+
+# Access at http://localhost:5001
+# Database persisted in ./data/ directory
+```
+
+For detailed Docker deployment instructions, see [DOCKER.md](DOCKER.md).
+
 ### Local Development
 ```bash
 python app.py  # Runs on http://localhost:5001

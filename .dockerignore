@@ -1,0 +1,45 @@
+# Git files
+.git/
+.gitignore
+
+# Documentation
+README.md
+ARCHITECTURE.md
+FEATURE_SUGGESTIONS.md
+
+# Python cache and virtual environment
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+.env
+.venv
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Database files (will be mounted as volume)
+data/
+instance/
+
+# Scripts directory (not needed at runtime)
+scripts/
+
+# Logs
+*.log
+
+# Other development files
+*.md
+.pytest_cache/
+.coverage
+htmlcov/ 
