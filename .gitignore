@@ -68,6 +68,7 @@ Thumbs.db
 
 # Backups
 backups/
+exports/
 *.csv
 *.zip
 *.bak
