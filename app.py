@@ -179,6 +179,46 @@ def delete_expense(expense_id):
         db.session.rollback()
         return jsonify({'error': 'Server error deleting expense'}), 500
 
+@app.route('/api/expenses/<int:expense_id>', methods=['PUT'])
+def update_expense(expense_id):
+    try:
+        expense = Expense.query.get_or_404(expense_id)
+        data = request.get_json()
+        
+        if data is None:
+            return jsonify({'error': 'No JSON data received'}), 400
+        
+        # Validate required fields
+        required_fields = ['amount', 'category', 'description']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'{field.capitalize()} field is required'}), 400
+        
+        try:
+            amount = float(data['amount'])
+        except (ValueError, TypeError):
+            return jsonify({'error': 'Invalid amount value'}), 400
+        
+        category = data['category'].strip()
+        description = data['description'].strip()
+        
+        if not category or not description:
+            return jsonify({'error': 'Category and description cannot be empty'}), 400
+        
+        # Update expense
+        expense.amount = amount
+        expense.category = category
+        expense.description = description
+        
+        db.session.commit()
+        logger.info(f"Updated expense {expense_id}: ${amount:.2f} ({category})")
+        return jsonify(expense.to_dict())
+        
+    except Exception as e:
+        logger.error(f"Error updating expense {expense_id}: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Server error updating expense'}), 500
+
 def run_dev_server():
     extra_files = []
     # Watch static directory for changes
