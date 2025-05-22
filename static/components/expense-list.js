@@ -16,46 +16,27 @@ class ExpenseList extends HTMLElement {
     render() {
         this.innerHTML = `
             <div class="card shadow-sm mb-4">
-                <div class="card-header bg-white py-3">
-                    <h5 class="mb-0">
-                        <button class="btn btn-link text-decoration-none text-dark p-0 w-100 text-start d-flex justify-content-between align-items-center" 
-                                type="button" 
-                                data-bs-toggle="collapse" 
-                                data-bs-target="#expensesListSection">
-                            <span><i class="bi bi-list-ul me-2"></i>Recent Expenses</span>
-                            <i class="bi bi-chevron-down"></i>
-                        </button>
-                    </h5>
+                <div class="card-header py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <button class="btn btn-link text-decoration-none p-0 text-start d-flex align-items-center" 
+                                    type="button" 
+                                    data-bs-toggle="collapse" 
+                                    data-bs-target="#expensesListSection">
+                                <i class="bi bi-list-ul me-2"></i>Recent Expenses
+                                <i class="bi bi-chevron-down ms-2"></i>
+                            </button>
+                        </h5>
+                        <span id="totalAmount" class="fw-bold text-primary">€0.00</span>
+                    </div>
                 </div>
                 <div id="expensesListSection" class="collapse show">
-                    <div class="card-header bg-white border-top">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div></div>
-                            <button id="deleteLastBtn" 
-                                    class="btn btn-outline-danger btn-sm" 
-                                    disabled>
-                                <i class="bi bi-trash me-1"></i>Delete Last
-                            </button>
+                    <div class="card-body p-0">
+                        <div id="expensesList" class="list-group list-group-flush"></div>
+                        <div id="emptyState" class="text-center py-4 text-muted" style="display: none;">
+                            <i class="bi bi-receipt fs-1 mb-2 d-block"></i>
+                            <p class="mb-0">No expenses found for this period</p>
                         </div>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Category</th>
-                                    <th>Description</th>
-                                    <th class="amount">Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody id="expensesList"></tbody>
-                            <tfoot class="table-light">
-                                <tr>
-                                    <td colspan="3" class="text-end"><strong>Total:</strong></td>
-                                    <td class="amount"><strong id="totalAmount">€0.00</strong></td>
-                                </tr>
-                            </tfoot>
-                        </table>
                     </div>
                 </div>
             </div>
@@ -69,7 +50,7 @@ class ExpenseList extends HTMLElement {
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            Are you sure you want to delete the last expense?
+                            Are you sure you want to delete this expense?
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -82,12 +63,14 @@ class ExpenseList extends HTMLElement {
     }
 
     setupEventListeners() {
-        const deleteLastBtn = this.querySelector('#deleteLastBtn');
         const deleteModal = new bootstrap.Modal(this.querySelector('#deleteModal'));
         const confirmDeleteBtn = this.querySelector('#confirmDeleteBtn');
 
-        deleteLastBtn.addEventListener('click', () => {
-            deleteModal.show();
+        // Use event delegation for the dynamically created delete button
+        this.addEventListener('click', (e) => {
+            if (e.target.closest('#deleteLastBtn')) {
+                deleteModal.show();
+            }
         });
 
         confirmDeleteBtn.addEventListener('click', async () => {
@@ -134,12 +117,13 @@ class ExpenseList extends HTMLElement {
     }
 
     renderExpenses() {
-        const tbody = this.querySelector('#expensesList');
-        const deleteLastBtn = this.querySelector('#deleteLastBtn');
-        tbody.innerHTML = '';
+        const expensesList = this.querySelector('#expensesList');
+        const emptyState = this.querySelector('#emptyState');
+        expensesList.innerHTML = '';
         
         let total = 0;
         let hasExpenses = false;
+        let filteredExpenses = [];
 
         this.expenses.forEach(expense => {
             const date = new Date(expense.date);
@@ -156,24 +140,50 @@ class ExpenseList extends HTMLElement {
             if (this.currentWeek === 'all' || this.currentWeek === weekKey) {
                 hasExpenses = true;
                 total += expense.amount;
-
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${this.formatDate(date)}</td>
-                    <td>
-                        <span class="badge category-${expense.category}">
-                            ${this.formatCategory(expense.category)}
-                        </span>
-                    </td>
-                    <td>${expense.description}</td>
-                    <td class="amount">€${expense.amount.toFixed(2)}</td>
-                `;
-                tbody.appendChild(row);
+                filteredExpenses.push({ ...expense, date });
             }
         });
 
+        if (hasExpenses) {
+            emptyState.style.display = 'none';
+            expensesList.style.display = 'block';
+
+            filteredExpenses.forEach((expense, index) => {
+                const isFirst = index === 0; // Most recent expense
+                const item = document.createElement('div');
+                item.className = 'list-group-item px-3 py-3';
+                item.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1">
+                            <div class="d-flex align-items-center mb-1">
+                                <span class="badge category-${expense.category} me-2">
+                                    ${this.formatCategory(expense.category)}
+                                </span>
+                                <small class="text-muted">${this.formatDate(expense.date)}</small>
+                                ${isFirst ? '<span class="badge bg-light text-dark ms-2"><i class="bi bi-clock"></i> Latest</span>' : ''}
+                            </div>
+                            <div class="fw-medium">${expense.description}</div>
+                        </div>
+                        <div class="text-end ms-3 d-flex align-items-center gap-2">
+                            <span class="fw-bold fs-6">€${expense.amount.toFixed(2)}</span>
+                            ${isFirst ? `
+                                <button class="btn btn-outline-danger btn-sm" 
+                                        id="deleteLastBtn"
+                                        title="Delete this expense (quick fix)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+                expensesList.appendChild(item);
+            });
+        } else {
+            expensesList.style.display = 'none';
+            emptyState.style.display = 'block';
+        }
+
         this.querySelector('#totalAmount').textContent = `€${total.toFixed(2)}`;
-        deleteLastBtn.disabled = !hasExpenses;
     }
 
     formatDate(date) {

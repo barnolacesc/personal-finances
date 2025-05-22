@@ -14,27 +14,55 @@ class DateNavigation extends HTMLElement {
 
     render() {
         this.innerHTML = `
+            <style>
+                .date-nav-title {
+                    color: var(--bs-body-color, #000);
+                }
+                .date-nav-subtitle {
+                    color: var(--bs-secondary-color, #6c757d);
+                }
+                .date-nav-btn {
+                    color: var(--bs-body-color, #000);
+                }
+                .date-nav-btn:hover {
+                    color: var(--bs-primary, #0d6efd);
+                }
+                
+                /* Dark mode specific overrides */
+                [data-bs-theme="dark"] .date-nav-title {
+                    color: #ffffff !important;
+                }
+                [data-bs-theme="dark"] .date-nav-subtitle {
+                    color: #a0a0a0 !important;
+                }
+                [data-bs-theme="dark"] .date-nav-btn {
+                    color: #e0e0e0 !important;
+                }
+                [data-bs-theme="dark"] .date-nav-btn:hover {
+                    color: #0d6efd !important;
+                }
+            </style>
             <div class="d-flex flex-column align-items-center">
                 <div class="d-flex justify-content-center align-items-center gap-3 mb-2">
-                    <button id="prevMonthBtn" class="btn btn-link text-decoration-none p-0 fs-4">
+                    <button id="prevMonthBtn" class="btn btn-link text-decoration-none p-0 fs-4 date-nav-btn">
                         <i class="bi bi-chevron-left"></i>
                     </button>
-                    <h1 id="currentMonthBtn" class="mb-0 text-center" style="min-width: 200px">
+                    <h1 id="currentMonthBtn" class="mb-0 text-center date-nav-title" style="min-width: 200px">
                         ${this.formatMonth()}
                     </h1>
-                    <button id="nextMonthBtn" class="btn btn-link text-decoration-none p-0 fs-4">
+                    <button id="nextMonthBtn" class="btn btn-link text-decoration-none p-0 fs-4 date-nav-btn">
                         <i class="bi bi-chevron-right"></i>
                     </button>
                 </div>
 
                 <div class="d-flex justify-content-center align-items-center gap-2 mb-4">
-                    <button id="prevWeekBtn" class="btn btn-link text-decoration-none p-0">
+                    <button id="prevWeekBtn" class="btn btn-link text-decoration-none p-0 date-nav-btn">
                         <i class="bi bi-chevron-left"></i>
                     </button>
-                    <h4 id="currentWeekBtn" class="mb-0 text-center text-muted" style="min-width: 150px; font-size: 1.1rem;">
+                    <h4 id="currentWeekBtn" class="mb-0 text-center date-nav-subtitle" style="min-width: 150px; font-size: 1.1rem;">
                         All Month
                     </h4>
-                    <button id="nextWeekBtn" class="btn btn-link text-decoration-none p-0">
+                    <button id="nextWeekBtn" class="btn btn-link text-decoration-none p-0 date-nav-btn">
                         <i class="bi bi-chevron-right"></i>
                     </button>
                 </div>
