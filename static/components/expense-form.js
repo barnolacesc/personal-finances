@@ -15,9 +15,9 @@ class ExpenseForm extends HTMLElement {
     render() {
         this.innerHTML = `
             <div class="card shadow-sm mb-4">
-                <div class="card-header bg-white py-3">
+                <div class="card-header py-3">
                     <h5 class="mb-0">
-                        <button class="btn btn-link text-decoration-none text-dark p-0 w-100 text-start d-flex justify-content-between align-items-center" 
+                        <button class="btn btn-link text-decoration-none p-0 w-100 text-start d-flex justify-content-between align-items-center" 
                                 type="button" 
                                 data-bs-toggle="collapse" 
                                 data-bs-target="#expenseFormSection">

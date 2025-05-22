@@ -209,23 +209,35 @@ class CategoryChart extends HTMLElement {
                 return acc;
             }, {});
 
+            console.log('Category totals:', categoryTotals);
+
             // Sort categories by amount
             const sortedCategories = Object.entries(categoryTotals)
                 .sort(([,a], [,b]) => b - a);
 
+            console.log('Sorted categories:', sortedCategories);
+
             // Store categories for click handling
             this.currentCategories = sortedCategories;
 
-            // Prepare chart data
+            // Prepare chart data with debug logging
+            const colors = sortedCategories.map(([category]) => {
+                const color = this.getCategoryColor(category);
+                console.log(`Category: ${category}, Color: ${color}`);
+                return color;
+            });
+
             const data = {
                 labels: sortedCategories.map(([category]) => this.formatCategory(category)),
                 datasets: [{
                     data: sortedCategories.map(([,amount]) => amount),
-                    backgroundColor: sortedCategories.map(([category]) => this.getCategoryColor(category)),
+                    backgroundColor: colors,
                     borderWidth: 0,
                     hoverOffset: 15
                 }]
             };
+
+            console.log('Chart data:', data);
 
             // Update or create chart
             if (this.chart) {
@@ -277,17 +289,21 @@ class CategoryChart extends HTMLElement {
 
             // Update legend
             const legendContainer = this.querySelector('#chartLegend');
-            legendContainer.innerHTML = sortedCategories.map(([category, amount]) => `
-                <div class="d-flex align-items-center justify-content-between legend-item" 
-                     data-category="${category}" 
-                     style="cursor: pointer">
-                    <div class="d-flex align-items-center">
-                        <span class="color-dot me-2" style="background-color: ${this.getCategoryColor(category)}"></span>
-                        <span class="text-capitalize">${this.formatCategory(category)}</span>
+            legendContainer.innerHTML = sortedCategories.map(([category, amount]) => {
+                const color = this.getCategoryColor(category);
+                console.log(`Legend - Category: ${category}, Color: ${color}`);
+                return `
+                    <div class="d-flex align-items-center justify-content-between legend-item" 
+                         data-category="${category}" 
+                         style="cursor: pointer">
+                        <div class="d-flex align-items-center">
+                            <span class="color-dot me-2" style="background-color: ${color}"></span>
+                            <span class="text-capitalize">${this.formatCategory(category)}</span>
+                        </div>
+                        <strong>${this.formatAmount(amount)}</strong>
                     </div>
-                    <strong>${this.formatAmount(amount)}</strong>
-                </div>
-            `).join('');
+                `;
+            }).join('');
 
             // Add legend click handlers
             legendContainer.querySelectorAll('.legend-item').forEach(item => {
@@ -331,9 +347,9 @@ class CategoryChart extends HTMLElement {
     render() {
         this.innerHTML = `
             <div class="card shadow-sm">
-                <div class="card-header bg-white py-3">
+                <div class="card-header py-3">
                     <h5 class="mb-0">
-                        <button class="btn btn-link text-decoration-none text-dark p-0 w-100 text-start d-flex justify-content-between align-items-center" 
+                        <button class="btn btn-link text-decoration-none p-0 w-100 text-start d-flex justify-content-between align-items-center" 
                                 type="button" 
                                 data-bs-toggle="collapse" 
                                 data-bs-target="#chartSection">
@@ -359,7 +375,7 @@ class CategoryChart extends HTMLElement {
                     </div>
                     <!-- Category Details Section -->
                     <div id="categoryDetails" class="collapse">
-                        <div class="card-header border-top bg-white">
+                        <div class="card-header border-top">
                             <h6 class="mb-0 d-flex justify-content-between align-items-center">
                                 <span id="categoryDetailsTitle">Category Details</span>
                                 <button type="button" class="btn-close" aria-label="Close"></button>
