@@ -1,10 +1,8 @@
-name: CI/CD Pipeline
+name: Deploy to Raspberry Pi
 
 on:
   push:
-    branches: [ develop ]
-  pull_request:
-    branches: [ main ]
+    branches: [ develop, main ]
 
 jobs:
   test:
@@ -19,7 +17,7 @@ jobs:
           
   deploy:
     needs: test
-    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+    if: github.ref == 'refs/heads/main'
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
