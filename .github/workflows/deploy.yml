@@ -29,8 +29,19 @@ jobs:
           PI_PASSWORD: ${{ secrets.PI_PASSWORD }}
         run: |
           # Deploy to Raspberry Pi using password authentication
-          if ! sshpass -p "$PI_PASSWORD" ssh -o StrictHostKeyChecking=no $PI_USER@$PI_HOST "cd /home/cesc/personal-finances && git pull origin main && docker compose down && docker compose build --no-cache && docker compose up -d"; then
-            echo "Deployment failed"
+          if ! sshpass -p "$PI_PASSWORD" ssh -o StrictHostKeyChecking=no $PI_USER@$PI_HOST << 'EOF'
+            cd /home/cesc/personal-finances  # Replace with actual path on Pi
+            # Stash any local changes to allow clean pull
+            # These changes are preserved in the stash but not reapplied
+            git stash
+            # Pull latest changes
+            git pull origin main
+            # Rebuild and restart containers
+            docker compose down
+            docker compose build
+            docker compose up -d
+          EOF; then
+            echo "::error::Deployment failed - changes will not be merged to main"
             exit 1
           fi
           
@@ -41,6 +52,19 @@ jobs:
           PI_PASSWORD: ${{ secrets.PI_PASSWORD }}
         run: |
           if ! sshpass -p "$PI_PASSWORD" ssh -o StrictHostKeyChecking=no $PI_USER@$PI_HOST "docker compose ps"; then
-            echo "Deployment verification failed"
+            echo "::error::Deployment verification failed - containers are not running properly"
+            exit 1
+          fi
+          
+      - name: Check application health
+        env:
+          PI_HOST: ${{ secrets.PI_HOST }}
+          PI_USER: ${{ secrets.PI_USER }}
+          PI_PASSWORD: ${{ secrets.PI_PASSWORD }}
+        run: |
+          # Wait for application to be ready
+          sleep 10
+          if ! sshpass -p "$PI_PASSWORD" ssh -o StrictHostKeyChecking=no $PI_USER@$PI_HOST "curl -f http://localhost:5001/"; then
+            echo "::error::Application health check failed - the application is not responding"
             exit 1
           fi 
