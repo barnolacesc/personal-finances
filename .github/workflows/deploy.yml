@@ -28,20 +28,11 @@ jobs:
           PI_USER: ${{ secrets.PI_USER }}
           PI_PASSWORD: ${{ secrets.PI_PASSWORD }}
         run: |
-          # Install sshpass if not already installed
-          if ! command -v sshpass &> /dev/null; then
-            echo "Installing sshpass..."
-            sudo apt-get update && sudo apt-get install -y sshpass
-          fi
-          
           # Deploy to Raspberry Pi using password authentication
-          sshpass -p "$PI_PASSWORD" ssh -o StrictHostKeyChecking=no $PI_USER@$PI_HOST << 'EOF'
-            cd /path/to/your/app  # Replace with actual path on Pi
-            git pull origin main
-            docker compose down
-            docker compose build --no-cache
-            docker compose up -d
-          EOF
+          if ! sshpass -p "$PI_PASSWORD" ssh -o StrictHostKeyChecking=no $PI_USER@$PI_HOST "cd /path/to/your/app && git pull origin main && docker compose down && docker compose build --no-cache && docker compose up -d"; then
+            echo "Deployment failed"
+            exit 1
+          fi
           
       - name: Verify deployment
         env:
@@ -49,4 +40,7 @@ jobs:
           PI_USER: ${{ secrets.PI_USER }}
           PI_PASSWORD: ${{ secrets.PI_PASSWORD }}
         run: |
-          sshpass -p "$PI_PASSWORD" ssh -o StrictHostKeyChecking=no $PI_USER@$PI_HOST "docker compose ps" 
+          if ! sshpass -p "$PI_PASSWORD" ssh -o StrictHostKeyChecking=no $PI_USER@$PI_HOST "docker compose ps"; then
+            echo "Deployment verification failed"
+            exit 1
+          fi 
