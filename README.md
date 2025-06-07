@@ -191,3 +191,5 @@ class MyComponent extends BaseComponent {
 ## License
 
 MIT License - See [LICENSE](LICENSE) file for details. 
+
+<!-- Test CI/CD workflow --> 
