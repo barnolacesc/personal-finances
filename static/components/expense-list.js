@@ -7,8 +7,11 @@ class ExpenseList extends HTMLElement {
         this.currentWeek = 'all';
         this.categories = [
             'super', 'xofa', 'food_drink', 'save_inv', 'recurrent',
-            'clothing', 'personal', 'taxes', 'transport', 'health', 'other'
+            'clothing', 'personal', 'taxes', 'transport', 'car', 'health', 'other'
         ];
+        this.page = 1;
+        this.perPage = 5;
+        this.total = 0;
     }
 
     connectedCallback() {
@@ -40,6 +43,10 @@ class ExpenseList extends HTMLElement {
                         <div id="emptyState" class="text-center py-4 text-muted" style="display: none;">
                             <i class="bi bi-receipt fs-1 mb-2 d-block"></i>
                             <p class="mb-0">No expenses found for this period</p>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center px-3 py-2">
+                            <nav id="paginationNav" class="d-flex align-items-center"></nav>
+                            <backup-button></backup-button>
                         </div>
                     </div>
                 </div>
@@ -85,19 +92,21 @@ class ExpenseList extends HTMLElement {
         });
     }
 
-    async loadExpenses() {
+    async loadExpenses(page = this.page) {
         try {
-            console.log(`Loading expenses for ${this.currentMonth}/${this.currentYear}`);
-            const response = await fetch(`/api/expenses?month=${this.currentMonth}&year=${this.currentYear}`);
+            this.page = page;
+            const response = await fetch(`/api/expenses?month=${this.currentMonth}&year=${this.currentYear}&page=${this.page}&per_page=${this.perPage}`);
             if (!response.ok) {
                 console.error('Server response:', await response.text());
                 throw new Error('Failed to fetch expenses');
             }
-            
             const data = await response.json();
-            console.log('Loaded expenses:', data);
             this.expenses = data.expenses;
+            this.total = data.total;
+            this.page = data.page;
+            this.perPage = data.per_page;
             this.renderExpenses();
+            this.renderPagination();
         } catch (error) {
             console.error('Error loading expenses:', error);
             window.showToast('Failed to load expenses', 'error');
@@ -357,6 +366,38 @@ class ExpenseList extends HTMLElement {
             console.error('Error deleting expense:', error);
             window.showToast('Failed to delete expense', 'error');
         }
+    }
+
+    renderPagination() {
+        const nav = this.querySelector('#paginationNav');
+        if (!nav) return;
+        const totalPages = Math.ceil(this.total / this.perPage);
+        if (totalPages <= 1) {
+            nav.innerHTML = '';
+            return;
+        }
+        nav.innerHTML = `
+            <ul class="pagination mb-0">
+                <li class="page-item${this.page === 1 ? ' disabled' : ''}">
+                    <button class="page-link" data-page="prev">Previous</button>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">Page ${this.page} of ${totalPages}</span>
+                </li>
+                <li class="page-item${this.page === totalPages ? ' disabled' : ''}">
+                    <button class="page-link" data-page="next">Next</button>
+                </li>
+            </ul>
+        `;
+        nav.querySelectorAll('button[data-page]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                if (btn.dataset.page === 'prev' && this.page > 1) {
+                    this.loadExpenses(this.page - 1);
+                } else if (btn.dataset.page === 'next' && this.page < totalPages) {
+                    this.loadExpenses(this.page + 1);
+                }
+            });
+        });
     }
 }
 
