@@ -91,6 +91,7 @@
 .badge.category-transport { background-color: #6366f1 !important; color: white !important; }
 .badge.category-health { background-color: #06b6d4 !important; color: white !important; }
 .badge.category-other { background-color: #6b7280 !important; color: white !important; }
+.badge.category-car { background-color: #374151 !important; color: white !important; }
 
 /* Chart specific */
 #chartCenterTotal {
