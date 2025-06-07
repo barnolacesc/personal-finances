@@ -8,7 +8,7 @@ services:
       - "5001:5001"
     volumes:
       # Persist SQLite database
-      - ./data:/app/instance
+      - ./data:/app/instance:rw
     environment:
       - FLASK_ENV=production
     restart: unless-stopped
