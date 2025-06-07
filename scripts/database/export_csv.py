@@ -4,7 +4,7 @@ import sqlite3
 from datetime import datetime
 
 # Find the project root (assume this script is in scripts/database/)
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 
 # Paths
 exports_dir = os.path.join(os.path.dirname(__file__), 'exports')
