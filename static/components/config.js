@@ -56,6 +56,11 @@ export const CONFIG = {
             color: '#6366f1',
             icon: 'bi-car-front'
         },
+        car: {
+            label: 'Car',
+            color: '#374151', // dark gray
+            icon: 'bi-car-front-fill'
+        },
         health: { 
             label: 'Health', 
             color: '#06b6d4',

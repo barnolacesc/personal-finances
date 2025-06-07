@@ -16,6 +16,7 @@ class CategoryChart extends HTMLElement {
             personal: '#8b5cf6',   // Purple
             taxes: '#dc2626',      // Red
             transport: '#6366f1',  // Indigo
+            car: '#374151',      // Dark gray
             health: '#06b6d4',     // Cyan
             other: '#6b7280'       // Gray
         };
