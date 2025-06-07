@@ -26,7 +26,7 @@ jobs:
       
       - name: Deploy to Raspberry Pi
         env:
-          PI_HOST: 192.168.1.31
+          PI_HOST: ${{ secrets.PI_HOST }}
           PI_USER: ${{ secrets.PI_USER }}
           PI_PASSWORD: ${{ secrets.PI_PASSWORD }}
         run: |
@@ -47,7 +47,7 @@ jobs:
           
       - name: Verify deployment
         env:
-          PI_HOST: 192.168.1.31
+          PI_HOST: ${{ secrets.PI_HOST }}
           PI_USER: ${{ secrets.PI_USER }}
           PI_PASSWORD: ${{ secrets.PI_PASSWORD }}
         run: |
