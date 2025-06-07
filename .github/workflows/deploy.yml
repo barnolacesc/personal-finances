@@ -2,7 +2,7 @@ name: Deploy to Raspberry Pi
 
 on:
   push:
-    branches: [ develop, main ]
+    branches: [ main ]
 
 jobs:
   test:
@@ -17,7 +17,6 @@ jobs:
           
   deploy:
     needs: test
-    if: github.ref == 'refs/heads/main'
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
@@ -29,19 +28,12 @@ jobs:
           PI_PASSWORD: ${{ secrets.PI_PASSWORD }}
         run: |
           # Deploy to Raspberry Pi using password authentication
-          if ! sshpass -p "$PI_PASSWORD" ssh -o StrictHostKeyChecking=no $PI_USER@$PI_HOST << 'EOF'
-            cd /home/cesc/personal-finances  # Replace with actual path on Pi
-            # Stash any local changes to allow clean pull
-            # These changes are preserved in the stash but not reapplied
-            git stash
-            # Pull latest changes
-            git pull origin main
-            # Rebuild and restart containers
-            docker compose down
-            docker compose build
-            docker compose up -d
-          EOF; then
-            echo "::error::Deployment failed - changes will not be merged to main"
+          if ! sshpass -p "$PI_PASSWORD" ssh -o StrictHostKeyChecking=no $PI_USER@$PI_HOST "cd /home/cesc/personal-finances && \
+            git stash && \
+            git pull origin main && \
+            sudo systemctl stop personal-finances && \
+            sudo systemctl start personal-finances"; then
+            echo "::error::Deployment failed - could not update and restart the service"
             exit 1
           fi
           
@@ -51,8 +43,8 @@ jobs:
           PI_USER: ${{ secrets.PI_USER }}
           PI_PASSWORD: ${{ secrets.PI_PASSWORD }}
         run: |
-          if ! sshpass -p "$PI_PASSWORD" ssh -o StrictHostKeyChecking=no $PI_USER@$PI_HOST "docker compose ps"; then
-            echo "::error::Deployment verification failed - containers are not running properly"
+          if ! sshpass -p "$PI_PASSWORD" ssh -o StrictHostKeyChecking=no $PI_USER@$PI_HOST "sudo systemctl status personal-finances"; then
+            echo "::error::Service verification failed - the service is not running"
             exit 1
           fi
           
@@ -62,9 +54,24 @@ jobs:
           PI_USER: ${{ secrets.PI_USER }}
           PI_PASSWORD: ${{ secrets.PI_PASSWORD }}
         run: |
-          # Wait for application to be ready
-          sleep 10
-          if ! sshpass -p "$PI_PASSWORD" ssh -o StrictHostKeyChecking=no $PI_USER@$PI_HOST "curl -f http://localhost:5001/"; then
-            echo "::error::Application health check failed - the application is not responding"
-            exit 1
-          fi 
+          # Wait for application to be ready with retries
+          MAX_RETRIES=12  # 2 minutes total (12 * 10 seconds)
+          RETRY_INTERVAL=10
+          
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Health check attempt $i of $MAX_RETRIES..."
+            
+            # Try to get the response and check both status and content
+            if sshpass -p "$PI_PASSWORD" ssh -o StrictHostKeyChecking=no $PI_USER@$PI_HOST "curl -s -f -m 5 http://localhost:5001/"; then
+              echo "Application is healthy and responding!"
+              exit 0
+            fi
+            
+            if [ $i -lt $MAX_RETRIES ]; then
+              echo "Application not ready yet, waiting ${RETRY_INTERVAL} seconds..."
+              sleep $RETRY_INTERVAL
+            fi
+          done
+          
+          echo "::error::Application health check failed after $MAX_RETRIES attempts - the application is not responding"
+          exit 1 
