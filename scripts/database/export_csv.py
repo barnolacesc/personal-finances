@@ -12,9 +12,10 @@ db_path = os.path.join(os.path.dirname(__file__), 'instance', 'expenses.db')
 conn = sqlite3.connect(db_path)
 cursor = conn.cursor()
 
-# Get current date for filename
-today = datetime.now().strftime('%Y%m%d')
-csv_path = os.path.join(exports_dir, f'expenses_{today}.csv')
+# Get current date and time for filename
+now = datetime.now()
+date_str = now.strftime('%Y%m%d_%H%M%S')
+csv_path = os.path.join(exports_dir, f'expenses_{date_str}.csv')
 
 # Export data to CSV
 try:

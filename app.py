@@ -1,10 +1,13 @@
-from flask import Flask, request, jsonify, send_from_directory, redirect
+from flask import Flask, request, jsonify, send_from_directory, redirect, send_file
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import os
 import logging
 from werkzeug.serving import run_simple
 from sqlalchemy import extract
+from subprocess import run, CalledProcessError
+from pathlib import Path
+import glob
 
 # Configure logging
 logging.basicConfig(
@@ -132,18 +135,25 @@ def handle_expenses():
         now = datetime.utcnow()
         month = int(request.args.get('month', now.month))
         year = int(request.args.get('year', now.year))
-        
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 5))
+
         # Filter expenses by month and year
-        expenses = Expense.query\
-            .filter(extract('year', Expense.date) == year)\
-            .filter(extract('month', Expense.date) == month)\
-            .order_by(Expense.date.desc())\
-            .all()
-        
+        query = Expense.query \
+            .filter(extract('year', Expense.date) == year) \
+            .filter(extract('month', Expense.date) == month) \
+            .order_by(Expense.date.desc())
+
+        total = query.count()
+        expenses = query.offset((page - 1) * per_page).limit(per_page).all()
+
         return jsonify({
             'expenses': [expense.to_dict() for expense in expenses],
             'month': month,
-            'year': year
+            'year': year,
+            'page': page,
+            'per_page': per_page,
+            'total': total
         })
     except Exception as e:
         logger.error(f"Error processing GET request: {e}")
@@ -218,6 +228,29 @@ def update_expense(expense_id):
         logger.error(f"Error updating expense {expense_id}: {e}")
         db.session.rollback()
         return jsonify({'error': 'Server error updating expense'}), 500
+
+@app.route('/api/backup', methods=['POST'])
+def backup_database():
+    try:
+        result = run(['python3', 'scripts/database/export_csv.py'], capture_output=True, text=True, check=True)
+        return jsonify({'success': True, 'message': result.stdout.strip()}), 200
+    except CalledProcessError as e:
+        return jsonify({'success': False, 'error': e.stderr.strip() or str(e)}), 500
+
+@app.route('/api/backup/download', methods=['GET'])
+def download_backup():
+    # Run the export script
+    try:
+        result = run(['python3', 'scripts/database/export_csv.py'], capture_output=True, text=True, check=True)
+    except CalledProcessError as e:
+        return jsonify({'success': False, 'error': e.stderr.strip() or str(e)}), 500
+    # Find the most recent CSV file
+    export_dir = Path('scripts/database/exports')
+    files = sorted(glob.glob(str(export_dir / 'expenses_*.csv')), key=lambda x: Path(x).stat().st_mtime, reverse=True)
+    if not files:
+        return jsonify({'success': False, 'error': 'No backup file found.'}), 500
+    latest_file = files[0]
+    return send_file(latest_file, as_attachment=True, download_name=Path(latest_file).name, mimetype='text/csv')
 
 def run_dev_server():
     extra_files = []
