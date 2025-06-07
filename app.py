@@ -135,24 +135,29 @@ def handle_expenses():
         now = datetime.utcnow()
         month = int(request.args.get('month', now.month))
         year = int(request.args.get('year', now.year))
-        page = int(request.args.get('page', 1))
-        per_page = int(request.args.get('per_page', 5))
+        page = request.args.get('page')
+        per_page = request.args.get('per_page')
 
-        # Filter expenses by month and year
         query = Expense.query \
             .filter(extract('year', Expense.date) == year) \
             .filter(extract('month', Expense.date) == month) \
             .order_by(Expense.date.desc())
 
-        total = query.count()
-        expenses = query.offset((page - 1) * per_page).limit(per_page).all()
+        if page and per_page:
+            page = int(page)
+            per_page = int(per_page)
+            total = query.count()
+            expenses = query.offset((page - 1) * per_page).limit(per_page).all()
+        else:
+            expenses = query.all()
+            total = len(expenses)
 
         return jsonify({
             'expenses': [expense.to_dict() for expense in expenses],
             'month': month,
             'year': year,
-            'page': page,
-            'per_page': per_page,
+            'page': int(page) if page else None,
+            'per_page': int(per_page) if per_page else None,
             'total': total
         })
     except Exception as e:
