@@ -313,4 +313,27 @@
     background-color: var(--secondary-bg) !important;
     border-color: var(--border-color) !important;
     color: var(--text-color) !important;
+}
+
+[data-bs-theme="dark"] .table-light,
+[data-bs-theme="dark"] tfoot.table-light,
+[data-bs-theme="dark"] .table tfoot.table-light tr {
+    background-color: var(--secondary-bg) !important;
+    color: var(--text-color) !important;
+}
+
+[data-bs-theme="dark"] .table tfoot.table-light td,
+[data-bs-theme="dark"] .table tfoot.table-light th {
+    color: var(--text-color) !important;
+}
+
+[data-bs-theme="dark"] .table tfoot.table-light tr,
+[data-bs-theme="dark"] .table tfoot.table-light td,
+[data-bs-theme="dark"] .table tfoot.table-light th,
+[data-bs-theme="dark"] tfoot.table-light tr,
+[data-bs-theme="dark"] tfoot.table-light td,
+[data-bs-theme="dark"] tfoot.table-light th {
+    background-color: var(--secondary-bg) !important;
+    color: var(--text-color) !important;
+    border-color: var(--border-color) !important;
 } 
