@@ -29,7 +29,18 @@ jobs:
           PI_PASSWORD: ${{ secrets.PI_PASSWORD }}
         run: |
           # Deploy to Raspberry Pi using password authentication
-          if ! sshpass -p "$PI_PASSWORD" ssh -o StrictHostKeyChecking=no $PI_USER@$PI_HOST "cd /home/cesc/personal-finances && git pull origin main && docker compose down && docker compose build --no-cache && docker compose up -d"; then
+          if ! sshpass -p "$PI_PASSWORD" ssh -o StrictHostKeyChecking=no $PI_USER@$PI_HOST << 'EOF'
+            cd /path/to/your/app  # Replace with actual path on Pi
+            # Stash any local changes to allow clean pull
+            # These changes are preserved in the stash but not reapplied
+            git stash
+            # Pull latest changes
+            git pull origin main
+            # Rebuild and restart containers
+            docker compose down
+            docker compose build
+            docker compose up -d
+          EOF; then
             echo "Deployment failed"
             exit 1
           fi
