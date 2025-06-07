@@ -98,6 +98,18 @@
     z-index: 1;
 }
 
+[data-bs-theme="dark"] #chartCenterTotal {
+    color: var(--text-color);
+}
+
+[data-bs-theme="dark"] #chartCenterTotal .text-muted {
+    color: var(--muted-color) !important;
+}
+
+[data-bs-theme="dark"] #chartCenterTotal .fw-bold {
+    color: #ffffff;
+}
+
 /* Dark mode component styles */
 [data-bs-theme="dark"] .card {
     background-color: var(--primary-bg);
