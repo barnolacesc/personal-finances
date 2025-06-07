@@ -376,13 +376,17 @@ class ExpenseList extends HTMLElement {
             nav.innerHTML = '';
             return;
         }
+        // Use a span with d-none d-sm-inline for full text, d-inline d-sm-none for compact
         nav.innerHTML = `
             <ul class="pagination mb-0">
                 <li class="page-item${this.page === 1 ? ' disabled' : ''}">
                     <button class="page-link" data-page="prev">Previous</button>
                 </li>
                 <li class="page-item disabled">
-                    <span class="page-link">Page ${this.page} of ${totalPages}</span>
+                    <span class="page-link">
+                        <span class="d-none d-sm-inline">Page ${this.page} of ${totalPages}</span>
+                        <span class="d-inline d-sm-none">${this.page}/${totalPages}</span>
+                    </span>
                 </li>
                 <li class="page-item${this.page === totalPages ? ' disabled' : ''}">
                     <button class="page-link" data-page="next">Next</button>
