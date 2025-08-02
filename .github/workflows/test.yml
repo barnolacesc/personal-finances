@@ -30,8 +30,8 @@ jobs:
 
       - name: Set up Python environment and run tests
         run: |
-          # Use the confirmed working Python path directly
-          PYTHON_CMD="/usr/bin/python3.11"
+          # Use the Python that exists in the container
+          PYTHON_CMD="/usr/bin/python3"
 
           echo "🔍 Using confirmed working Python path..."
           echo "🐍 Testing Python: $PYTHON_CMD"
