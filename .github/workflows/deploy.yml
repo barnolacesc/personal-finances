@@ -1,75 +1,12 @@
-name: CI/CD Pipeline
+name: Deploy to Raspberry Pi
 
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
 
 jobs:
-  test:
-    runs-on: self-hosted
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python environment and run tests
-        env:
-          PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-        run: |
-          # Fix systemd service PATH issue - GitHub runners run with minimal environment
-          export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-
-          echo "🔍 Debugging PATH issue..."
-          echo "Current user: $(whoami)"
-          echo "PATH: $PATH"
-
-          # Simple Python detection with proper PATH
-          PYTHON_CMD=""
-          for cmd in python3 python; do
-            if command -v $cmd &> /dev/null; then
-              PYTHON_CMD=$cmd
-              break
-            fi
-          done
-
-          if [ -z "$PYTHON_CMD" ]; then
-            echo "❌ Python not found in PATH"
-            echo "Available commands in PATH:"
-            ls -la /usr/bin/python* /usr/local/bin/python* 2>/dev/null || echo "No python found"
-            exit 1
-          fi
-
-          echo "🐍 Using Python: $PYTHON_CMD ($(which $PYTHON_CMD))"
-          echo "🐍 Version: $($PYTHON_CMD --version)"
-
-          # Create virtual environment and install dependencies
-          $PYTHON_CMD -m venv ci_venv
-          source ci_venv/bin/activate
-
-          # Install dependencies
-          pip install --upgrade pip
-          pip install -r requirements.txt -r requirements-dev.txt
-
-          # Run all checks in sequence
-          echo "🧪 Running tests..."
-          pytest -v --tb=short
-
-          echo "🔍 Running flake8 linting..."
-          flake8 --max-line-length=88 --extend-ignore=E203,W503 app.py tests/
-
-          echo "🎨 Checking code formatting with black..."
-          black --check --diff app.py tests/
-
-          echo "✅ All checks completed successfully"
-
-          # Clean up
-          deactivate
-          rm -rf ci_venv
-
   deploy:
-    needs: test
     runs-on: self-hosted
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
 
