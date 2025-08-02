@@ -13,29 +13,17 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Python environment and run tests
+        env:
+          PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
         run: |
-          echo "🔍 Debugging Python access issue..."
+          # Fix systemd service PATH issue - GitHub runners run with minimal environment
+          export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+          echo "🔍 Debugging PATH issue..."
           echo "Current user: $(whoami)"
           echo "PATH: $PATH"
 
-          # Check if python exists but has permission issues
-          echo "Checking file permissions on python binaries:"
-          ls -la /usr/bin/python* 2>/dev/null || echo "No python* files in /usr/bin/"
-
-          # Check if cesc user can access python
-          echo "Testing python access as cesc user:"
-          sudo -u cesc which python3 2>/dev/null && echo "✅ cesc has python3" || echo "❌ cesc: python3 not found"
-          sudo -u cesc which python 2>/dev/null && echo "✅ cesc has python" || echo "❌ cesc: python not found"
-
-          # Run the entire test suite as cesc user since that's where Python is accessible
-          echo "🔄 Running tests as cesc user..."
-          sudo -u cesc bash << 'EOF'
-
-          # Set up environment as cesc user
-          cd "$(pwd)"
-          export PATH="/usr/bin:/usr/local/bin:$PATH"
-
-          # Find Python command
+          # Simple Python detection with proper PATH
           PYTHON_CMD=""
           for cmd in python3 python; do
             if command -v $cmd &> /dev/null; then
@@ -45,12 +33,13 @@ jobs:
           done
 
           if [ -z "$PYTHON_CMD" ]; then
-            echo "❌ Even cesc user cannot find Python"
+            echo "❌ Python not found in PATH"
+            echo "Available commands in PATH:"
+            ls -la /usr/bin/python* /usr/local/bin/python* 2>/dev/null || echo "No python found"
             exit 1
           fi
 
-          echo "🐍 Using Python: $PYTHON_CMD"
-          echo "🐍 Location: $(which $PYTHON_CMD)"
+          echo "🐍 Using Python: $PYTHON_CMD ($(which $PYTHON_CMD))"
           echo "🐍 Version: $($PYTHON_CMD --version)"
 
           # Create virtual environment and install dependencies
@@ -76,7 +65,6 @@ jobs:
           # Clean up
           deactivate
           rm -rf ci_venv
-          EOF
 
   deploy:
     needs: test
