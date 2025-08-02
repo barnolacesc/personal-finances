@@ -12,17 +12,40 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Debug runner environment
+        run: |
+          echo "🔍 Debugging runner environment..."
+          echo "Current user: $(whoami)"
+          echo "User ID: $(id)"
+          echo "Home directory: $HOME"
+          echo "Current PATH: $PATH"
+          echo "Working directory: $(pwd)"
+          echo "Available Python binaries:"
+          find /usr -name "python*" -type f -executable 2>/dev/null || echo "No python found in /usr"
+          find /bin -name "python*" -type f -executable 2>/dev/null || echo "No python found in /bin"
+          ls -la /usr/bin/python* 2>/dev/null || echo "No python* in /usr/bin"
+          echo "Testing direct paths:"
+          /usr/bin/python --version 2>/dev/null && echo "✅ /usr/bin/python works" || echo "❌ /usr/bin/python failed"
+          /usr/bin/python3 --version 2>/dev/null && echo "✅ /usr/bin/python3 works" || echo "❌ /usr/bin/python3 failed"
+
       - name: Set up Python environment and run tests
         run: |
-          # Find Python in common locations since it's installed but not in PATH
+          # Find Python - try multiple approaches
           PYTHON_CMD=""
 
-          # Try common system Python locations
+          echo "🔍 Searching for Python..."
+
+          # Try common system Python locations with execution test
           for path in /usr/bin/python3 /usr/bin/python /usr/local/bin/python3 /bin/python3; do
-            if [ -x "$path" ]; then
-              PYTHON_CMD="$path"
-              echo "✅ Found Python at: $path"
-              break
+            if [ -f "$path" ] && [ -x "$path" ]; then
+              echo "Testing $path..."
+              if "$path" --version >/dev/null 2>&1; then
+                PYTHON_CMD="$path"
+                echo "✅ Found working Python at: $path"
+                break
+              else
+                echo "⚠️  Found $path but execution failed"
+              fi
             fi
           done
 
@@ -30,27 +53,47 @@ jobs:
           if [ -z "$PYTHON_CMD" ]; then
             for cmd in python3 python; do
               if command -v $cmd &> /dev/null; then
-                PYTHON_CMD=$cmd
-                echo "✅ Found Python in PATH: $cmd"
-                break
+                if $cmd --version >/dev/null 2>&1; then
+                  PYTHON_CMD=$cmd
+                  echo "✅ Found working Python in PATH: $cmd"
+                  break
+                else
+                  echo "⚠️  Found $cmd in PATH but execution failed"
+                fi
               fi
             done
           fi
 
+          # Last resort: try to use sudo to access python as cesc user
           if [ -z "$PYTHON_CMD" ]; then
-            echo "❌ Python not found in common locations"
-            echo "Searched: /usr/bin/python3, /usr/bin/python, /usr/local/bin/python3, /bin/python3"
+            echo "🔄 Trying to run as cesc user..."
+            if sudo -u cesc /usr/bin/python3 --version >/dev/null 2>&1; then
+              PYTHON_CMD="sudo -u cesc /usr/bin/python3"
+              echo "✅ Found Python via sudo as cesc user"
+            elif sudo -u cesc /usr/bin/python --version >/dev/null 2>&1; then
+              PYTHON_CMD="sudo -u cesc /usr/bin/python"
+              echo "✅ Found Python via sudo as cesc user"
+            fi
+          fi
+
+          if [ -z "$PYTHON_CMD" ]; then
+            echo "❌ Python not found with any method"
+            echo "Searched: /usr/bin/python3, /usr/bin/python, /usr/local/bin/python3, /bin/python3, PATH, sudo as cesc"
             exit 1
           fi
 
-          echo "🐍 Using Python: $PYTHON_CMD ($(which $PYTHON_CMD))"
+          echo "🐍 Using Python: $PYTHON_CMD"
           echo "🐍 Version: $($PYTHON_CMD --version)"
 
           # Create virtual environment and install dependencies
+          echo "📦 Creating virtual environment..."
           $PYTHON_CMD -m venv ci_venv
+
+          echo "🔌 Activating virtual environment..."
           source ci_venv/bin/activate
 
           # Install dependencies
+          echo "📥 Installing dependencies..."
           pip install --upgrade pip
           pip install -r requirements.txt -r requirements-dev.txt
 
@@ -67,5 +110,6 @@ jobs:
           echo "✅ All checks completed successfully"
 
           # Clean up
+          echo "🧹 Cleaning up..."
           deactivate
           rm -rf ci_venv
