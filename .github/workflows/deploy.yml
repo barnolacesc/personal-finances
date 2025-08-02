@@ -10,50 +10,47 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python environment
+      - name: Cache Python dependencies
         run: |
-          # Create virtual environment for testing
-          python3 -m venv test_venv
-          source test_venv/bin/activate
+          # Create cache key from requirements files
+          CACHE_KEY=$(cat requirements.txt requirements-dev.txt | sha256sum | cut -d' ' -f1)
+          CACHE_DIR="/tmp/pi-cache/venv-$CACHE_KEY"
 
-          # Install dependencies
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r requirements-dev.txt
+          if [ -d "$CACHE_DIR" ]; then
+            echo "📦 Using cached dependencies..."
+            cp -r "$CACHE_DIR" ci_venv
+          else
+            echo "🔄 Installing fresh dependencies..."
+            python3 -m venv ci_venv
+            source ci_venv/bin/activate
+            pip install --upgrade pip
+            pip install -r requirements.txt -r requirements-dev.txt
+            deactivate
 
-      - name: Run tests
+            # Cache for next run
+            mkdir -p /tmp/pi-cache
+            cp -r ci_venv "$CACHE_DIR"
+          fi
+
+      - name: Run all checks
         run: |
-          # Activate virtual environment and run tests
-          source test_venv/bin/activate
+          source ci_venv/bin/activate
 
-          # Run pytest with verbose output and coverage
+          # Run all checks in sequence
+          echo "🧪 Running tests..."
           pytest -v --tb=short
 
-          # Clean up test environment
-          deactivate
-          rm -rf test_venv
-
-      - name: Run code quality checks
-        run: |
-          # Create virtual environment for quality checks
-          python3 -m venv quality_venv
-          source quality_venv/bin/activate
-
-          # Install dev dependencies
-          pip install --upgrade pip
-          pip install -r requirements-dev.txt
-
-          # Run flake8 linting
-          echo "Running flake8 linting..."
+          echo "🔍 Running flake8 linting..."
           flake8 --max-line-length=88 --extend-ignore=E203,W503 app.py tests/
 
-          # Run black formatting check
-          echo "Checking code formatting with black..."
+          echo "🎨 Checking code formatting with black..."
           black --check --diff app.py tests/
 
-          # Clean up
+          echo "✅ All checks completed successfully"
+
+          # Clean up (keep cache but remove working copy)
           deactivate
-          rm -rf quality_venv
+          rm -rf ci_venv
 
   deploy:
     needs: test
