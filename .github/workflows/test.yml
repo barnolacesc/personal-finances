@@ -12,74 +12,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Debug runner environment
-        run: |
-          echo "🔍 Debugging runner environment..."
-          echo "Current user: $(whoami)"
-          echo "User ID: $(id)"
-          echo "Home directory: $HOME"
-          echo "Current PATH: $PATH"
-          echo "Working directory: $(pwd)"
-          echo "Available Python binaries:"
-          find /usr -name "python*" -type f -executable 2>/dev/null || echo "No python found in /usr"
-          find /bin -name "python*" -type f -executable 2>/dev/null || echo "No python found in /bin"
-          ls -la /usr/bin/python* 2>/dev/null || echo "No python* in /usr/bin"
-          echo "Testing direct paths:"
-          /usr/bin/python --version 2>/dev/null && echo "✅ /usr/bin/python works" || echo "❌ /usr/bin/python failed"
-          /usr/bin/python3 --version 2>/dev/null && echo "✅ /usr/bin/python3 works" || echo "❌ /usr/bin/python3 failed"
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt', 'requirements-dev.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
       - name: Set up Python environment and run tests
         run: |
-          # Use the Python that exists in the container
-          PYTHON_CMD="/usr/bin/python3"
-
-          echo "🔍 Using confirmed working Python path..."
-          echo "🐍 Testing Python: $PYTHON_CMD"
-
-          if [ -f "$PYTHON_CMD" ] && [ -x "$PYTHON_CMD" ]; then
-            if "$PYTHON_CMD" --version >/dev/null 2>&1; then
-              echo "✅ Python confirmed working: $PYTHON_CMD"
-            else
-              echo "❌ Python execution failed despite being executable"
-              echo "Trying to debug the issue..."
-              ls -la "$PYTHON_CMD"
-              ldd "$PYTHON_CMD" | head -5
-              exit 1
-            fi
-          else
-            echo "❌ Python binary not found or not executable: $PYTHON_CMD"
-            ls -la /usr/bin/python*
-            exit 1
-          fi
-
-          echo "🐍 Using Python: $PYTHON_CMD"
-          echo "🐍 Version: $($PYTHON_CMD --version)"
-
           # Create virtual environment and install dependencies
-          echo "📦 Creating virtual environment..."
-          $PYTHON_CMD -m venv ci_venv
-
-          echo "🔌 Activating virtual environment..."
+          python3 -m venv ci_venv
           source ci_venv/bin/activate
 
           # Install dependencies
-          echo "📥 Installing dependencies..."
           pip install --upgrade pip
           pip install -r requirements.txt -r requirements-dev.txt
 
           # Run all checks in sequence
-          echo "🧪 Running tests..."
           pytest -v --tb=short
-
-          echo "🔍 Running flake8 linting..."
           flake8 --max-line-length=88 --extend-ignore=E203,W503 app.py tests/
-
-          echo "🎨 Checking code formatting with black..."
           black --check --diff app.py tests/
 
-          echo "✅ All checks completed successfully"
-
           # Clean up
-          echo "🧹 Cleaning up..."
           deactivate
           rm -rf ci_venv
