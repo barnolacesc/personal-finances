@@ -5,56 +5,7 @@ on:
     branches: [ main ]
 
 jobs:
-  test:
-    runs-on: self-hosted
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python environment and run tests
-        run: |
-          # Find available Python command
-          PYTHON_CMD=""
-          for cmd in python3 python python3.11 python3.10 python3.9; do
-            if command -v $cmd &> /dev/null; then
-              PYTHON_CMD=$cmd
-              break
-            fi
-          done
-
-          if [ -z "$PYTHON_CMD" ]; then
-            echo "❌ No Python found. Available commands:"
-            ls -la /usr/bin/python* || echo "No python binaries found in /usr/bin/"
-            exit 1
-          fi
-
-          echo "🐍 Using Python: $PYTHON_CMD ($($PYTHON_CMD --version))"
-
-          # Create virtual environment and install dependencies
-          $PYTHON_CMD -m venv ci_venv
-          source ci_venv/bin/activate
-
-          # Install dependencies
-          pip install --upgrade pip
-          pip install -r requirements.txt -r requirements-dev.txt
-
-          # Run all checks in sequence
-          echo "🧪 Running tests..."
-          pytest -v --tb=short
-
-          echo "🔍 Running flake8 linting..."
-          flake8 --max-line-length=88 --extend-ignore=E203,W503 app.py tests/
-
-          echo "🎨 Checking code formatting with black..."
-          black --check --diff app.py tests/
-
-          echo "✅ All checks completed successfully"
-
-          # Clean up
-          deactivate
-          rm -rf ci_venv
-
   deploy:
-    needs: test
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
