@@ -12,30 +12,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Python if not available
-        run: |
-          # Check if Python is available
-          if ! command -v python3 &> /dev/null && ! command -v python &> /dev/null; then
-            echo "🔄 Installing Python..."
-            sudo apt-get update
-            sudo apt-get install -y python3 python3-pip python3-venv
-          else
-            echo "✅ Python already available"
-          fi
-
       - name: Set up Python environment and run tests
         run: |
-          # Find Python command
+          # Find Python in common locations since it's installed but not in PATH
           PYTHON_CMD=""
-          for cmd in python3 python; do
-            if command -v $cmd &> /dev/null; then
-              PYTHON_CMD=$cmd
+
+          # Try common system Python locations
+          for path in /usr/bin/python3 /usr/bin/python /usr/local/bin/python3 /bin/python3; do
+            if [ -x "$path" ]; then
+              PYTHON_CMD="$path"
+              echo "✅ Found Python at: $path"
               break
             fi
           done
 
+          # Fallback to PATH if found there
           if [ -z "$PYTHON_CMD" ]; then
-            echo "❌ Python still not found after installation attempt"
+            for cmd in python3 python; do
+              if command -v $cmd &> /dev/null; then
+                PYTHON_CMD=$cmd
+                echo "✅ Found Python in PATH: $cmd"
+                break
+              fi
+            done
+          fi
+
+          if [ -z "$PYTHON_CMD" ]; then
+            echo "❌ Python not found in common locations"
+            echo "Searched: /usr/bin/python3, /usr/bin/python, /usr/local/bin/python3, /bin/python3"
             exit 1
           fi
 
