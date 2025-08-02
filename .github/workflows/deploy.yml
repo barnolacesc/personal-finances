@@ -9,18 +9,55 @@ jobs:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Placeholder for future tests
+
+      - name: Cache Python dependencies
         run: |
-          echo "TODO: Implement actual tests in the future"
-          echo "Current placeholder always passes"
-          
+          # Create cache key from requirements files
+          CACHE_KEY=$(cat requirements.txt requirements-dev.txt | sha256sum | cut -d' ' -f1)
+          CACHE_DIR="/tmp/pi-cache/venv-$CACHE_KEY"
+
+          if [ -d "$CACHE_DIR" ]; then
+            echo "📦 Using cached dependencies..."
+            cp -r "$CACHE_DIR" ci_venv
+          else
+            echo "🔄 Installing fresh dependencies..."
+            python3 -m venv ci_venv
+            source ci_venv/bin/activate
+            pip install --upgrade pip
+            pip install -r requirements.txt -r requirements-dev.txt
+            deactivate
+
+            # Cache for next run
+            mkdir -p /tmp/pi-cache
+            cp -r ci_venv "$CACHE_DIR"
+          fi
+
+      - name: Run all checks
+        run: |
+          source ci_venv/bin/activate
+
+          # Run all checks in sequence
+          echo "🧪 Running tests..."
+          pytest -v --tb=short
+
+          echo "🔍 Running flake8 linting..."
+          flake8 --max-line-length=88 --extend-ignore=E203,W503 app.py tests/
+
+          echo "🎨 Checking code formatting with black..."
+          black --check --diff app.py tests/
+
+          echo "✅ All checks completed successfully"
+
+          # Clean up (keep cache but remove working copy)
+          deactivate
+          rm -rf ci_venv
+
   deploy:
     needs: test
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Deploy to Raspberry Pi
         env:
           PI_HOST: ${{ secrets.PI_HOST }}
@@ -36,7 +73,7 @@ jobs:
             echo "::error::Deployment failed - could not update and restart the service"
             exit 1
           fi
-          
+
       - name: Verify deployment
         env:
           PI_HOST: ${{ secrets.PI_HOST }}
@@ -47,7 +84,7 @@ jobs:
             echo "::error::Service verification failed - the service is not running"
             exit 1
           fi
-          
+
       - name: Check application health
         env:
           PI_HOST: ${{ secrets.PI_HOST }}
@@ -57,21 +94,21 @@ jobs:
           # Wait for application to be ready with retries
           MAX_RETRIES=12  # 2 minutes total (12 * 10 seconds)
           RETRY_INTERVAL=10
-          
+
           for i in $(seq 1 $MAX_RETRIES); do
             echo "Health check attempt $i of $MAX_RETRIES..."
-            
+
             # Try to get the response and check both status and content
             if sshpass -p "$PI_PASSWORD" ssh -o StrictHostKeyChecking=no $PI_USER@$PI_HOST "curl -s -f -m 5 http://localhost:5001/"; then
               echo "Application is healthy and responding!"
               exit 0
             fi
-            
+
             if [ $i -lt $MAX_RETRIES ]; then
               echo "Application not ready yet, waiting ${RETRY_INTERVAL} seconds..."
               sleep $RETRY_INTERVAL
             fi
           done
-          
+
           echo "::error::Application health check failed after $MAX_RETRIES attempts - the application is not responding"
-          exit 1 
+          exit 1
