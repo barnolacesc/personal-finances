@@ -1,7 +1,9 @@
-name: Deploy to Raspberry Pi
+name: CI/CD Pipeline
 
 on:
   push:
+    branches: [ main ]
+  pull_request:
     branches: [ main ]
 
 jobs:
@@ -56,6 +58,7 @@ jobs:
   deploy:
     needs: test
     runs-on: self-hosted
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
 
