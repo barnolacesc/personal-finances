@@ -9,18 +9,58 @@ jobs:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Placeholder for future tests
+
+      - name: Set up Python environment
         run: |
-          echo "TODO: Implement actual tests in the future"
-          echo "Current placeholder always passes"
-          
+          # Create virtual environment for testing
+          python3 -m venv test_venv
+          source test_venv/bin/activate
+
+          # Install dependencies
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Run tests
+        run: |
+          # Activate virtual environment and run tests
+          source test_venv/bin/activate
+
+          # Run pytest with verbose output and coverage
+          pytest -v --tb=short
+
+          # Clean up test environment
+          deactivate
+          rm -rf test_venv
+
+      - name: Run code quality checks
+        run: |
+          # Create virtual environment for quality checks
+          python3 -m venv quality_venv
+          source quality_venv/bin/activate
+
+          # Install dev dependencies
+          pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+          # Run flake8 linting
+          echo "Running flake8 linting..."
+          flake8 --max-line-length=88 --extend-ignore=E203,W503 app.py tests/
+
+          # Run black formatting check
+          echo "Checking code formatting with black..."
+          black --check --diff app.py tests/
+
+          # Clean up
+          deactivate
+          rm -rf quality_venv
+
   deploy:
     needs: test
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Deploy to Raspberry Pi
         env:
           PI_HOST: ${{ secrets.PI_HOST }}
@@ -36,7 +76,7 @@ jobs:
             echo "::error::Deployment failed - could not update and restart the service"
             exit 1
           fi
-          
+
       - name: Verify deployment
         env:
           PI_HOST: ${{ secrets.PI_HOST }}
@@ -47,7 +87,7 @@ jobs:
             echo "::error::Service verification failed - the service is not running"
             exit 1
           fi
-          
+
       - name: Check application health
         env:
           PI_HOST: ${{ secrets.PI_HOST }}
@@ -57,21 +97,21 @@ jobs:
           # Wait for application to be ready with retries
           MAX_RETRIES=12  # 2 minutes total (12 * 10 seconds)
           RETRY_INTERVAL=10
-          
+
           for i in $(seq 1 $MAX_RETRIES); do
             echo "Health check attempt $i of $MAX_RETRIES..."
-            
+
             # Try to get the response and check both status and content
             if sshpass -p "$PI_PASSWORD" ssh -o StrictHostKeyChecking=no $PI_USER@$PI_HOST "curl -s -f -m 5 http://localhost:5001/"; then
               echo "Application is healthy and responding!"
               exit 0
             fi
-            
+
             if [ $i -lt $MAX_RETRIES ]; then
               echo "Application not ready yet, waiting ${RETRY_INTERVAL} seconds..."
               sleep $RETRY_INTERVAL
             fi
           done
-          
+
           echo "::error::Application health check failed after $MAX_RETRIES attempts - the application is not responding"
-          exit 1 
+          exit 1
