@@ -14,6 +14,9 @@ jobs:
 
       - name: Set up Python environment and run tests
         run: |
+          # Ensure /usr/bin is in PATH
+          export PATH="/usr/bin:/usr/local/bin:$PATH"
+
           # Find available Python command
           PYTHON_CMD=""
           for cmd in python3 python python3.11 python3.10 python3.9; do
@@ -23,13 +26,32 @@ jobs:
             fi
           done
 
+          # Try absolute paths if command -v fails
           if [ -z "$PYTHON_CMD" ]; then
-            echo "❌ No Python found. Available commands:"
-            ls -la /usr/bin/python* || echo "No python binaries found in /usr/bin/"
+            for path in /usr/bin/python3 /usr/bin/python /usr/local/bin/python3 /usr/local/bin/python; do
+              if [ -x "$path" ]; then
+                PYTHON_CMD=$path
+                break
+              fi
+            done
+          fi
+
+          if [ -z "$PYTHON_CMD" ]; then
+            echo "❌ No Python found. Debugging info:"
+            echo "PATH: $PATH"
+            echo "User: $(whoami)"
+            echo "Available python commands:"
+            which python3 2>/dev/null || echo "python3 not found"
+            which python 2>/dev/null || echo "python not found"
+            echo "Python binaries in common locations:"
+            ls -la /usr/bin/python* 2>/dev/null || echo "No python in /usr/bin/"
+            ls -la /usr/local/bin/python* 2>/dev/null || echo "No python in /usr/local/bin/"
             exit 1
           fi
 
-          echo "🐍 Using Python: $PYTHON_CMD ($($PYTHON_CMD --version))"
+          echo "🐍 Using Python: $PYTHON_CMD"
+          echo "🐍 Location: $(which $PYTHON_CMD 2>/dev/null || echo $PYTHON_CMD)"
+          echo "🐍 Version: $($PYTHON_CMD --version)"
 
           # Create virtual environment and install dependencies
           $PYTHON_CMD -m venv ci_venv
