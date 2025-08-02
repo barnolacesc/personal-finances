@@ -1,3 +1,5 @@
+import { CONFIG, CategoryHelper, CurrencyHelper } from './config.js';
+
 class CategoryChart extends HTMLElement {
     constructor() {
         super();
@@ -6,20 +8,8 @@ class CategoryChart extends HTMLElement {
         this.currentMonth = new Date().getMonth() + 1;
         this.currentYear = new Date().getFullYear();
         this.currentWeek = 'all';
-        this.categoryColors = {
-            super: '#2563eb',      // Blue
-            xofa: '#7c3aed',       // Purple
-            food_drink: '#059669',  // Green
-            save_inv: '#10b981',   // Emerald
-            recurrent: '#f59e0b',  // Orange
-            clothing: '#ec4899',   // Pink
-            personal: '#8b5cf6',   // Purple
-            taxes: '#dc2626',      // Red
-            transport: '#6366f1',  // Indigo
-            car: '#374151',      // Dark gray
-            health: '#06b6d4',     // Cyan
-            other: '#6b7280'       // Gray
-        };
+        // Categories and colors loaded from config
+        this.categoryColors = {};
     }
 
     async connectedCallback() {
@@ -135,7 +125,7 @@ class CategoryChart extends HTMLElement {
     }
 
     getCategoryColor(category) {
-        return this.categoryColors[category] || '#6b7280';
+        return CategoryHelper.getCategoryColor(category);
     }
 
     async updateChart() {

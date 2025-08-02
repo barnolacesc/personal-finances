@@ -1,3 +1,5 @@
+import { CONFIG, CategoryHelper, CurrencyHelper } from './config.js';
+
 class ExpenseList extends HTMLElement {
     constructor() {
         super();
@@ -5,10 +7,8 @@ class ExpenseList extends HTMLElement {
         this.currentMonth = new Date().getMonth() + 1;
         this.currentYear = new Date().getFullYear();
         this.currentWeek = 'all';
-        this.categories = [
-            'super', 'xofa', 'food_drink', 'save_inv', 'recurrent',
-            'clothing', 'personal', 'taxes', 'transport', 'car', 'health', 'other'
-        ];
+        // Load categories from config
+        this.categories = CategoryHelper.getAllCategories();
         this.page = 1;
         this.perPage = 5;
         this.total = 0;
@@ -34,7 +34,7 @@ class ExpenseList extends HTMLElement {
                                 <i class="bi bi-chevron-down ms-2"></i>
                             </button>
                         </h5>
-                        <span id="totalAmount" class="fw-bold text-primary">€0.00</span>
+                        <span id="totalAmount" class="fw-bold text-primary">${CurrencyHelper.format(0)}</span>
                     </div>
                 </div>
                 <div id="expensesListSection" class="collapse show">
@@ -55,6 +55,16 @@ class ExpenseList extends HTMLElement {
     }
 
     setupEventListeners() {
+        // Listen for date changes from navigation component
+        document.addEventListener('datechange', (e) => {
+            const { month, year, week } = e.detail;
+            this.currentMonth = month;
+            this.currentYear = year;
+            this.currentWeek = week;
+            this.page = 1; // Reset to first page when date changes
+            this.loadExpenses();
+        });
+
         // Listen for clicks on expense items for editing
         this.addEventListener('click', (e) => {
             const expenseItem = e.target.closest('.expense-item');
@@ -164,7 +174,7 @@ class ExpenseList extends HTMLElement {
                             <div class="fw-medium expense-description">${expense.description}</div>
                         </div>
                         <div class="text-end ms-3 d-flex align-items-center gap-2">
-                            <span class="fw-bold fs-6 expense-amount">€${expense.amount.toFixed(2)}</span>
+                            <span class="fw-bold fs-6 expense-amount">${CurrencyHelper.format(expense.amount)}</span>
                             <small class="text-muted">
                                 <i class="bi bi-pencil-square"></i>
                             </small>
@@ -178,7 +188,7 @@ class ExpenseList extends HTMLElement {
             emptyState.style.display = 'block';
         }
 
-        this.querySelector('#totalAmount').textContent = `€${total.toFixed(2)}`;
+        this.querySelector('#totalAmount').textContent = CurrencyHelper.format(total);
     }
 
     formatDate(date) {
@@ -191,10 +201,7 @@ class ExpenseList extends HTMLElement {
     }
 
     formatCategory(category) {
-        return category
-            .split('_')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ');
+        return CategoryHelper.getCategoryLabel(category);
     }
 
     editExpense(expenseItem) {
@@ -230,7 +237,7 @@ class ExpenseList extends HTMLElement {
                     <div class="col-sm-4">
                         <label class="form-label small fw-bold">Amount</label>
                         <div class="input-group input-group-sm">
-                            <span class="input-group-text">€</span>
+                            <span class="input-group-text">${CONFIG.CURRENCY.symbol}</span>
                             <input type="text" 
                                    class="form-control edit-amount" 
                                    value="${amount}"
