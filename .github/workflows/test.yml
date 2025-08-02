@@ -30,55 +30,25 @@ jobs:
 
       - name: Set up Python environment and run tests
         run: |
-          # Find Python - try multiple approaches
-          PYTHON_CMD=""
+          # Use the confirmed working Python path directly
+          PYTHON_CMD="/usr/bin/python3.11"
 
-          echo "🔍 Searching for Python..."
+          echo "🔍 Using confirmed working Python path..."
+          echo "🐍 Testing Python: $PYTHON_CMD"
 
-          # Try common system Python locations with execution test
-          for path in /usr/bin/python3 /usr/bin/python /usr/local/bin/python3 /bin/python3; do
-            if [ -f "$path" ] && [ -x "$path" ]; then
-              echo "Testing $path..."
-              if "$path" --version >/dev/null 2>&1; then
-                PYTHON_CMD="$path"
-                echo "✅ Found working Python at: $path"
-                break
-              else
-                echo "⚠️  Found $path but execution failed"
-              fi
+          if [ -f "$PYTHON_CMD" ] && [ -x "$PYTHON_CMD" ]; then
+            if "$PYTHON_CMD" --version >/dev/null 2>&1; then
+              echo "✅ Python confirmed working: $PYTHON_CMD"
+            else
+              echo "❌ Python execution failed despite being executable"
+              echo "Trying to debug the issue..."
+              ls -la "$PYTHON_CMD"
+              ldd "$PYTHON_CMD" | head -5
+              exit 1
             fi
-          done
-
-          # Fallback to PATH if found there
-          if [ -z "$PYTHON_CMD" ]; then
-            for cmd in python3 python; do
-              if command -v $cmd &> /dev/null; then
-                if $cmd --version >/dev/null 2>&1; then
-                  PYTHON_CMD=$cmd
-                  echo "✅ Found working Python in PATH: $cmd"
-                  break
-                else
-                  echo "⚠️  Found $cmd in PATH but execution failed"
-                fi
-              fi
-            done
-          fi
-
-          # Last resort: try to use sudo to access python as cesc user
-          if [ -z "$PYTHON_CMD" ]; then
-            echo "🔄 Trying to run as cesc user..."
-            if sudo -u cesc /usr/bin/python3 --version >/dev/null 2>&1; then
-              PYTHON_CMD="sudo -u cesc /usr/bin/python3"
-              echo "✅ Found Python via sudo as cesc user"
-            elif sudo -u cesc /usr/bin/python --version >/dev/null 2>&1; then
-              PYTHON_CMD="sudo -u cesc /usr/bin/python"
-              echo "✅ Found Python via sudo as cesc user"
-            fi
-          fi
-
-          if [ -z "$PYTHON_CMD" ]; then
-            echo "❌ Python not found with any method"
-            echo "Searched: /usr/bin/python3, /usr/bin/python, /usr/local/bin/python3, /bin/python3, PATH, sudo as cesc"
+          else
+            echo "❌ Python binary not found or not executable: $PYTHON_CMD"
+            ls -la /usr/bin/python*
             exit 1
           fi
 
