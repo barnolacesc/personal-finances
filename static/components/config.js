@@ -11,48 +11,48 @@ export const CONFIG = {
 
     // Expense categories with colors and labels
     CATEGORIES: {
-        super: { 
-            label: 'Super', 
+        super: {
+            label: 'Super',
             color: '#2563eb',
             icon: 'bi-cart'
         },
-        xofa: { 
-            label: 'Xofa', 
+        xofa: {
+            label: 'Xofa',
             color: '#7c3aed',
             icon: 'bi-house'
         },
-        food_drink: { 
-            label: 'Food & Drink', 
+        food_drink: {
+            label: 'Food & Drink',
             color: '#059669',
             icon: 'bi-cup-straw'
         },
-        save_inv: { 
-            label: 'Save & Invest', 
+        save_inv: {
+            label: 'Save & Invest',
             color: '#10b981',
             icon: 'bi-piggy-bank'
         },
-        recurrent: { 
-            label: 'Recurrent', 
+        recurrent: {
+            label: 'Recurrent',
             color: '#f59e0b',
             icon: 'bi-arrow-repeat'
         },
-        clothing: { 
-            label: 'Clothing', 
+        clothing: {
+            label: 'Clothing',
             color: '#ec4899',
             icon: 'bi-person-check'
         },
-        personal: { 
-            label: 'Personal', 
+        personal: {
+            label: 'Personal',
             color: '#8b5cf6',
             icon: 'bi-person'
         },
-        taxes: { 
-            label: 'Taxes', 
+        taxes: {
+            label: 'Taxes',
             color: '#dc2626',
             icon: 'bi-receipt'
         },
-        transport: { 
-            label: 'Transport', 
+        transport: {
+            label: 'Transport',
             color: '#6366f1',
             icon: 'bi-car-front'
         },
@@ -61,13 +61,23 @@ export const CONFIG = {
             color: '#374151', // dark gray
             icon: 'bi-car-front-fill'
         },
-        health: { 
-            label: 'Health', 
+        health: {
+            label: 'Health',
             color: '#06b6d4',
             icon: 'bi-heart-pulse'
         },
-        other: { 
-            label: 'Other', 
+        cobeetrans: {
+            label: 'Cobee Trans',
+            color: '#8b5cf6',
+            icon: 'bi-bus-front'
+        },
+        cobeefood: {
+            label: 'Cobee Food',
+            color: '#f97316',
+            icon: 'bi-cup-hot'
+        },
+        other: {
+            label: 'Other',
             color: '#6b7280',
             icon: 'bi-three-dots'
         }
@@ -161,4 +171,4 @@ export class DateHelper {
             minute: '2-digit'
         });
     }
-} 
+}
