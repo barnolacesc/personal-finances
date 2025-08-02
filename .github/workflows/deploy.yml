@@ -14,43 +14,43 @@ jobs:
 
       - name: Set up Python environment and run tests
         run: |
-          # Ensure /usr/bin is in PATH
+          echo "🔍 Debugging Python access issue..."
+          echo "Current user: $(whoami)"
+          echo "PATH: $PATH"
+
+          # Check if python exists but has permission issues
+          echo "Checking file permissions on python binaries:"
+          ls -la /usr/bin/python* 2>/dev/null || echo "No python* files in /usr/bin/"
+
+          # Check if cesc user can access python
+          echo "Testing python access as cesc user:"
+          sudo -u cesc which python3 2>/dev/null && echo "✅ cesc has python3" || echo "❌ cesc: python3 not found"
+          sudo -u cesc which python 2>/dev/null && echo "✅ cesc has python" || echo "❌ cesc: python not found"
+
+          # Run the entire test suite as cesc user since that's where Python is accessible
+          echo "🔄 Running tests as cesc user..."
+          sudo -u cesc bash << 'EOF'
+
+          # Set up environment as cesc user
+          cd "$(pwd)"
           export PATH="/usr/bin:/usr/local/bin:$PATH"
 
-          # Find available Python command
+          # Find Python command
           PYTHON_CMD=""
-          for cmd in python3 python python3.11 python3.10 python3.9; do
+          for cmd in python3 python; do
             if command -v $cmd &> /dev/null; then
               PYTHON_CMD=$cmd
               break
             fi
           done
 
-          # Try absolute paths if command -v fails
           if [ -z "$PYTHON_CMD" ]; then
-            for path in /usr/bin/python3 /usr/bin/python /usr/local/bin/python3 /usr/local/bin/python; do
-              if [ -x "$path" ]; then
-                PYTHON_CMD=$path
-                break
-              fi
-            done
-          fi
-
-          if [ -z "$PYTHON_CMD" ]; then
-            echo "❌ No Python found. Debugging info:"
-            echo "PATH: $PATH"
-            echo "User: $(whoami)"
-            echo "Available python commands:"
-            which python3 2>/dev/null || echo "python3 not found"
-            which python 2>/dev/null || echo "python not found"
-            echo "Python binaries in common locations:"
-            ls -la /usr/bin/python* 2>/dev/null || echo "No python in /usr/bin/"
-            ls -la /usr/local/bin/python* 2>/dev/null || echo "No python in /usr/local/bin/"
+            echo "❌ Even cesc user cannot find Python"
             exit 1
           fi
 
           echo "🐍 Using Python: $PYTHON_CMD"
-          echo "🐍 Location: $(which $PYTHON_CMD 2>/dev/null || echo $PYTHON_CMD)"
+          echo "🐍 Location: $(which $PYTHON_CMD)"
           echo "🐍 Version: $($PYTHON_CMD --version)"
 
           # Create virtual environment and install dependencies
@@ -76,6 +76,7 @@ jobs:
           # Clean up
           deactivate
           rm -rf ci_venv
+          EOF
 
   deploy:
     needs: test
