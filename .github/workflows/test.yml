@@ -38,6 +38,5 @@ jobs:
           flake8 --max-line-length=88 --extend-ignore=E203,W503 app.py tests/
           black --check --diff app.py tests/
 
-          # Clean up
+          # Deactivate but keep venv for caching
           deactivate
-          rm -rf ci_venv
