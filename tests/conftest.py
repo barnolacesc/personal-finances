@@ -1,7 +1,7 @@
 import pytest
 import tempfile
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 import sys
 from app import app, db, Expense
 
@@ -43,23 +43,27 @@ def client(app_instance):
 @pytest.fixture
 def test_expenses(_db):
     """Create test expenses."""
+    # Use a fixed date in the current month to ensure all expenses are in the same month
+    base_date = datetime.now().replace(
+        day=15
+    )  # Use middle of month to avoid edge cases
     expenses = [
         Expense(
             amount=50.0,
             description="Grocery shopping",
-            date=datetime.now(),
+            date=base_date,
             category="Groceries",
         ),
         Expense(
             amount=30.0,
             description="Bus fare",
-            date=datetime.now() - timedelta(days=1),
+            date=base_date.replace(day=10),  # Earlier in same month
             category="Transport",
         ),
         Expense(
             amount=25.0,
             description="Movie night",
-            date=datetime.now() - timedelta(days=2),
+            date=base_date.replace(day=20),  # Later in same month
             category="Entertainment",
         ),
     ]
