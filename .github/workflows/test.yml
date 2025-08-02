@@ -12,23 +12,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Cache pip dependencies
+      - name: Cache virtual environment
         uses: actions/cache@v4
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt', 'requirements-dev.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          path: ci_venv
+          key: ${{ runner.os }}-venv-${{ hashFiles('requirements.txt', 'requirements-dev.txt') }}
 
       - name: Set up Python environment and run tests
         run: |
-          # Create virtual environment and install dependencies
-          python3 -m venv ci_venv
-          source ci_venv/bin/activate
+          # Create virtual environment only if not cached
+          if [ ! -d "ci_venv" ]; then
+            echo "Creating new virtual environment..."
+            python3 -m venv ci_venv
+            source ci_venv/bin/activate
+            pip install --upgrade pip
+            pip install -r requirements.txt -r requirements-dev.txt
+          else
+            echo "Using cached virtual environment..."
+          fi
 
-          # Install dependencies
-          pip install --upgrade pip
-          pip install -r requirements.txt -r requirements-dev.txt
+          source ci_venv/bin/activate
 
           # Run all checks in sequence
           pytest -v --tb=short
