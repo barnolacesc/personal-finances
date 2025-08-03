@@ -106,6 +106,13 @@ class AddExpenseForm extends BaseComponent {
         try {
             const result = await ApiService.createExpense(data);
 
+            console.log('Expense creation result:', result);
+
+            // Validate the result
+            if (!result || !result.id) {
+                throw new Error('Invalid response from server');
+            }
+
             // Show success state
             this.showSuccess(result);
 
@@ -113,6 +120,7 @@ class AddExpenseForm extends BaseComponent {
             EventManager.emitExpenseAdded(result);
 
         } catch (error) {
+            console.error('Add expense error:', error);
             ErrorHandler.handle(error, 'AddExpenseForm.handleSubmit');
             this.setSubmittingState(false);
             this.isSubmitting = false;
@@ -148,7 +156,7 @@ class AddExpenseForm extends BaseComponent {
                 <div class="card-body">
                     <div class="row text-start">
                         <div class="col-6"><strong>Amount:</strong></div>
-                        <div class="col-6">${CurrencyHelper.formatAmount(expense.amount)}</div>
+                        <div class="col-6">${CurrencyHelper.format(expense.amount)}</div>
                         <div class="col-6"><strong>Category:</strong></div>
                         <div class="col-6">
                             <span class="badge category-${expense.category}">
