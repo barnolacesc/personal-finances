@@ -152,11 +152,11 @@ class AddExpenseForm extends BaseComponent {
         const expenseDetails = document.getElementById('expenseDetails');
 
         expenseDetails.innerHTML = `
-            <div class="card bg-light">
+            <div class="card bg-body-secondary">
                 <div class="card-body">
                     <div class="row text-start">
                         <div class="col-6"><strong>Amount:</strong></div>
-                        <div class="col-6">${CurrencyHelper.format(expense.amount)}</div>
+                        <div class="col-6 fw-bold text-primary">${CurrencyHelper.format(expense.amount)}</div>
                         <div class="col-6"><strong>Category:</strong></div>
                         <div class="col-6">
                             <span class="badge category-${expense.category}">
