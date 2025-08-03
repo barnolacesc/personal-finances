@@ -917,10 +917,10 @@ class CategoryChart extends HTMLElement {
                         <div class="d-md-none" id="categoryExpensesListMobile"></div>
 
                         <!-- Mobile Total -->
-                        <div class="d-md-none mt-3 p-3 bg-light rounded">
+                        <div class="d-md-none mt-3 p-3 bg-body-secondary rounded">
                             <div class="d-flex justify-content-between align-items-center">
                                 <span class="fw-bold">Category Total</span>
-                                <span class="fw-bold fs-5" id="categoryTotalMobile">€0.00</span>
+                                <span class="fw-bold fs-5 text-primary" id="categoryTotalMobile">€0.00</span>
                             </div>
                         </div>
                     </div>

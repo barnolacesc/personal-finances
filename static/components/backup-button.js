@@ -8,8 +8,11 @@ class BackupButton extends HTMLElement {
 
     render() {
         this.innerHTML = `
-            <button class="btn btn-outline-success" title="Export & backup your expense data">
-                <i class="bi bi-download me-2"></i>Export Data
+            <button class="btn btn-outline-success d-flex align-items-center" title="Export & backup your expense data">
+                <i class="bi bi-download d-md-none"></i>
+                <span class="d-none d-md-inline">
+                    <i class="bi bi-download me-2"></i>Export Data
+                </span>
             </button>
         `;
     }
@@ -101,7 +104,12 @@ class BackupButton extends HTMLElement {
             window.showToast ? window.showToast('Backup failed: ' + e, 'error') : alert('Backup failed: ' + e);
         } finally {
             this.button.disabled = false;
-            this.button.innerHTML = '<i class="bi bi-download me-2"></i>Export Data';
+            this.button.innerHTML = `
+                <i class="bi bi-download d-md-none"></i>
+                <span class="d-none d-md-inline">
+                    <i class="bi bi-download me-2"></i>Export Data
+                </span>
+            `;
         }
     }
 
@@ -126,7 +134,12 @@ class BackupButton extends HTMLElement {
             window.showToast ? window.showToast('Download failed: ' + e, 'error') : alert('Download failed: ' + e);
         } finally {
             this.button.disabled = false;
-            this.button.innerHTML = '<i class="bi bi-download me-2"></i>Export Data';
+            this.button.innerHTML = `
+                <i class="bi bi-download d-md-none"></i>
+                <span class="d-none d-md-inline">
+                    <i class="bi bi-download me-2"></i>Export Data
+                </span>
+            `;
         }
     }
 }

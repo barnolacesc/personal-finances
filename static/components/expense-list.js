@@ -26,9 +26,9 @@ class ExpenseList extends HTMLElement {
                 <div class="card-header py-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
-                            <button class="btn btn-link text-decoration-none p-0 text-start d-flex align-items-center" 
-                                    type="button" 
-                                    data-bs-toggle="collapse" 
+                            <button class="btn btn-link text-decoration-none p-0 text-start d-flex align-items-center"
+                                    type="button"
+                                    data-bs-toggle="collapse"
                                     data-bs-target="#expensesListSection">
                                 <i class="bi bi-list-ul me-2"></i>Recent Expenses
                                 <i class="bi bi-chevron-down ms-2"></i>
@@ -70,7 +70,7 @@ class ExpenseList extends HTMLElement {
             const expenseItem = e.target.closest('.expense-item');
             const saveBtn = e.target.closest('.save-expense-btn');
             const cancelBtn = e.target.closest('.cancel-expense-btn');
-            
+
             if (expenseItem && !expenseItem.classList.contains('editing') && !saveBtn && !cancelBtn) {
                 // Enter edit mode
                 this.editExpense(expenseItem);
@@ -127,7 +127,7 @@ class ExpenseList extends HTMLElement {
         const expensesList = this.querySelector('#expensesList');
         const emptyState = this.querySelector('#emptyState');
         expensesList.innerHTML = '';
-        
+
         let total = 0;
         let hasExpenses = false;
         let filteredExpenses = [];
@@ -169,7 +169,7 @@ class ExpenseList extends HTMLElement {
                                     ${this.formatCategory(expense.category)}
                                 </span>
                                 <small class="text-muted">${this.formatDate(expense.date)}</small>
-                                ${isFirst ? '<span class="badge bg-light text-dark ms-2"><i class="bi bi-clock"></i> Latest</span>' : ''}
+                                ${isFirst ? '<span class="badge bg-body-secondary text-body ms-2"><i class="bi bi-clock"></i> Latest</span>' : ''}
                             </div>
                             <div class="fw-medium expense-description">${expense.description}</div>
                         </div>
@@ -238,8 +238,8 @@ class ExpenseList extends HTMLElement {
                         <label class="form-label small fw-bold">Amount</label>
                         <div class="input-group input-group-sm">
                             <span class="input-group-text">${CONFIG.CURRENCY.symbol}</span>
-                            <input type="text" 
-                                   class="form-control edit-amount" 
+                            <input type="text"
+                                   class="form-control edit-amount"
                                    value="${amount}"
                                    pattern="[0-9]*[.,]?[0-9]*"
                                    inputmode="decimal">
@@ -257,8 +257,8 @@ class ExpenseList extends HTMLElement {
                     </div>
                     <div class="col-sm-4">
                         <label class="form-label small fw-bold">Description</label>
-                        <input type="text" 
-                               class="form-control form-control-sm edit-description" 
+                        <input type="text"
+                               class="form-control form-control-sm edit-description"
                                value="${description}"
                                maxlength="50">
                     </div>
@@ -293,7 +293,7 @@ class ExpenseList extends HTMLElement {
     async saveExpenseEdit(saveBtn) {
         const expenseId = saveBtn.dataset.expenseId;
         const expenseItem = saveBtn.closest('.expense-item');
-        
+
         const amount = parseFloat(expenseItem.querySelector('.edit-amount').value.replace(',', '.'));
         const category = expenseItem.querySelector('.edit-category').value;
         const description = expenseItem.querySelector('.edit-description').value.trim();
@@ -344,7 +344,7 @@ class ExpenseList extends HTMLElement {
         // Remove editing state
         expenseItem.classList.remove('editing');
         expenseItem.style.border = '';
-        
+
         // Restore original content if available
         if (expenseItem.dataset.originalContent) {
             expenseItem.innerHTML = expenseItem.dataset.originalContent;
@@ -412,4 +412,4 @@ class ExpenseList extends HTMLElement {
     }
 }
 
-customElements.define('expense-list', ExpenseList); 
+customElements.define('expense-list', ExpenseList);

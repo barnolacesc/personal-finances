@@ -352,32 +352,32 @@
         min-height: 44px;
         padding: 0.5rem 1rem;
     }
-    
+
     .btn-sm {
         min-height: 38px;
         padding: 0.25rem 0.75rem;
     }
-    
+
     /* Optimize form controls for touch */
     .form-control, .form-select {
         min-height: 44px;
         font-size: 16px; /* Prevents zoom on iOS */
     }
-    
+
     .form-control-sm, .form-select-sm {
         min-height: 38px;
         font-size: 14px;
     }
-    
+
     /* Better spacing for mobile */
     .card {
         margin-bottom: 1rem;
     }
-    
+
     .card-body {
         padding: 1rem;
     }
-    
+
     /* Optimize toast positioning */
     .toast-container {
         bottom: 1rem;
@@ -385,22 +385,22 @@
         left: 1rem;
         width: auto;
     }
-    
+
     .toast {
         width: 100%;
         min-width: unset;
     }
-    
+
     /* Landing page mobile optimization */
     .landing-button {
         height: 120px;
         margin-bottom: 1rem;
     }
-    
+
     .landing-button i {
         font-size: 2rem;
     }
-    
+
     /* Chart responsive */
     canvas {
         max-height: 250px !important;
@@ -412,11 +412,11 @@
     .toast {
         animation: none;
     }
-    
+
     .landing-button {
         transition: none;
     }
-    
+
     .landing-button:hover {
         transform: none;
     }
@@ -428,7 +428,7 @@
         animation-duration: 0.1s !important;
         transition-duration: 0.1s !important;
     }
-    
+
     .toast {
         animation-duration: 0.2s !important;
     }
@@ -450,4 +450,220 @@
 
 [data-bs-theme="dark"] .badge.category-other {
     background-color: #9ca3af !important; /* Lighter gray for better contrast */
+}
+
+/* DARK MODE DEVELOPMENT GUIDELINES AND COMPREHENSIVE PATTERNS */
+
+/*
+DARK MODE FIRST PRINCIPLES:
+1. Always use Bootstrap 5.3+ semantic color classes (bg-body, bg-body-secondary, text-body, etc.)
+2. Never use fixed colors like bg-light, bg-white, text-dark in components
+3. Test every new feature in both light AND dark modes before committing
+4. Use CSS custom properties for consistent theming
+5. Ensure proper contrast ratios for accessibility
+*/
+
+/* Bootstrap utility class overrides for proper dark mode support */
+[data-bs-theme="dark"] .bg-body {
+    background-color: var(--bs-body-bg) !important;
+}
+
+[data-bs-theme="dark"] .bg-body-secondary {
+    background-color: var(--bs-secondary-bg) !important;
+}
+
+[data-bs-theme="dark"] .bg-body-tertiary {
+    background-color: var(--bs-tertiary-bg) !important;
+}
+
+[data-bs-theme="dark"] .text-body {
+    color: var(--bs-body-color) !important;
+}
+
+[data-bs-theme="dark"] .text-body-secondary {
+    color: var(--bs-secondary-color) !important;
+}
+
+[data-bs-theme="dark"] .text-body-tertiary {
+    color: var(--bs-tertiary-color) !important;
+}
+
+/* Ensure bg-light fallback for dark mode - use bg-body-secondary instead */
+[data-bs-theme="dark"] .bg-light {
+    background-color: var(--bs-secondary-bg) !important;
+    color: var(--bs-body-color) !important;
+}
+
+/* Strong and bold text should be highly visible in dark mode */
+[data-bs-theme="dark"] strong,
+[data-bs-theme="dark"] .fw-bold {
+    color: #ffffff !important;
+}
+
+/* Improve overall text readability */
+[data-bs-theme="dark"] .card-body {
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="dark"] .card-body strong {
+    color: #ffffff;
+}
+
+/* Alert and status components */
+[data-bs-theme="dark"] .alert {
+    color: var(--bs-body-color);
+    background-color: var(--bs-secondary-bg);
+    border-color: var(--bs-border-color);
+}
+
+[data-bs-theme="dark"] .alert-success {
+    color: #22c55e;
+    background-color: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.2);
+}
+
+[data-bs-theme="dark"] .alert-danger {
+    color: #ef4444;
+    background-color: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.2);
+}
+
+[data-bs-theme="dark"] .alert-warning {
+    color: #f59e0b;
+    background-color: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.2);
+}
+
+[data-bs-theme="dark"] .alert-info {
+    color: #06b6d4;
+    background-color: rgba(6, 182, 212, 0.1);
+    border-color: rgba(6, 182, 212, 0.2);
+}
+
+/* Dropdown and offcanvas dark mode */
+[data-bs-theme="dark"] .dropdown-menu {
+    background-color: var(--bs-body-bg);
+    border-color: var(--bs-border-color);
+}
+
+[data-bs-theme="dark"] .dropdown-item {
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="dark"] .dropdown-item:hover,
+[data-bs-theme="dark"] .dropdown-item:focus {
+    background-color: var(--bs-secondary-bg);
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="dark"] .offcanvas {
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+}
+
+/* Pagination dark mode */
+[data-bs-theme="dark"] .pagination .page-link {
+    background-color: var(--bs-body-bg);
+    border-color: var(--bs-border-color);
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="dark"] .pagination .page-link:hover {
+    background-color: var(--bs-secondary-bg);
+    border-color: var(--bs-border-color);
+    color: var(--bs-body-color);
+}
+
+[data-bs-theme="dark"] .pagination .page-item.active .page-link {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: #ffffff;
+}
+
+/* Progress bars */
+[data-bs-theme="dark"] .progress {
+    background-color: var(--bs-secondary-bg);
+}
+
+/* Borders and dividers */
+[data-bs-theme="dark"] .border {
+    border-color: var(--bs-border-color) !important;
+}
+
+[data-bs-theme="dark"] .border-top {
+    border-top-color: var(--bs-border-color) !important;
+}
+
+[data-bs-theme="dark"] .border-bottom {
+    border-bottom-color: var(--bs-border-color) !important;
+}
+
+[data-bs-theme="dark"] .border-start {
+    border-left-color: var(--bs-border-color) !important;
+}
+
+[data-bs-theme="dark"] .border-end {
+    border-right-color: var(--bs-border-color) !important;
+}
+
+/* Navbar improvements */
+[data-bs-theme="dark"] .navbar {
+    background-color: var(--bs-body-bg) !important;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+[data-bs-theme="dark"] .navbar-brand {
+    color: #ffffff !important;
+}
+
+[data-bs-theme="dark"] .navbar-nav .nav-link {
+    color: var(--bs-body-color) !important;
+}
+
+[data-bs-theme="dark"] .navbar-nav .nav-link:hover {
+    color: #ffffff !important;
+}
+
+/* Accordion dark mode */
+[data-bs-theme="dark"] .accordion {
+    --bs-accordion-bg: var(--bs-body-bg);
+    --bs-accordion-border-color: var(--bs-border-color);
+    --bs-accordion-button-bg: var(--bs-secondary-bg);
+    --bs-accordion-button-color: var(--bs-body-color);
+    --bs-accordion-button-active-bg: var(--bs-primary);
+    --bs-accordion-button-active-color: #ffffff;
+}
+
+/* Tab navigation */
+[data-bs-theme="dark"] .nav-tabs {
+    border-bottom-color: var(--bs-border-color);
+}
+
+[data-bs-theme="dark"] .nav-tabs .nav-link {
+    color: var(--bs-body-color);
+    border-color: transparent;
+}
+
+[data-bs-theme="dark"] .nav-tabs .nav-link:hover {
+    border-color: var(--bs-border-color);
+    color: #ffffff;
+}
+
+[data-bs-theme="dark"] .nav-tabs .nav-link.active {
+    color: #ffffff;
+    background-color: var(--bs-body-bg);
+    border-color: var(--bs-border-color) var(--bs-border-color) var(--bs-body-bg);
+}
+
+/* List groups */
+[data-bs-theme="dark"] .list-group {
+    --bs-list-group-bg: var(--bs-body-bg);
+    --bs-list-group-border-color: var(--bs-border-color);
+    --bs-list-group-item-bg: var(--bs-body-bg);
+    --bs-list-group-hover-bg: var(--bs-secondary-bg);
+}
+
+/* Breadcrumb */
+[data-bs-theme="dark"] .breadcrumb-item + .breadcrumb-item::before {
+    color: var(--bs-secondary-color);
 }
