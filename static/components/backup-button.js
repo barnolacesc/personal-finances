@@ -8,8 +8,8 @@ class BackupButton extends HTMLElement {
 
     render() {
         this.innerHTML = `
-            <button class="btn btn-outline-secondary btn-sm" title="Backup all data to CSV">
-                <i class="bi bi-download me-1"></i> Backup CSV
+            <button class="btn btn-outline-success" title="Export & backup your expense data">
+                <i class="bi bi-download me-2"></i>Export Data
             </button>
         `;
     }
@@ -27,14 +27,34 @@ class BackupButton extends HTMLElement {
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">Backup Options</h5>
+                        <h5 class="modal-title">
+                            <i class="bi bi-download me-2"></i>Export Your Data
+                        </h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <p>Choose how you want to backup your data:</p>
-                        <div class="d-grid gap-2">
-                            <button id="backupToServerBtn" class="btn btn-outline-primary">Backup to server</button>
-                            <button id="downloadBackupBtn" class="btn btn-outline-success">Download to device</button>
+                        <p class="mb-3">Choose how you want to export and backup your expense data:</p>
+                        <div class="d-grid gap-3">
+                            <button id="downloadBackupBtn" class="btn btn-success btn-lg">
+                                <i class="bi bi-download me-2"></i>
+                                <div class="d-flex flex-column align-items-start">
+                                    <span class="fw-bold">Download to Device</span>
+                                    <small class="text-white-50">Save CSV file to your device</small>
+                                </div>
+                            </button>
+                            <button id="backupToServerBtn" class="btn btn-outline-primary btn-lg">
+                                <i class="bi bi-cloud-upload me-2"></i>
+                                <div class="d-flex flex-column align-items-start">
+                                    <span class="fw-bold">Backup to Server</span>
+                                    <small class="text-muted">Create server backup for later download</small>
+                                </div>
+                            </button>
+                        </div>
+                        <div class="mt-3 text-center">
+                            <small class="text-muted">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Both options export all your expense data to CSV format
+                            </small>
                         </div>
                     </div>
                 </div>
@@ -81,7 +101,7 @@ class BackupButton extends HTMLElement {
             window.showToast ? window.showToast('Backup failed: ' + e, 'error') : alert('Backup failed: ' + e);
         } finally {
             this.button.disabled = false;
-            this.button.innerHTML = '<i class="bi bi-download me-1"></i> Backup CSV';
+            this.button.innerHTML = '<i class="bi bi-download me-2"></i>Export Data';
         }
     }
 
@@ -106,9 +126,9 @@ class BackupButton extends HTMLElement {
             window.showToast ? window.showToast('Download failed: ' + e, 'error') : alert('Download failed: ' + e);
         } finally {
             this.button.disabled = false;
-            this.button.innerHTML = '<i class="bi bi-download me-1"></i> Backup CSV';
+            this.button.innerHTML = '<i class="bi bi-download me-2"></i>Export Data';
         }
     }
 }
 
-customElements.define('backup-button', BackupButton); 
+customElements.define('backup-button', BackupButton);
