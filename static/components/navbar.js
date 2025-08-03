@@ -19,9 +19,7 @@ class NavBar extends HTMLElement {
     getContextualActions() {
         switch (this.currentPage) {
             case 'add-expense':
-                return [
-                    { icon: 'chart-bar', label: 'View Expenses', href: '/static/expenses.html', variant: 'outline-success' }
-                ];
+                return [];
             case 'expenses':
                 return [
                     { icon: 'plus-circle', label: 'Add Expense', href: '/static/add-expense.html', variant: 'outline-primary' },
