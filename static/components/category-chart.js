@@ -283,23 +283,50 @@ class CategoryChart extends HTMLElement {
                     type: 'doughnut',
                     data: data,
                     options: {
-                        cutout: '60%',
+                        cutout: '65%',
+                        radius: '90%',
                         plugins: {
                             legend: {
                                 display: false
                             },
                             tooltip: {
+                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                titleColor: '#374151',
+                                bodyColor: '#374151',
+                                borderColor: '#e5e7eb',
+                                borderWidth: 1,
+                                cornerRadius: 8,
+                                padding: 12,
+                                displayColors: true,
                                 callbacks: {
                                     label: (context) => {
                                         const value = context.raw;
-                                        return `${context.label}: ${this.formatAmount(value)}`;
+                                        const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                        const percentage = Math.round((value / total) * 100);
+                                        return `${context.label}: ${this.formatAmount(value)} (${percentage}%)`;
                                     }
                                 }
                             }
                         },
+                        responsive: true,
+                        maintainAspectRatio: true,
                         animation: {
                             animateRotate: true,
-                            animateScale: true
+                            animateScale: true,
+                            duration: 800,
+                            easing: 'easeOutQuart'
+                        },
+                        interaction: {
+                            intersect: false,
+                            mode: 'nearest'
+                        },
+                        elements: {
+                            arc: {
+                                borderWidth: 3,
+                                borderColor: 'rgba(255, 255, 255, 0.8)',
+                                hoverBorderWidth: 4,
+                                hoverBorderColor: '#ffffff'
+                            }
                         },
                         onClick: (e, elements) => {
                             if (elements && elements.length > 0) {
@@ -317,14 +344,22 @@ class CategoryChart extends HTMLElement {
                 const color = this.getCategoryColor(category);
                 console.log(`Legend - Category: ${category}, Color: ${color}`);
                 return `
-                    <div class="d-flex align-items-center justify-content-between legend-item"
+                    <div class="expense-card p-3 legend-item"
                          data-category="${category}"
-                         style="cursor: pointer">
-                        <div class="d-flex align-items-center">
-                            <span class="color-dot me-2" style="background-color: ${color}"></span>
-                            <span class="text-capitalize">${this.formatCategory(category)}</span>
+                         style="cursor: pointer; border-left: 4px solid ${color};">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <div class="d-inline-flex align-items-center justify-content-center me-3"
+                                     style="width: 40px; height: 40px; background: ${color}15; border-radius: 50%;">
+                                    <i class="bi bi-${CategoryHelper.getCategoryIcon(category)}" style="color: ${color};"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-medium">${this.formatCategory(category)}</div>
+                                    <small class="text-muted">${Math.round((amount/sortedCategories.reduce((sum, [,amt]) => sum + amt, 0))*100)}% of total</small>
+                                </div>
+                            </div>
+                            <strong class="fs-5" style="color: ${color};">${this.formatAmount(amount)}</strong>
                         </div>
-                        <strong>${this.formatAmount(amount)}</strong>
                     </div>
                 `;
             }).join('');
@@ -843,40 +878,37 @@ class CategoryChart extends HTMLElement {
 
     render() {
         this.innerHTML = `
-            <div class="card shadow-sm">
-                <div class="card-header py-3">
-                    <h5 class="mb-0">
-                        <button class="btn btn-link text-decoration-none p-0 w-100 text-start d-flex justify-content-between align-items-center"
-                                type="button"
-                                data-bs-toggle="collapse"
-                                data-bs-target="#chartSection">
-                            <span><i class="bi bi-pie-chart me-2"></i>Expense Distribution</span>
-                            <span id="chartTotal" class="text-primary"></span>
-                        </button>
-                    </h5>
+            <div class="chart-container-modern">
+                <div class="text-center mb-4">
+                    <div class="d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px; background: var(--primary-gradient); border-radius: 50%;">
+                        <i class="bi bi-pie-chart text-white fs-3"></i>
+                    </div>
+                    <h4 class="chart-title-modern mb-0">Expense Distribution</h4>
+                    <p class="text-muted">Analyze your spending patterns</p>
                 </div>
-                <div id="chartSection" class="collapse show">
-                    <div class="card-body">
-                        <div class="row align-items-center">
-                            <div class="col-md-6 position-relative">
-                                <canvas id="categoryChart"></canvas>
-                                <div id="chartCenterTotal" class="position-absolute top-50 start-50 translate-middle text-center">
-                                    <div class="fs-5 text-muted mb-1">Total</div>
-                                    <div class="fs-4 fw-bold"></div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div id="chartLegend" class="d-flex flex-column gap-2 ps-md-4 mt-4 mt-md-0"></div>
+                <div id="chartSection">
+                    <div class="row align-items-center">
+                        <div class="col-md-6 position-relative">
+                            <canvas id="categoryChart" style="max-height: 280px;"></canvas>
+                            <div id="chartCenterTotal" class="position-absolute top-50 start-50 translate-middle text-center">
+                                <div class="fs-6 text-muted mb-1">Total</div>
+                                <div class="fs-4 fw-bold"></div>
                             </div>
                         </div>
+                        <div class="col-md-6">
+                            <div id="chartLegend" class="d-flex flex-column gap-3 ps-md-4 mt-4 mt-md-0"></div>
+                        </div>
                     </div>
+                </div>
                     <!-- Category Details Section -->
                     <div id="categoryDetails" class="collapse">
-                        <div class="card-header border-top">
-                            <h6 class="mb-0 d-flex justify-content-between align-items-center">
-                                <span id="categoryDetailsTitle">Category Details</span>
+                        <div class="border-top pt-4 mt-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="mb-0 text-primary">
+                                    <i class="bi bi-list-ul me-2"></i><span id="categoryDetailsTitle">Category Details</span>
+                                </h5>
                                 <button type="button" class="btn-close" aria-label="Close"></button>
-                            </h6>
+                            </div>
                         </div>
                         <!-- Desktop Table View -->
                         <div class="table-responsive d-none d-md-block">

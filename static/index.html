@@ -20,18 +20,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <!-- Custom Styles -->
     <link rel="stylesheet" href="/static/styles/theme.css">
-    <style>
-        .landing-button {
-            height: 200px;
-            transition: transform 0.2s;
-        }
-        .landing-button:hover {
-            transform: scale(1.02);
-        }
-        .landing-button i {
-            font-size: 3rem;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/styles/modern-theme.css">
 </head>
 <body>
     <nav-bar></nav-bar>
@@ -39,26 +28,25 @@
     <div class="container py-5">
         <div class="row justify-content-center">
             <div class="col-md-8 col-lg-6">
-                <h1 class="text-center mb-5">Personal Finance Tracker</h1>
+                <div class="text-center mb-5">
+                    <h1 class="display-5 fw-bold mb-3" style="background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Personal Finance</h1>
+                    <p class="text-muted fs-5">Track your expenses with style</p>
+                </div>
 
                 <div class="d-flex flex-column gap-4">
-                    <a href="/static/add-expense.html" class="text-decoration-none">
-                        <div class="card landing-button shadow-sm">
-                            <div class="card-body d-flex flex-column justify-content-center align-items-center">
-                                <i class="bi bi-plus-circle text-primary mb-3"></i>
-                                <h2 class="mb-0">Add Expense</h2>
-                                <p class="text-muted mb-0 mt-2">Record a new expense</p>
-                            </div>
+                    <a href="/static/add-expense.html" class="landing-card">
+                        <div class="card-content">
+                            <i class="bi bi-plus-circle-fill card-icon"></i>
+                            <h2 class="card-title">Add Expense</h2>
+                            <p class="card-description">Record a new expense quickly</p>
                         </div>
                     </a>
 
-                    <a href="/static/expenses.html" class="text-decoration-none">
-                        <div class="card landing-button shadow-sm">
-                            <div class="card-body d-flex flex-column justify-content-center align-items-center">
-                                <i class="bi bi-chart-bar text-success mb-3"></i>
-                                <h2 class="mb-0">View Expenses</h2>
-                                <p class="text-muted mb-0 mt-2">See charts and expense details</p>
-                            </div>
+                    <a href="/static/expenses.html" class="landing-card">
+                        <div class="card-content">
+                            <i class="bi bi-bar-chart-fill card-icon"></i>
+                            <h2 class="card-title">View Expenses</h2>
+                            <p class="card-description">Analyze your spending patterns</p>
                         </div>
                     </a>
                 </div>

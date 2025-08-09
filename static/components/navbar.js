@@ -34,9 +34,10 @@ class NavBar extends HTMLElement {
         const actions = this.getContextualActions();
 
         const actionsHtml = actions.map(action => {
+            const buttonClass = action.variant.includes('primary') ? 'btn-modern btn-modern-primary' : 'btn-modern btn-modern-secondary';
             if (action.href) {
                 return `
-                    <a href="${action.href}" class="btn btn-${action.variant} d-flex align-items-center me-2">
+                    <a href="${action.href}" class="${buttonClass} d-flex align-items-center text-decoration-none">
                         <i class="bi bi-${action.icon} d-md-none"></i>
                         <span class="d-none d-md-inline">
                             <i class="bi bi-${action.icon} me-2"></i>${action.label}
@@ -45,7 +46,7 @@ class NavBar extends HTMLElement {
                 `;
             } else {
                 return `
-                    <button class="btn btn-${action.variant} d-flex align-items-center me-2" data-action="${action.action}">
+                    <button class="${buttonClass} d-flex align-items-center" data-action="${action.action}">
                         <i class="bi bi-${action.icon} d-md-none"></i>
                         <span class="d-none d-md-inline">
                             <i class="bi bi-${action.icon} me-2"></i>${action.label}
@@ -56,12 +57,17 @@ class NavBar extends HTMLElement {
         }).join('');
 
         this.innerHTML = `
-            <nav class="navbar navbar-expand-lg shadow-sm mb-3">
+            <nav class="navbar navbar-modern navbar-expand-lg mb-4">
                 <div class="container">
-                    <a class="navbar-brand fw-semibold" href="/static/index.html">Personal Finances</a>
-                    <div class="d-flex align-items-center">
+                    <a class="navbar-brand fw-bold d-flex align-items-center" href="/static/index.html">
+                        <div class="d-inline-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; background: var(--primary-gradient); border-radius: 50%;">
+                            <i class="bi bi-wallet2 text-white fs-6"></i>
+                        </div>
+                        Personal Finances
+                    </a>
+                    <div class="d-flex align-items-center gap-2">
                         ${actionsHtml}
-                        <button class="btn btn-outline-secondary" id="themeToggle" aria-label="Toggle dark mode">
+                        <button class="btn-modern btn-modern-secondary" id="themeToggle" aria-label="Toggle dark mode">
                             <i class="bi bi-moon-fill"></i>
                         </button>
                     </div>

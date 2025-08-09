@@ -1,0 +1,568 @@
+/* Modern Theme System - 2024 Design Trends
+   Optimized for mobile devices and low-spec Raspberry Pi */
+
+:root {
+    /* Modern Color System - Light Theme */
+    --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --success-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    --warning-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --info-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+
+    /* Card System */
+    --card-border-radius: 16px;
+    --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    --card-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.1);
+    --card-bg: #ffffff;
+    --card-border: 1px solid rgba(0, 0, 0, 0.08);
+
+    /* Surface Colors */
+    --surface-primary: #ffffff;
+    --surface-secondary: #f8fafc;
+    --surface-tertiary: #f1f5f9;
+    --surface-elevated: #ffffff;
+
+    /* Text Colors */
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --text-tertiary: #94a3b8;
+    --text-inverse: #ffffff;
+
+    /* Accent Colors - Modern Palette */
+    --accent-blue: #3b82f6;
+    --accent-green: #10b981;
+    --accent-purple: #8b5cf6;
+    --accent-pink: #ec4899;
+    --accent-orange: #f59e0b;
+    --accent-red: #ef4444;
+    --accent-indigo: #6366f1;
+    --accent-teal: #06b6d4;
+
+    /* Interactive States */
+    --interactive-hover: rgba(59, 130, 246, 0.08);
+    --interactive-press: rgba(59, 130, 246, 0.12);
+    --interactive-focus: 0 0 0 3px rgba(59, 130, 246, 0.1);
+
+    /* Spacing System */
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+    --space-xl: 2rem;
+    --space-2xl: 3rem;
+
+    /* Typography */
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    --font-size-2xl: 1.5rem;
+    --font-size-3xl: 1.875rem;
+
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    /* Animation */
+    --transition-fast: 0.15s ease-out;
+    --transition-base: 0.2s ease-out;
+    --transition-slow: 0.3s ease-out;
+}
+
+[data-bs-theme="dark"] {
+    /* Dark Theme Colors */
+    --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --success-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    --warning-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --info-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+
+    /* Card System - Dark */
+    --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    --card-shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.4);
+    --card-bg: #1e293b;
+    --card-border: 1px solid rgba(255, 255, 255, 0.1);
+
+    /* Surface Colors - Dark */
+    --surface-primary: #0f172a;
+    --surface-secondary: #1e293b;
+    --surface-tertiary: #334155;
+    --surface-elevated: #1e293b;
+
+    /* Text Colors - Dark */
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-tertiary: #94a3b8;
+    --text-inverse: #0f172a;
+
+    /* Interactive States - Dark */
+    --interactive-hover: rgba(59, 130, 246, 0.12);
+    --interactive-press: rgba(59, 130, 246, 0.16);
+    --interactive-focus: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+/* Modern Card Components */
+.modern-card {
+    background: var(--card-bg);
+    border: var(--card-border);
+    border-radius: var(--card-border-radius);
+    box-shadow: var(--card-shadow);
+    transition: all var(--transition-base);
+    overflow: hidden;
+}
+
+.modern-card:hover {
+    box-shadow: var(--card-shadow-hover);
+    transform: translateY(-1px);
+}
+
+.modern-card-gradient {
+    background: var(--primary-gradient);
+    color: var(--text-inverse);
+    border: none;
+}
+
+.modern-card-elevated {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+[data-bs-theme="dark"] .modern-card-elevated {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+}
+
+/* Enhanced Landing Page Cards */
+.landing-card {
+    background: var(--card-bg);
+    border: var(--card-border);
+    border-radius: var(--card-border-radius);
+    box-shadow: var(--card-shadow);
+    transition: all var(--transition-base);
+    padding: var(--space-2xl);
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-decoration: none !important;
+    color: inherit;
+    position: relative;
+    overflow: hidden;
+}
+
+.landing-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--primary-gradient);
+    opacity: 0;
+    transition: opacity var(--transition-base);
+    z-index: 0;
+}
+
+.landing-card:hover::before {
+    opacity: 0.05;
+}
+
+[data-bs-theme="dark"] .landing-card:hover::before {
+    opacity: 0.1;
+}
+
+.landing-card:hover {
+    box-shadow: var(--card-shadow-hover);
+    transform: translateY(-2px);
+    color: inherit;
+}
+
+.landing-card .card-content {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+}
+
+.landing-card .card-icon {
+    font-size: 2.5rem;
+    margin-bottom: var(--space-md);
+    color: var(--accent-blue);
+    transition: all var(--transition-base);
+}
+
+.landing-card:hover .card-icon {
+    transform: scale(1.1);
+    color: var(--accent-purple);
+}
+
+.landing-card .card-title {
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--space-xs);
+    color: var(--text-primary);
+}
+
+.landing-card .card-description {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* Expense List Cards */
+.expense-card {
+    background: var(--card-bg);
+    border: var(--card-border);
+    border-radius: 12px;
+    padding: var(--space-lg);
+    margin-bottom: var(--space-md);
+    box-shadow: var(--card-shadow);
+    transition: all var(--transition-base);
+}
+
+.expense-card:hover {
+    box-shadow: var(--card-shadow-hover);
+    transform: translateY(-1px);
+}
+
+.expense-card .expense-amount {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+    color: var(--text-primary);
+}
+
+.expense-card .expense-category {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: 20px;
+    display: inline-block;
+}
+
+.expense-card .expense-description {
+    color: var(--text-secondary);
+    margin: var(--space-xs) 0;
+}
+
+.expense-card .expense-date {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+}
+
+/* Modern Buttons */
+.btn-modern {
+    border-radius: 12px;
+    font-weight: var(--font-weight-medium);
+    padding: var(--space-sm) var(--space-lg);
+    transition: all var(--transition-base);
+    border: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-modern-primary {
+    background: var(--primary-gradient);
+    color: var(--text-inverse);
+}
+
+.btn-modern-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    color: var(--text-inverse);
+}
+
+.btn-modern-secondary {
+    background: var(--surface-secondary);
+    color: var(--text-primary);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.btn-modern-secondary:hover {
+    background: var(--surface-tertiary);
+    transform: translateY(-1px);
+    color: var(--text-primary);
+}
+
+/* Form Styling */
+.form-modern .form-control {
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--font-size-base);
+    transition: all var(--transition-base);
+    background: var(--surface-primary);
+}
+
+.form-modern .form-control:focus {
+    border-color: var(--accent-blue);
+    box-shadow: var(--interactive-focus);
+    background: var(--surface-primary);
+}
+
+.form-modern .form-select {
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: var(--space-sm) var(--space-md);
+    transition: all var(--transition-base);
+    background: var(--surface-primary);
+}
+
+[data-bs-theme="dark"] .form-modern .form-control,
+[data-bs-theme="dark"] .form-modern .form-select {
+    background: var(--surface-secondary);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+}
+
+[data-bs-theme="dark"] .form-modern .form-control:focus,
+[data-bs-theme="dark"] .form-modern .form-select:focus {
+    background: var(--surface-secondary);
+    border-color: var(--accent-blue);
+}
+
+/* Category Badge Modernization */
+.category-badge-modern {
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: 20px;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+/* Chart Container Modernization */
+.chart-container-modern {
+    background: var(--card-bg);
+    border: var(--card-border);
+    border-radius: var(--card-border-radius);
+    padding: var(--space-xl);
+    box-shadow: var(--card-shadow);
+    margin-bottom: var(--space-lg);
+}
+
+.chart-title-modern {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+    margin-bottom: var(--space-lg);
+    text-align: center;
+}
+
+/* Navigation Enhancement */
+.navbar-modern {
+    background: var(--surface-elevated) !important;
+    border-bottom: var(--card-border);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    padding: var(--space-md) 0;
+}
+
+.navbar-modern .navbar-brand {
+    font-weight: var(--font-weight-bold);
+    color: var(--text-primary) !important;
+}
+
+.navbar-modern .nav-link {
+    color: var(--text-secondary) !important;
+    font-weight: var(--font-weight-medium);
+    transition: color var(--transition-base);
+}
+
+.navbar-modern .nav-link:hover {
+    color: var(--accent-blue) !important;
+}
+
+/* Toast Modernization */
+.toast-modern {
+    background: var(--card-bg);
+    border: var(--card-border);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    border-left: none;
+    padding: var(--space-lg);
+}
+
+.toast-modern.success {
+    border-left: 4px solid var(--accent-green);
+}
+
+.toast-modern.error {
+    border-left: 4px solid var(--accent-red);
+}
+
+.toast-modern.info {
+    border-left: 4px solid var(--accent-blue);
+}
+
+[data-bs-theme="dark"] .toast-modern {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Responsive Design - Mobile First */
+@media (max-width: 768px) {
+    .landing-card {
+        padding: var(--space-lg);
+        min-height: 140px;
+    }
+
+    .landing-card .card-icon {
+        font-size: 2rem;
+        margin-bottom: var(--space-sm);
+    }
+
+    .landing-card .card-title {
+        font-size: var(--font-size-lg);
+    }
+
+    .chart-container-modern {
+        padding: var(--space-lg);
+    }
+
+    .expense-card {
+        padding: var(--space-md);
+    }
+}
+
+/* Performance Optimizations for Raspberry Pi */
+@media (prefers-reduced-motion: reduce) {
+    .modern-card,
+    .landing-card,
+    .expense-card,
+    .btn-modern,
+    .form-modern .form-control,
+    .form-modern .form-select {
+        transition: none !important;
+        animation: none !important;
+    }
+
+    .landing-card:hover,
+    .modern-card:hover,
+    .expense-card:hover {
+        transform: none !important;
+    }
+
+    .loading-shimmer {
+        animation: none !important;
+    }
+}
+
+/* Force reduced motion for low-end devices - Raspberry Pi Optimization */
+@media (max-device-width: 1024px) and (orientation: portrait) {
+    * {
+        animation-duration: 0.05s !important;
+        transition-duration: 0.05s !important;
+    }
+
+    .landing-card:hover,
+    .modern-card:hover,
+    .expense-card:hover,
+    .btn-modern:hover {
+        transform: translateY(-1px);
+    }
+
+    /* Disable complex animations on low-end devices */
+    .loading-shimmer {
+        display: none !important;
+    }
+
+    /* Reduce shadow complexity */
+    .modern-card,
+    .landing-card,
+    .expense-card {
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .modern-card:hover,
+    .landing-card:hover,
+    .expense-card:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+    }
+}
+
+/* Additional Raspberry Pi Zero optimizations */
+@media (max-width: 480px) {
+    /* Reduce gradient complexity on very small devices */
+    .landing-card::before {
+        background: var(--accent-blue) !important;
+        opacity: 0.05 !important;
+    }
+
+    .btn-modern-primary,
+    .modern-card-gradient {
+        background: var(--accent-blue) !important;
+    }
+
+    /* Simplify transforms for better performance */
+    .landing-card:hover,
+    .modern-card:hover {
+        transform: none !important;
+    }
+
+    .btn-modern:hover {
+        transform: none !important;
+    }
+
+    /* Optimize font rendering */
+    * {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        text-rendering: optimizeSpeed;
+    }
+}
+
+/* Accessibility Enhancements */
+@media (prefers-contrast: high) {
+    :root {
+        --card-border: 2px solid #000000;
+        --text-primary: #000000;
+        --text-secondary: #333333;
+    }
+
+    [data-bs-theme="dark"] {
+        --card-border: 2px solid #ffffff;
+        --text-primary: #ffffff;
+        --text-secondary: #cccccc;
+    }
+}
+
+/* Focus States for Keyboard Navigation */
+.modern-card:focus,
+.landing-card:focus,
+.btn-modern:focus,
+.form-modern .form-control:focus,
+.form-modern .form-select:focus {
+    outline: none;
+    box-shadow: var(--interactive-focus);
+}
+
+/* Loading States */
+.loading-shimmer {
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+}
+
+[data-bs-theme="dark"] .loading-shimmer {
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.1) 50%, transparent 100%);
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+/* Modern Color Palette for Categories */
+:root {
+    --category-super-modern: #3b82f6;
+    --category-xofa-modern: #8b5cf6;
+    --category-food-modern: #10b981;
+    --category-save-modern: #06b6d4;
+    --category-recurrent-modern: #f59e0b;
+    --category-clothing-modern: #ec4899;
+    --category-personal-modern: #8b5cf6;
+    --category-taxes-modern: #ef4444;
+    --category-transport-modern: #6366f1;
+    --category-health-modern: #06b6d4;
+    --category-car-modern: #64748b;
+    --category-other-modern: #94a3b8;
+}
