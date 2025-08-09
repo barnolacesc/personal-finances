@@ -145,7 +145,7 @@ class AddExpenseForm extends BaseComponent {
 
     showSuccess(expense) {
         // Hide the form card
-        document.querySelector('.card').classList.add('d-none');
+        document.querySelector('.modern-card.chart-container-modern').classList.add('d-none');
 
         // Show success card with expense details
         const successCard = document.getElementById('successCard');
@@ -181,7 +181,7 @@ class AddExpenseForm extends BaseComponent {
 
     resetForm() {
         // Show the form card again
-        document.querySelector('.card').classList.remove('d-none');
+        document.querySelector('.modern-card.chart-container-modern').classList.remove('d-none');
 
         // Reset form
         const form = this.querySelector('#addExpenseForm');
