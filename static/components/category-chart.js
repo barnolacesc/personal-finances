@@ -271,20 +271,38 @@ class CategoryChart extends HTMLElement {
                                 display: false
                             },
                             tooltip: {
-                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                titleColor: '#374151',
-                                bodyColor: '#374151',
-                                borderColor: '#e5e7eb',
-                                borderWidth: 1,
+                                enabled: true,
+                                backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                                titleColor: '#ffffff',
+                                bodyColor: '#ffffff',
+                                borderColor: 'rgba(255, 255, 255, 0.2)',
+                                borderWidth: 2,
                                 cornerRadius: 8,
-                                padding: 12,
+                                padding: 16,
                                 displayColors: true,
+                                boxPadding: 6,
+                                usePointStyle: true,
+                                position: 'average',
+                                yAlign: 'bottom',
+                                xAlign: 'center',
+                                caretSize: 8,
+                                caretPadding: 10,
+                                titleFont: {
+                                    size: 14,
+                                    weight: 'bold'
+                                },
+                                bodyFont: {
+                                    size: 13
+                                },
                                 callbacks: {
+                                    title: (context) => {
+                                        return context[0].label;
+                                    },
                                     label: (context) => {
                                         const value = context.raw;
                                         const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
                                         const percentage = Math.round((value / total) * 100);
-                                        return `${context.label}: ${this.formatAmount(value)} (${percentage}%)`;
+                                        return `${this.formatAmount(value)} (${percentage}%)`;
                                     }
                                 }
                             }
@@ -669,7 +687,7 @@ class CategoryChart extends HTMLElement {
                 }
                 #chartCenterTotal {
                     pointer-events: none;
-                    z-index: 1;
+                    z-index: 10;
                 }
                 .expense-row {
                     transition: all 0.2s ease;
