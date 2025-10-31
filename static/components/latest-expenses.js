@@ -18,15 +18,15 @@ class LatestExpenses extends HTMLElement {
     render() {
         this.innerHTML = `
             <div class="modern-card chart-container-modern">
-                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                    <div class="d-flex align-items-center">
+                <div class="mb-3">
+                    <div class="d-flex align-items-center mb-3">
                         <div class="d-inline-flex align-items-center justify-content-center me-2"
                              style="width: 36px; height: 36px; background: var(--primary-gradient); border-radius: 50%;">
                             <i class="bi bi-clock-history text-white"></i>
                         </div>
                         <h5 class="chart-title-modern mb-0">Latest Expenses</h5>
                     </div>
-                    <div class="btn-group btn-group-sm" role="group">
+                    <div class="btn-group w-100" role="group">
                         <button type="button" class="btn btn-outline-primary ${this.period === 'today' ? 'active' : ''}" data-period="today">
                             Today
                         </button>
@@ -109,10 +109,36 @@ class LatestExpenses extends HTMLElement {
                     flex-shrink: 0;
                 }
 
+                .btn-group {
+                    display: flex;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+                    border-radius: 0.5rem;
+                    overflow: hidden;
+                }
+
+                .btn-group > .btn {
+                    flex: 1;
+                    font-weight: 500;
+                    padding: 0.625rem 1rem;
+                    border: none;
+                    background: rgba(255, 255, 255, 0.05);
+                    color: var(--bs-light);
+                    transition: all 0.2s ease;
+                }
+
+                .btn-group > .btn:hover:not(.active) {
+                    background: rgba(255, 255, 255, 0.1);
+                }
+
+                .btn-group > .btn.active {
+                    background: var(--bs-primary);
+                    color: white;
+                }
+
                 @media (max-width: 768px) {
-                    .btn-group-sm > .btn {
-                        padding: 0.25rem 0.5rem;
-                        font-size: 0.75rem;
+                    .btn-group > .btn {
+                        padding: 0.5rem 0.75rem;
+                        font-size: 0.875rem;
                     }
 
                     .expense-item {
