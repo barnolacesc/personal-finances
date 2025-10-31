@@ -14,63 +14,34 @@ class CategoryChart extends HTMLElement {
     }
 
     async connectedCallback() {
+        console.log('CategoryChart connected');
         this.render();
+
+        // Wait for the DOM to be fully rendered
+        await new Promise(resolve => setTimeout(resolve, 100));
+
         this.setupEventListeners();
 
-        // Wait for Chart.js to load before any updates
-        try {
-            await this.loadChartJS();
-            this.isInitialized = true;
-            await this.updateChart();
-        } catch (error) {
-            console.error('Error during initial chart setup:', error);
-            // Don't show error toast during initial load
-        }
+        // Chart.js is already loaded in HTML, so initialize directly
+        console.log('Chart.js available:', !!window.Chart);
+        this.isInitialized = true;
+        await this.updateChart();
     }
 
-    async loadChartJS() {
-        return new Promise((resolve, reject) => {
-            // If Chart.js is already loaded, resolve immediately
-            if (window.Chart) {
-                console.log('Chart.js already loaded');
-                resolve();
-                return;
-            }
-
-            // If we're already loading Chart.js, wait for it
-            if (window._chartJSLoading) {
-                console.log('Waiting for Chart.js to load...');
-                document.addEventListener('chartJSLoaded', () => resolve(), { once: true });
-                return;
-            }
-
-            // Start loading Chart.js
-            window._chartJSLoading = true;
-            const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
-
-            script.onload = () => {
-                console.log('Chart.js loaded successfully');
-                window._chartJSLoading = false;
-                document.dispatchEvent(new Event('chartJSLoaded'));
-                resolve();
-            };
-
-            script.onerror = (error) => {
-                console.error('Failed to load Chart.js:', error);
-                window._chartJSLoading = false;
-                reject(new Error('Failed to load Chart.js'));
-            };
-
-            document.head.appendChild(script);
-        });
-    }
 
     setupEventListeners() {
         // Close button for category details
         this.querySelector('#categoryDetails .btn-close').addEventListener('click', () => {
             const categoryDetails = this.querySelector('#categoryDetails');
             bootstrap.Collapse.getOrCreateInstance(categoryDetails).hide();
+
+            // Clear chart highlighting when closing details
+            if (this.chart) {
+                this.chart.setActiveElements([]);
+                this.chart.update('none');
+                this.activeCategory = null;
+                this.activeCategoryIndex = null;
+            }
         });
 
         // Listen for expense updates - only on document
@@ -92,8 +63,8 @@ class CategoryChart extends HTMLElement {
                     console.error('Error updating chart after date change:', error);
                 });
             } else {
-                this.initializeChart().catch(error => {
-                    console.error('Error initializing chart after date change:', error);
+                this.updateChart().catch(error => {
+                    console.error('Error updating chart after date change:', error);
                 });
             }
         });
@@ -162,6 +133,7 @@ class CategoryChart extends HTMLElement {
     }
 
     async updateChart() {
+        console.log('updateChart called, initialized:', this.isInitialized);
         if (!this.isInitialized) {
             console.log('Chart not initialized, skipping update');
             return;
@@ -176,6 +148,7 @@ class CategoryChart extends HTMLElement {
             }
 
             const { expenses } = await response.json();
+            console.log('Fetched expenses:', expenses.length);
 
             // Filter expenses by week if needed
             const filteredExpenses = this.currentWeek === 'all' ? expenses : expenses.filter(expense => {
@@ -199,16 +172,21 @@ class CategoryChart extends HTMLElement {
     }
 
     async renderChart(expenses) {
+        console.log('renderChart called with', expenses.length, 'expenses');
         if (!this.isInitialized || !window.Chart) {
-            console.error('Chart not properly initialized');
+            console.error('Chart not properly initialized, initialized:', this.isInitialized, 'Chart available:', !!window.Chart);
             return;
         }
 
         // If no expenses, show empty state
         if (!expenses || expenses.length === 0) {
-            this.querySelector('#chartTotal').textContent = this.formatAmount(0);
-            this.querySelector('#chartCenterTotal .fw-bold').textContent = this.formatAmount(0);
-            this.querySelector('#chartLegend').innerHTML = '<div class="text-muted">No expenses for this period</div>';
+            const totalEl = this.querySelector('#chartTotal');
+            const centerTotalEl = this.querySelector('#chartCenterTotal .fw-bold');
+            const legendEl = this.querySelector('#chartLegend');
+
+            if (totalEl) totalEl.textContent = this.formatAmount(0);
+            if (centerTotalEl) centerTotalEl.textContent = this.formatAmount(0);
+            if (legendEl) legendEl.innerHTML = '<div class="text-muted">No expenses for this period</div>';
 
             // Clear existing chart
             if (this.chart) {
@@ -223,8 +201,11 @@ class CategoryChart extends HTMLElement {
             const total = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
 
             // Update totals display
-            this.querySelector('#chartTotal').textContent = this.formatAmount(total);
-            this.querySelector('#chartCenterTotal .fw-bold').textContent = this.formatAmount(total);
+            const totalEl = this.querySelector('#chartTotal');
+            const centerTotalEl = this.querySelector('#chartCenterTotal .fw-bold');
+
+            if (totalEl) totalEl.textContent = this.formatAmount(total);
+            if (centerTotalEl) centerTotalEl.textContent = this.formatAmount(total);
 
             // Group expenses by category
             const categoryTotals = expenses.reduce((acc, exp) => {
@@ -338,36 +319,83 @@ class CategoryChart extends HTMLElement {
                 });
             }
 
-            // Update legend
+            // Update desktop legend
             const legendContainer = this.querySelector('#chartLegend');
             legendContainer.innerHTML = sortedCategories.map(([category, amount]) => {
                 const color = this.getCategoryColor(category);
-                console.log(`Legend - Category: ${category}, Color: ${color}`);
                 return `
-                    <div class="expense-card p-3 legend-item"
+                    <div class="legend-item d-flex align-items-center justify-content-between py-2 px-3 rounded"
                          data-category="${category}"
-                         style="cursor: pointer; border-left: 4px solid ${color};">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div class="d-flex align-items-center">
-                                <div class="d-inline-flex align-items-center justify-content-center me-3"
-                                     style="width: 40px; height: 40px; background: ${color}15; border-radius: 50%;">
-                                    <i class="bi bi-${CategoryHelper.getCategoryIcon(category)}" style="color: ${color};"></i>
-                                </div>
-                                <div>
-                                    <div class="fw-medium">${this.formatCategory(category)}</div>
-                                    <small class="text-muted">${Math.round((amount/sortedCategories.reduce((sum, [,amt]) => sum + amt, 0))*100)}% of total</small>
-                                </div>
-                            </div>
-                            <strong class="fs-5" style="color: ${color};">${this.formatAmount(amount)}</strong>
+                         style="cursor: pointer; background: rgba(255,255,255,0.05); transition: all 0.2s ease;">
+                        <div class="d-flex align-items-center">
+                            <div class="me-3" style="width: 12px; height: 12px; background: ${color}; border-radius: 50%;"></div>
+                            <span class="text-light">${this.formatCategory(category)}</span>
                         </div>
+                        <strong class="text-light">${this.formatAmount(amount)}</strong>
                     </div>
                 `;
             }).join('');
 
-            // Add legend click handlers
-            legendContainer.querySelectorAll('.legend-item').forEach(item => {
+            // Update mobile legend - compact horizontal chips
+            const mobileLegendContainer = this.querySelector('#chartLegendMobile');
+            mobileLegendContainer.innerHTML = sortedCategories.map(([category, amount]) => {
+                const color = this.getCategoryColor(category);
+                return `
+                    <div class="legend-item-mobile badge text-light px-2 py-1 mobile-legend-chip"
+                         data-category="${category}"
+                         style="cursor: pointer; background: ${color}; font-size: 0.75rem; transition: all 0.2s ease;">
+                        ${this.formatCategory(category)} ${this.formatAmount(amount)}
+                    </div>
+                `;
+            }).join('');
+
+            // Add legend click handlers - desktop
+            legendContainer.querySelectorAll('.legend-item').forEach((item, index) => {
                 item.addEventListener('click', () => {
                     const category = item.dataset.category;
+
+                    // Trigger chart interaction to highlight the segment
+                    if (this.chart) {
+                        const categoryIndex = sortedCategories.findIndex(([cat]) => cat === category);
+                        if (categoryIndex !== -1) {
+                            // Store the active category for persistent highlighting
+                            this.activeCategory = category;
+                            this.activeCategoryIndex = categoryIndex;
+
+                            this.chart.setActiveElements([{
+                                datasetIndex: 0,
+                                index: categoryIndex
+                            }]);
+                            this.chart.update('none');
+                        }
+                    }
+
+                    this.showCategoryDetails(category, expenses);
+                });
+            });
+
+            // Add legend click handlers - mobile
+            mobileLegendContainer.querySelectorAll('.legend-item-mobile').forEach((item, index) => {
+                item.addEventListener('click', () => {
+                    const category = item.dataset.category;
+
+                    // Trigger chart interaction to highlight the segment
+                    if (this.chart) {
+                        // Find the index of this category in the sorted categories
+                        const categoryIndex = sortedCategories.findIndex(([cat]) => cat === category);
+                        if (categoryIndex !== -1) {
+                            // Store the active category for persistent highlighting
+                            this.activeCategory = category;
+                            this.activeCategoryIndex = categoryIndex;
+
+                            this.chart.setActiveElements([{
+                                datasetIndex: 0,
+                                index: categoryIndex
+                            }]);
+                            this.chart.update('none');
+                        }
+                    }
+
                     this.showCategoryDetails(category, expenses);
                 });
             });
@@ -454,31 +482,25 @@ class CategoryChart extends HTMLElement {
                 </tr>
             `).join('');
 
-        // Update Mobile cards
+        // Update Mobile cards - compact table-like design
         this.querySelector('#categoryExpensesListMobile').innerHTML = sortedExpenses
             .map((exp, index) => `
-                <div class="card mb-3 expense-card" data-expense-id="${exp.id}" style="cursor: pointer;" title="Tap to edit this expense">
-                    <div class="card-body p-3">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="mobile-expense-row d-flex align-items-center py-2 px-3 border-bottom expense-card"
+                     data-expense-id="${exp.id}" style="cursor: pointer; border-color: rgba(255,255,255,0.1);" title="Tap to edit">
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center">
                             <div class="d-flex align-items-center">
-                                <span class="badge category-${exp.category} me-2" style="font-size: 0.75rem;">
+                                <span class="badge category-${exp.category} me-2" style="font-size: 0.7rem; padding: 0.2rem 0.4rem;">
                                     <i class="bi bi-${CategoryHelper.getCategoryIcon(exp.category)}"></i>
                                 </span>
                                 <div>
-                                    <div class="fw-medium">${this.formatDateCompact(exp.date)}</div>
-                                    <small class="text-muted">${new Date(exp.date).toLocaleTimeString('default', { hour: '2-digit', minute: '2-digit' })}</small>
+                                    <div class="fw-medium text-light" style="font-size: 0.9rem;">${exp.description}</div>
+                                    <small class="text-muted" style="font-size: 0.75rem;">${this.formatDateCompact(exp.date)}</small>
                                 </div>
                             </div>
                             <div class="text-end">
-                                <div class="fw-bold fs-5">${this.formatAmount(exp.amount)}</div>
-                                <small class="text-muted">
-                                    <i class="bi bi-pencil-square me-1"></i>Tap to edit
-                                </small>
+                                <div class="fw-bold text-light" style="font-size: 0.95rem;">${this.formatAmount(exp.amount)}</div>
                             </div>
-                        </div>
-                        <div class="mt-2">
-                            <div class="fw-medium">${exp.description}</div>
-                            <small class="text-muted">ID: ${exp.id}</small>
                         </div>
                     </div>
                 </div>
@@ -487,16 +509,24 @@ class CategoryChart extends HTMLElement {
         // Add click handlers for editing expenses (Desktop)
         this.querySelector('#categoryExpensesList').addEventListener('click', (e) => {
             const row = e.target.closest('.expense-row');
-            if (row && !row.classList.contains('editing')) {
-                this.editExpense(row, categoryExpenses);
+            if (row) {
+                const expenseId = row.dataset.expenseId;
+                const expense = categoryExpenses.find(e => e.id == expenseId);
+                if (expense) {
+                    this.editExpense(expense);
+                }
             }
         });
 
         // Add click handlers for editing expenses (Mobile)
         this.querySelector('#categoryExpensesListMobile').addEventListener('click', (e) => {
-            const card = e.target.closest('.expense-card');
-            if (card && !card.classList.contains('editing')) {
-                this.editExpenseMobile(card, categoryExpenses);
+            const row = e.target.closest('.expense-card');
+            if (row) {
+                const expenseId = row.dataset.expenseId;
+                const expense = categoryExpenses.find(e => e.id == expenseId);
+                if (expense) {
+                    this.editExpense(expense);
+                }
             }
         });
 
@@ -505,283 +535,10 @@ class CategoryChart extends HTMLElement {
         bootstrap.Collapse.getOrCreateInstance(categoryDetails).show();
     }
 
-    editExpense(row, categoryExpenses) {
-        if (row.classList.contains('editing')) return;
-
-        // Close any currently editing expense first
-        const currentlyEditing = this.querySelector('.expense-row.editing');
-        if (currentlyEditing && currentlyEditing !== row) {
-            this.cancelEditingRow(currentlyEditing);
-        }
-
-        const expenseId = row.dataset.expenseId;
-        const expense = categoryExpenses.find(e => e.id == expenseId);
-        if (!expense) return;
-
-        // Store original content before editing
-        row.dataset.originalContent = row.innerHTML;
-
-        // Add editing class for visual feedback
-        row.classList.add('editing');
-        row.style.backgroundColor = 'var(--bs-light)';
-
-        // Get current values
-        const amount = expense.amount;
-        const category = expense.category;
-        const description = expense.description;
-
-        // Create edit form
-        row.innerHTML = `
-            <td colspan="4" class="p-3">
-                <div class="edit-form">
-                    <div class="row g-3">
-                        <div class="col-sm-4">
-                            <label class="form-label small fw-bold">Amount</label>
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text">${CONFIG.CURRENCY.symbol}</span>
-                                <input type="text"
-                                       class="form-control edit-amount"
-                                       value="${amount}"
-                                       pattern="[0-9]*[.,]?[0-9]*"
-                                       inputmode="decimal">
-                            </div>
-                        </div>
-                        <div class="col-sm-4">
-                            <label class="form-label small fw-bold">Category</label>
-                            <select class="form-select form-select-sm edit-category">
-                                ${CategoryHelper.getAllCategories().map(cat => `
-                                    <option value="${cat}" ${cat === category ? 'selected' : ''}>
-                                        ${CategoryHelper.getCategoryLabel(cat)}
-                                    </option>
-                                `).join('')}
-                            </select>
-                        </div>
-                        <div class="col-sm-4">
-                            <label class="form-label small fw-bold">Description</label>
-                            <input type="text"
-                                   class="form-control form-control-sm edit-description"
-                                   value="${description}"
-                                   maxlength="${CONFIG.VALIDATION.DESCRIPTION_MAX_LENGTH}">
-                        </div>
-                    </div>
-                    <div class="d-flex gap-2 mt-3">
-                        <button class="btn btn-success btn-sm save-expense-btn" data-expense-id="${expenseId}">
-                            <i class="bi bi-check-lg"></i> Save
-                        </button>
-                        <button class="btn btn-secondary btn-sm cancel-expense-btn" data-expense-id="${expenseId}">
-                            <i class="bi bi-x-lg"></i> Cancel
-                        </button>
-                        <button class="btn btn-outline-danger btn-sm ms-auto delete-expense-btn" data-expense-id="${expenseId}">
-                            <i class="bi bi-trash"></i> Delete
-                        </button>
-                    </div>
-                </div>
-            </td>
-        `;
-
-        // Add event listeners for buttons
-        const saveBtn = row.querySelector('.save-expense-btn');
-        const cancelBtn = row.querySelector('.cancel-expense-btn');
-        const deleteBtn = row.querySelector('.delete-expense-btn');
-
-        saveBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.saveExpenseEdit(saveBtn);
-        });
-
-        cancelBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.cancelExpenseEdit(cancelBtn);
-        });
-
-        deleteBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.deleteExpense(expenseId);
-        });
-
-        // Focus on description field
-        setTimeout(() => {
-            row.querySelector('.edit-description').focus();
-        }, 100);
-    }
-
-    editExpenseMobile(card, categoryExpenses) {
-        if (card.classList.contains('editing')) return;
-
-        // Close any currently editing expense first
-        const currentlyEditing = this.querySelector('.expense-card.editing');
-        if (currentlyEditing && currentlyEditing !== card) {
-            this.cancelEditingCard(currentlyEditing);
-        }
-
-        const expenseId = card.dataset.expenseId;
-        const expense = categoryExpenses.find(e => e.id == expenseId);
-        if (!expense) return;
-
-        // Store original content before editing
-        card.dataset.originalContent = card.innerHTML;
-
-        // Add editing class for visual feedback
-        card.classList.add('editing');
-        card.style.border = '2px solid var(--bs-primary)';
-
-        // Get current values
-        const amount = expense.amount;
-        const category = expense.category;
-        const description = expense.description;
-
-        // Create mobile edit form
-        card.innerHTML = `
-            <div class="card-body p-3">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="mb-0 text-primary">
-                        <i class="bi bi-pencil-square me-2"></i>Edit Expense
-                    </h6>
-                    <small class="text-muted">ID: ${expenseId}</small>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Amount</label>
-                    <div class="input-group">
-                        <span class="input-group-text">${CONFIG.CURRENCY.symbol}</span>
-                        <input type="text"
-                               class="form-control edit-amount"
-                               value="${amount}"
-                               pattern="[0-9]*[.,]?[0-9]*"
-                               inputmode="decimal">
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Category</label>
-                    <select class="form-select edit-category">
-                        ${CategoryHelper.getAllCategories().map(cat => `
-                            <option value="${cat}" ${cat === category ? 'selected' : ''}>
-                                ${CategoryHelper.getCategoryLabel(cat)}
-                            </option>
-                        `).join('')}
-                    </select>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label small fw-bold">Description</label>
-                    <input type="text"
-                           class="form-control edit-description"
-                           value="${description}"
-                           maxlength="${CONFIG.VALIDATION.DESCRIPTION_MAX_LENGTH}">
-                </div>
-
-                <div class="d-grid gap-2">
-                    <button class="btn btn-success save-expense-btn" data-expense-id="${expenseId}">
-                        <i class="bi bi-check-lg me-2"></i>Save Changes
-                    </button>
-                    <div class="row g-2">
-                        <div class="col">
-                            <button class="btn btn-secondary w-100 cancel-expense-btn" data-expense-id="${expenseId}">
-                                <i class="bi bi-x-lg me-2"></i>Cancel
-                            </button>
-                        </div>
-                        <div class="col">
-                            <button class="btn btn-outline-danger w-100 delete-expense-btn" data-expense-id="${expenseId}">
-                                <i class="bi bi-trash me-2"></i>Delete
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // Add event listeners for buttons
-        const saveBtn = card.querySelector('.save-expense-btn');
-        const cancelBtn = card.querySelector('.cancel-expense-btn');
-        const deleteBtn = card.querySelector('.delete-expense-btn');
-
-        saveBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.saveExpenseEditMobile(saveBtn);
-        });
-
-        cancelBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.cancelExpenseEditMobile(cancelBtn);
-        });
-
-        deleteBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.deleteExpense(expenseId);
-        });
-
-        // Focus on description field
-        setTimeout(() => {
-            card.querySelector('.edit-description').focus();
-        }, 100);
-    }
-
-    async saveExpenseEdit(saveBtn) {
-        const expenseId = saveBtn.dataset.expenseId;
-        const row = saveBtn.closest('.expense-row');
-
-        const amount = CurrencyHelper.parseAmount(row.querySelector('.edit-amount').value);
-        const category = row.querySelector('.edit-category').value;
-        const description = row.querySelector('.edit-description').value.trim();
-
-        // Validation
-        if (!amount || amount <= 0) {
-            window.showToast('Please enter a valid amount', 'error');
-            return;
-        }
-        if (!category) {
-            window.showToast('Please select a category', 'error');
-            return;
-        }
-        if (!description) {
-            window.showToast('Please enter a description', 'error');
-            return;
-        }
-
-        try {
-            const response = await fetch(`/api/expenses/${expenseId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    amount,
-                    category,
-                    description
-                })
-            });
-
-            if (!response.ok) throw new Error('Failed to update expense');
-
-            window.showToast('Expense updated successfully', 'success');
-
-            // Refresh the chart and category details
-            await this.updateChart();
-
-            // Emit event for other components
-            EventManager.emitExpenseAdded();
-        } catch (error) {
-            console.error('Error updating expense:', error);
-            window.showToast('Failed to update expense', 'error');
-        }
-    }
-
-    cancelExpenseEdit(cancelBtn) {
-        const row = cancelBtn.closest('.expense-row');
-        this.cancelEditingRow(row);
-    }
-
-    cancelEditingRow(row) {
-        // Remove editing state
-        row.classList.remove('editing');
-        row.style.backgroundColor = '';
-
-        // Restore original content if available
-        if (row.dataset.originalContent) {
-            row.innerHTML = row.dataset.originalContent;
-            delete row.dataset.originalContent;
-        }
+    editExpense(expense) {
+        // Navigate to add-expense page with edit parameters
+        const editUrl = `/static/add-expense.html?edit=${expense.id}&amount=${expense.amount}&category=${expense.category}&description=${encodeURIComponent(expense.description)}`;
+        window.location.href = editUrl;
     }
 
     async deleteExpense(expenseId) {
@@ -809,111 +566,49 @@ class CategoryChart extends HTMLElement {
         }
     }
 
-    async saveExpenseEditMobile(saveBtn) {
-        const expenseId = saveBtn.dataset.expenseId;
-        const card = saveBtn.closest('.expense-card');
-
-        const amount = CurrencyHelper.parseAmount(card.querySelector('.edit-amount').value);
-        const category = card.querySelector('.edit-category').value;
-        const description = card.querySelector('.edit-description').value.trim();
-
-        // Validation
-        if (!amount || amount <= 0) {
-            window.showToast('Please enter a valid amount', 'error');
-            return;
-        }
-        if (!category) {
-            window.showToast('Please select a category', 'error');
-            return;
-        }
-        if (!description) {
-            window.showToast('Please enter a description', 'error');
-            return;
-        }
-
-        try {
-            const response = await fetch(`/api/expenses/${expenseId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    amount,
-                    category,
-                    description
-                })
-            });
-
-            if (!response.ok) throw new Error('Failed to update expense');
-
-            window.showToast('Expense updated successfully', 'success');
-
-            // Refresh the chart and category details
-            await this.updateChart();
-
-            // Emit event for other components
-            EventManager.emitExpenseAdded();
-        } catch (error) {
-            console.error('Error updating expense:', error);
-            window.showToast('Failed to update expense', 'error');
-        }
-    }
-
-    cancelExpenseEditMobile(cancelBtn) {
-        const card = cancelBtn.closest('.expense-card');
-        this.cancelEditingCard(card);
-    }
-
-    cancelEditingCard(card) {
-        // Remove editing state
-        card.classList.remove('editing');
-        card.style.border = '';
-
-        // Restore original content if available
-        if (card.dataset.originalContent) {
-            card.innerHTML = card.dataset.originalContent;
-            delete card.dataset.originalContent;
-        }
-    }
-
     render() {
         this.innerHTML = `
             <div class="chart-container-modern">
-                <div class="text-center mb-4">
-                    <div class="d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px; background: var(--primary-gradient); border-radius: 50%;">
-                        <i class="bi bi-pie-chart text-white fs-3"></i>
+                <div class="card bg-dark text-light border-0">
+                    <div class="card-header d-flex justify-content-between align-items-center border-0 bg-transparent">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-pie-chart me-2"></i>
+                            <span>Expense Distribution</span>
+                        </div>
+                        <div class="fs-5 fw-bold text-primary" id="chartTotal">€0.00</div>
                     </div>
-                    <h4 class="chart-title-modern mb-0">Expense Distribution</h4>
-                    <p class="text-muted">Analyze your spending patterns</p>
-                </div>
-                <div id="chartSection">
-                    <div class="row align-items-center">
-                        <div class="col-md-6 position-relative">
-                            <canvas id="categoryChart" style="max-height: 280px;"></canvas>
-                            <div id="chartCenterTotal" class="position-absolute top-50 start-50 translate-middle text-center">
-                                <div class="fs-6 text-muted mb-1">Total</div>
-                                <div class="fs-4 fw-bold"></div>
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-6 position-relative">
+                                <canvas id="categoryChart" style="max-height: 280px;"></canvas>
+                                <div id="chartCenterTotal" class="position-absolute top-50 start-50 translate-middle text-center">
+                                    <div class="fs-6 text-muted mb-1">Total</div>
+                                    <div class="fs-4 fw-bold text-light"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div id="chartLegend" class="d-flex flex-column gap-2 ps-md-3 mt-3 mt-md-0 d-none d-md-flex"></div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div id="chartLegend" class="d-flex flex-column gap-3 ps-md-4 mt-4 mt-md-0"></div>
+                        <!-- Mobile compact legend -->
+                        <div id="chartLegendMobile" class="d-md-none mt-3 d-flex flex-wrap gap-2"></div>
                         </div>
                     </div>
                 </div>
-                    <!-- Category Details Section -->
-                    <div id="categoryDetails" class="collapse">
-                        <div class="border-top pt-4 mt-4">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h5 class="mb-0 text-primary">
-                                    <i class="bi bi-list-ul me-2"></i><span id="categoryDetailsTitle">Category Details</span>
-                                </h5>
-                                <button type="button" class="btn-close" aria-label="Close"></button>
+                <!-- Category Details Section -->
+                <div id="categoryDetails" class="collapse">
+                    <div class="card bg-dark text-light border-0 mt-3">
+                        <div class="card-header d-flex justify-content-between align-items-center border-0 bg-transparent">
+                            <div class="d-flex align-items-center">
+                                <span id="categoryDetailsTitle">Category Details</span>
                             </div>
+                            <button type="button" class="btn-close btn-close-white" aria-label="Close"></button>
                         </div>
+                        <div class="card-body">
                         <!-- Desktop Table View -->
                         <div class="table-responsive d-none d-md-block">
-                            <table class="table table-hover mb-0">
-                                <thead class="table-light">
+                            <table class="table table-dark table-hover mb-0">
+                                <thead>
                                     <tr>
                                         <th width="35%">
                                             <div class="d-flex align-items-center">
@@ -936,7 +631,7 @@ class CategoryChart extends HTMLElement {
                                     </tr>
                                 </thead>
                                 <tbody id="categoryExpensesList"></tbody>
-                                <tfoot class="table-light">
+                                <tfoot class="table-dark">
                                     <tr>
                                         <td colspan="3"><strong>Category Total</strong></td>
                                         <td class="amount" id="categoryTotal">€0.00</td>
@@ -949,21 +644,28 @@ class CategoryChart extends HTMLElement {
                         <div class="d-md-none" id="categoryExpensesListMobile"></div>
 
                         <!-- Mobile Total -->
-                        <div class="d-md-none mt-3 p-3 bg-body-secondary rounded">
+                        <div class="d-md-none mt-3 p-3 rounded" style="background: rgba(255,255,255,0.05);">
                             <div class="d-flex justify-content-between align-items-center">
                                 <span class="fw-bold">Category Total</span>
                                 <span class="fw-bold fs-5 text-primary" id="categoryTotalMobile">€0.00</span>
                             </div>
                         </div>
+                        </div>
                     </div>
                 </div>
             </div>
             <style>
-                .color-dot {
-                    display: inline-block;
-                    width: 12px;
-                    height: 12px;
-                    border-radius: 50%;
+                .legend-item:hover {
+                    background: rgba(255,255,255,0.1) !important;
+                    transform: translateX(4px);
+                }
+                .mobile-legend-chip:hover {
+                    transform: scale(1.05);
+                    opacity: 0.9;
+                }
+                .mobile-legend-chip {
+                    border: 1px solid rgba(255,255,255,0.2);
+                    white-space: nowrap;
                 }
                 #chartCenterTotal {
                     pointer-events: none;
@@ -973,22 +675,23 @@ class CategoryChart extends HTMLElement {
                     transition: all 0.2s ease;
                 }
                 .expense-row:hover {
-                    background-color: rgba(var(--bs-primary-rgb), 0.05) !important;
+                    background-color: rgba(var(--bs-primary-rgb), 0.1) !important;
                     transform: translateX(2px);
                 }
                 .expense-row.editing {
-                    background-color: rgba(var(--bs-warning-rgb), 0.1) !important;
+                    background-color: rgba(var(--bs-warning-rgb), 0.2) !important;
                     border-left: 3px solid var(--bs-warning);
                 }
                 .category-expense-badge {
                     font-size: 0.7rem;
                     padding: 0.25rem 0.4rem;
                 }
-                .table th {
-                    border-top: none;
-                    font-weight: 600;
-                    font-size: 0.85rem;
-                    color: var(--bs-gray-700);
+                .table-dark th {
+                    border-color: rgba(255,255,255,0.2);
+                    background-color: rgba(255,255,255,0.05);
+                }
+                .table-dark td {
+                    border-color: rgba(255,255,255,0.1);
                 }
                 .table tbody tr:first-child td {
                     border-top: 2px solid var(--bs-primary);
@@ -999,25 +702,38 @@ class CategoryChart extends HTMLElement {
                 }
                 .expense-card:hover {
                     transform: translateY(-2px);
-                    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
                     border-left-color: var(--bs-primary);
                 }
                 .expense-card.editing {
                     border-left-color: var(--bs-primary);
-                    box-shadow: 0 4px 12px rgba(var(--bs-primary-rgb), 0.2);
+                    box-shadow: 0 4px 12px rgba(var(--bs-primary-rgb), 0.3);
+                }
+                .mobile-expense-row:hover {
+                    background: rgba(255,255,255,0.05) !important;
+                }
+                .mobile-expense-row.editing {
+                    background: rgba(0,123,255,0.1) !important;
+                    border-left: 3px solid var(--bs-primary);
                 }
                 @media (max-width: 768px) {
-                    .expense-card .card-body {
-                        padding: 1rem;
+                    .mobile-expense-row {
+                        transition: all 0.2s ease;
+                        min-height: 60px;
                     }
                     .expense-card .btn {
-                        padding: 0.5rem 1rem;
-                        font-size: 0.9rem;
+                        padding: 0.5rem;
+                        font-size: 0.85rem;
                     }
                     .expense-card .form-control,
                     .expense-card .form-select {
-                        font-size: 1rem;
-                        padding: 0.75rem;
+                        font-size: 0.9rem;
+                        padding: 0.5rem;
+                    }
+                    #categoryExpensesListMobile {
+                        background: rgba(255,255,255,0.02);
+                        border-radius: 0.5rem;
+                        overflow: hidden;
                     }
                 }
             </style>

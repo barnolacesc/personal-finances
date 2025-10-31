@@ -74,9 +74,10 @@
             const theme = localStorage.getItem('theme') || 'light';
             document.documentElement.setAttribute('data-bs-theme', theme);
 
-            // Update chart colors if needed
-            if (window.categoryChart) {
-                window.categoryChart.update();
+            // Update chart colors if needed - find the category-chart element
+            const categoryChart = document.querySelector('category-chart');
+            if (categoryChart && categoryChart.chart) {
+                categoryChart.chart.update();
             }
         }
 
