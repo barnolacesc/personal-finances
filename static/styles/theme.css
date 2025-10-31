@@ -81,20 +81,20 @@
     }
 }
 
-/* Category badges */
-.badge.category-super { background-color: #2563eb !important; color: white !important; }
-.badge.category-xofa { background-color: #7c3aed !important; color: white !important; }
-.badge.category-food_drink { background-color: #059669 !important; color: white !important; }
-.badge.category-save_inv { background-color: #10b981 !important; color: white !important; }
+/* Modern Category badges */
+.badge.category-super { background-color: #3b82f6 !important; color: white !important; }
+.badge.category-xofa { background-color: #8b5cf6 !important; color: white !important; }
+.badge.category-food_drink { background-color: #10b981 !important; color: white !important; }
+.badge.category-save_inv { background-color: #06b6d4 !important; color: white !important; }
 .badge.category-recurrent { background-color: #f59e0b !important; color: white !important; }
 .badge.category-clothing { background-color: #ec4899 !important; color: white !important; }
-.badge.category-personal { background-color: #8b5cf6 !important; color: white !important; }
-.badge.category-taxes { background-color: #dc2626 !important; color: white !important; }
+.badge.category-personal { background-color: #a855f7 !important; color: white !important; }
+.badge.category-taxes { background-color: #ef4444 !important; color: white !important; }
 .badge.category-transport { background-color: #6366f1 !important; color: white !important; }
-.badge.category-health { background-color: #06b6d4 !important; color: white !important; }
-.badge.category-other { background-color: #6b7280 !important; color: white !important; }
-.badge.category-car { background-color: #374151 !important; color: white !important; }
-.badge.category-cobeetrans { background-color: #8b5cf6 !important; color: white !important; }
+.badge.category-health { background-color: #14b8a6 !important; color: white !important; }
+.badge.category-other { background-color: #94a3b8 !important; color: white !important; }
+.badge.category-car { background-color: #64748b !important; color: white !important; }
+.badge.category-cobeetrans { background-color: #7c3aed !important; color: white !important; }
 .badge.category-cobeefood { background-color: #f97316 !important; color: white !important; }
 
 /* Chart specific */

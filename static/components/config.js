@@ -9,77 +9,77 @@ export const CONFIG = {
         }
     },
 
-    // Expense categories with colors and labels
+    // Expense categories with modern colors and labels
     CATEGORIES: {
         super: {
             label: 'Super',
-            color: '#2563eb',
-            icon: 'bi-cart'
+            color: '#3b82f6', // Modern blue
+            icon: 'cart'
         },
         xofa: {
             label: 'Xofa',
-            color: '#7c3aed',
-            icon: 'bi-house'
+            color: '#8b5cf6', // Modern purple
+            icon: 'house'
         },
         food_drink: {
             label: 'Food & Drink',
-            color: '#059669',
-            icon: 'bi-cup-straw'
+            color: '#10b981', // Modern green
+            icon: 'cup-straw'
         },
         save_inv: {
             label: 'Save & Invest',
-            color: '#10b981',
-            icon: 'bi-piggy-bank'
+            color: '#06b6d4', // Modern teal
+            icon: 'piggy-bank'
         },
         recurrent: {
             label: 'Recurrent',
-            color: '#f59e0b',
-            icon: 'bi-arrow-repeat'
+            color: '#f59e0b', // Modern amber
+            icon: 'arrow-repeat'
         },
         clothing: {
             label: 'Clothing',
-            color: '#ec4899',
-            icon: 'bi-person-check'
+            color: '#ec4899', // Modern pink
+            icon: 'person-check'
         },
         personal: {
             label: 'Personal',
-            color: '#8b5cf6',
-            icon: 'bi-person'
+            color: '#a855f7', // Modern purple variant
+            icon: 'person'
         },
         taxes: {
             label: 'Taxes',
-            color: '#dc2626',
-            icon: 'bi-receipt'
+            color: '#ef4444', // Modern red
+            icon: 'receipt'
         },
         transport: {
             label: 'Transport',
-            color: '#6366f1',
-            icon: 'bi-car-front'
+            color: '#6366f1', // Modern indigo
+            icon: 'car-front'
         },
         car: {
             label: 'Car',
-            color: '#374151', // dark gray
-            icon: 'bi-car-front-fill'
+            color: '#64748b', // Modern slate
+            icon: 'car-front-fill'
         },
         health: {
             label: 'Health',
-            color: '#06b6d4',
-            icon: 'bi-heart-pulse'
+            color: '#14b8a6', // Modern cyan
+            icon: 'heart-pulse'
         },
         cobeetrans: {
             label: 'Cobee Trans',
-            color: '#8b5cf6',
-            icon: 'bi-bus-front'
+            color: '#7c3aed', // Modern violet
+            icon: 'bus-front'
         },
         cobeefood: {
             label: 'Cobee Food',
-            color: '#f97316',
-            icon: 'bi-cup-hot'
+            color: '#f97316', // Modern orange
+            icon: 'cup-hot'
         },
         other: {
             label: 'Other',
-            color: '#6b7280',
-            icon: 'bi-three-dots'
+            color: '#94a3b8', // Modern gray
+            icon: 'three-dots'
         }
     },
 
