@@ -19,14 +19,6 @@ class LatestExpenses extends HTMLElement {
         this.innerHTML = `
             <div class="modern-card chart-container-modern">
                 <div class="text-center mb-3">
-                    <div class="d-flex align-items-center justify-content-center mb-3">
-                        <div class="d-inline-flex align-items-center justify-content-center me-2"
-                             style="width: 36px; height: 36px; background: var(--primary-gradient); border-radius: 50%;">
-                            <i class="bi bi-clock-history text-white"></i>
-                        </div>
-                        <h5 class="chart-title-modern mb-0">Latest Expenses</h5>
-                    </div>
-
                     <div class="period-selector-modern">
                         <button type="button" class="period-btn ${this.period === 'today' ? 'active' : ''}" data-period="today">
                             <i class="bi bi-calendar-day"></i>
@@ -69,10 +61,10 @@ class LatestExpenses extends HTMLElement {
                 /* Period Selector - Modern Pill Style */
                 .period-selector-modern {
                     display: inline-flex;
-                    gap: 0.5rem;
-                    padding: 0.375rem;
+                    gap: 0.375rem;
+                    padding: 0.25rem;
                     background: var(--surface-secondary);
-                    border-radius: 12px;
+                    border-radius: 10px;
                     border: 1px solid var(--card-border);
                 }
 
@@ -81,21 +73,21 @@ class LatestExpenses extends HTMLElement {
                     flex-direction: column;
                     align-items: center;
                     justify-content: center;
-                    gap: 0.25rem;
-                    padding: 0.625rem 1rem;
+                    gap: 0.15rem;
+                    padding: 0.45rem 0.75rem;
                     border: none;
                     background: transparent;
                     color: var(--text-secondary);
-                    border-radius: 8px;
-                    font-size: 0.8rem;
+                    border-radius: 7px;
+                    font-size: 0.7rem;
                     font-weight: 500;
                     transition: all 0.2s ease;
                     cursor: pointer;
-                    min-width: 70px;
+                    min-width: 55px;
                 }
 
                 .period-btn i {
-                    font-size: 1.1rem;
+                    font-size: 0.95rem;
                     transition: transform 0.2s ease;
                 }
 
@@ -167,19 +159,19 @@ class LatestExpenses extends HTMLElement {
 
                 @media (max-width: 768px) {
                     .period-selector-modern {
-                        gap: 0.375rem;
-                        padding: 0.25rem;
+                        gap: 0.3rem;
+                        padding: 0.2rem;
                     }
 
                     .period-btn {
-                        padding: 0.5rem 0.75rem;
-                        font-size: 0.75rem;
-                        min-width: 60px;
-                        gap: 0.2rem;
+                        padding: 0.4rem 0.65rem;
+                        font-size: 0.65rem;
+                        min-width: 50px;
+                        gap: 0.1rem;
                     }
 
                     .period-btn i {
-                        font-size: 1rem;
+                        font-size: 0.9rem;
                     }
 
                     .expense-item {
