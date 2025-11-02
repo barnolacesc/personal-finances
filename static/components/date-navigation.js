@@ -42,27 +42,27 @@ class DateNavigation extends HTMLElement {
                     color: #0d6efd !important;
                 }
             </style>
-            <div class="d-flex flex-column align-items-center">
-                <div class="d-flex justify-content-center align-items-center gap-2 mb-2">
-                    <button id="prevMonthBtn" class="btn btn-link text-decoration-none p-1 date-nav-btn" style="font-size: 1.1rem;">
+            <div class="d-flex flex-column align-items-center" style="margin-bottom: 0.75rem;">
+                <div class="d-flex justify-content-center align-items-center gap-2" style="margin-bottom: 0.25rem;">
+                    <button id="prevMonthBtn" class="btn btn-link text-decoration-none date-nav-btn" style="font-size: 1rem; padding: 0.25rem;">
                         <i class="bi bi-chevron-left"></i>
                     </button>
-                    <h3 id="currentMonthBtn" class="mb-0 text-center date-nav-title" style="min-width: 180px; font-size: 1.25rem;">
+                    <h5 id="currentMonthBtn" class="mb-0 text-center date-nav-title" style="min-width: 160px; font-size: 1.1rem;">
                         ${this.formatMonth()}
-                    </h3>
-                    <button id="nextMonthBtn" class="btn btn-link text-decoration-none p-1 date-nav-btn" style="font-size: 1.1rem;">
+                    </h5>
+                    <button id="nextMonthBtn" class="btn btn-link text-decoration-none date-nav-btn" style="font-size: 1rem; padding: 0.25rem;">
                         <i class="bi bi-chevron-right"></i>
                     </button>
                 </div>
 
-                <div class="d-flex justify-content-center align-items-center gap-2 mb-3">
-                    <button id="prevWeekBtn" class="btn btn-link text-decoration-none p-0 date-nav-btn" style="font-size: 0.9rem;">
+                <div class="d-flex justify-content-center align-items-center gap-2">
+                    <button id="prevWeekBtn" class="btn btn-link text-decoration-none p-0 date-nav-btn" style="font-size: 0.85rem;">
                         <i class="bi bi-chevron-left"></i>
                     </button>
-                    <span id="currentWeekBtn" class="mb-0 text-center date-nav-subtitle" style="min-width: 100px; font-size: 0.9rem; cursor: pointer;">
+                    <span id="currentWeekBtn" class="mb-0 text-center date-nav-subtitle" style="min-width: 90px; font-size: 0.85rem; cursor: pointer;">
                         All Month
                     </span>
-                    <button id="nextWeekBtn" class="btn btn-link text-decoration-none p-0 date-nav-btn" style="font-size: 0.9rem;">
+                    <button id="nextWeekBtn" class="btn btn-link text-decoration-none p-0 date-nav-btn" style="font-size: 0.85rem;">
                         <i class="bi bi-chevron-right"></i>
                     </button>
                 </div>

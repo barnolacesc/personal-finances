@@ -57,7 +57,7 @@ class NavBar extends HTMLElement {
         }).join('');
 
         this.innerHTML = `
-            <nav class="navbar navbar-modern navbar-expand-lg mb-4">
+            <nav class="navbar navbar-modern navbar-expand-lg mb-2">
                 <div class="container">
                     <a class="navbar-brand fw-bold d-flex align-items-center" href="/static/index.html">
                         <div class="d-inline-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; background: var(--primary-gradient); border-radius: 50%;">
