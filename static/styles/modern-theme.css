@@ -211,20 +211,22 @@
 .landing-card-compact {
     background: var(--card-bg);
     border: var(--card-border);
-    border-radius: 12px;
+    border-radius: 16px;
     box-shadow: var(--card-shadow);
     transition: all var(--transition-base);
-    padding: var(--space-md);
+    padding: var(--space-xl) var(--space-lg);
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     text-decoration: none !important;
     color: var(--text-primary);
     font-weight: var(--font-weight-semibold);
-    font-size: var(--font-size-base);
+    font-size: var(--font-size-lg);
     position: relative;
     overflow: hidden;
-    min-height: 48px;
+    min-height: 120px;
+    gap: var(--space-sm);
 }
 
 .landing-card-compact::before {
@@ -255,21 +257,23 @@
 }
 
 .landing-card-compact i {
-    font-size: 1.25rem;
+    font-size: 2.5rem;
     color: var(--accent-blue);
     transition: all var(--transition-base);
     position: relative;
     z-index: 1;
+    margin: 0;
 }
 
 .landing-card-compact span {
     position: relative;
     z-index: 1;
+    text-align: center;
 }
 
 .landing-card-compact:hover i {
     color: var(--accent-purple);
-    transform: scale(1.1);
+    transform: scale(1.15);
 }
 
 /* Expense List Cards */
@@ -480,13 +484,13 @@
     }
 
     .landing-card-compact {
-        padding: var(--space-sm) var(--space-md);
-        font-size: var(--font-size-sm);
-        min-height: 44px;
+        padding: var(--space-lg);
+        font-size: var(--font-size-base);
+        min-height: 100px;
     }
 
     .landing-card-compact i {
-        font-size: 1.1rem;
+        font-size: 2rem;
     }
 
     .chart-container-modern {
