@@ -18,23 +18,27 @@ class LatestExpenses extends HTMLElement {
     render() {
         this.innerHTML = `
             <div class="modern-card chart-container-modern">
-                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                    <div class="d-flex align-items-center">
+                <div class="text-center mb-3">
+                    <div class="d-flex align-items-center justify-content-center mb-3">
                         <div class="d-inline-flex align-items-center justify-content-center me-2"
                              style="width: 36px; height: 36px; background: var(--primary-gradient); border-radius: 50%;">
                             <i class="bi bi-clock-history text-white"></i>
                         </div>
                         <h5 class="chart-title-modern mb-0">Latest Expenses</h5>
                     </div>
-                    <div class="btn-group btn-group-sm" role="group">
-                        <button type="button" class="btn btn-outline-primary ${this.period === 'today' ? 'active' : ''}" data-period="today">
-                            Today
+
+                    <div class="period-selector-modern">
+                        <button type="button" class="period-btn ${this.period === 'today' ? 'active' : ''}" data-period="today">
+                            <i class="bi bi-calendar-day"></i>
+                            <span>Today</span>
                         </button>
-                        <button type="button" class="btn btn-outline-primary ${this.period === 'week' ? 'active' : ''}" data-period="week">
-                            Week
+                        <button type="button" class="period-btn ${this.period === 'week' ? 'active' : ''}" data-period="week">
+                            <i class="bi bi-calendar-week"></i>
+                            <span>Week</span>
                         </button>
-                        <button type="button" class="btn btn-outline-primary ${this.period === 'all' ? 'active' : ''}" data-period="all">
-                            Month
+                        <button type="button" class="period-btn ${this.period === 'all' ? 'active' : ''}" data-period="all">
+                            <i class="bi bi-calendar-month"></i>
+                            <span>Month</span>
                         </button>
                     </div>
                 </div>
@@ -62,6 +66,58 @@ class LatestExpenses extends HTMLElement {
             </div>
 
             <style>
+                /* Period Selector - Modern Pill Style */
+                .period-selector-modern {
+                    display: inline-flex;
+                    gap: 0.5rem;
+                    padding: 0.375rem;
+                    background: var(--surface-secondary);
+                    border-radius: 12px;
+                    border: 1px solid var(--card-border);
+                }
+
+                .period-btn {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 0.25rem;
+                    padding: 0.625rem 1rem;
+                    border: none;
+                    background: transparent;
+                    color: var(--text-secondary);
+                    border-radius: 8px;
+                    font-size: 0.8rem;
+                    font-weight: 500;
+                    transition: all 0.2s ease;
+                    cursor: pointer;
+                    min-width: 70px;
+                }
+
+                .period-btn i {
+                    font-size: 1.1rem;
+                    transition: transform 0.2s ease;
+                }
+
+                .period-btn:hover {
+                    background: rgba(59, 130, 246, 0.1);
+                    color: var(--accent-blue);
+                }
+
+                .period-btn:hover i {
+                    transform: scale(1.1);
+                }
+
+                .period-btn.active {
+                    background: var(--primary-gradient);
+                    color: white;
+                    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+                }
+
+                .period-btn.active i {
+                    transform: scale(1.05);
+                }
+
                 .expenses-list {
                     min-height: 300px;
                     border-radius: 0.5rem;
@@ -110,9 +166,20 @@ class LatestExpenses extends HTMLElement {
                 }
 
                 @media (max-width: 768px) {
-                    .btn-group-sm > .btn {
-                        padding: 0.25rem 0.5rem;
+                    .period-selector-modern {
+                        gap: 0.375rem;
+                        padding: 0.25rem;
+                    }
+
+                    .period-btn {
+                        padding: 0.5rem 0.75rem;
                         font-size: 0.75rem;
+                        min-width: 60px;
+                        gap: 0.2rem;
+                    }
+
+                    .period-btn i {
+                        font-size: 1rem;
                     }
 
                     .expense-item {
