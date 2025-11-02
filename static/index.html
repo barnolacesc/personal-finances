@@ -25,32 +25,21 @@
 <body>
     <nav-bar></nav-bar>
 
-    <div class="container py-5">
+    <div class="container py-3">
         <div class="row justify-content-center">
             <div class="col-md-10 col-lg-8">
-                <div class="text-center mb-5">
-                    <h1 class="display-5 fw-bold mb-3" style="background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Personal Finance</h1>
-                    <p class="text-muted fs-5">Track your expenses with style</p>
-                </div>
-
-                <div class="row g-4 mb-4">
-                    <div class="col-md-6">
-                        <a href="/static/add-expense.html" class="landing-card">
-                            <div class="card-content">
-                                <i class="bi bi-plus-circle-fill card-icon"></i>
-                                <h2 class="card-title">Add Expense</h2>
-                                <p class="card-description">Record a new expense quickly</p>
-                            </div>
+                <!-- Quick Actions - Compact buttons -->
+                <div class="row g-3 mb-4">
+                    <div class="col-6">
+                        <a href="/static/add-expense.html" class="landing-card-compact">
+                            <i class="bi bi-plus-circle-fill"></i>
+                            <span>Add Expense</span>
                         </a>
                     </div>
-
-                    <div class="col-md-6">
-                        <a href="/static/expenses.html" class="landing-card">
-                            <div class="card-content">
-                                <i class="bi bi-bar-chart-fill card-icon"></i>
-                                <h2 class="card-title">View Expenses</h2>
-                                <p class="card-description">Analyze your spending patterns</p>
-                            </div>
+                    <div class="col-6">
+                        <a href="/static/expenses.html" class="landing-card-compact">
+                            <i class="bi bi-bar-chart-fill"></i>
+                            <span>View Expenses</span>
                         </a>
                     </div>
                 </div>

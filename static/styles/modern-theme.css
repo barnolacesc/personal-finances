@@ -207,6 +207,75 @@
     margin: 0;
 }
 
+/* Compact Landing Cards - Horizontal Layout */
+.landing-card-compact {
+    background: var(--card-bg);
+    border: var(--card-border);
+    border-radius: 16px;
+    box-shadow: var(--card-shadow);
+    transition: all var(--transition-base);
+    padding: var(--space-xl) var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none !important;
+    color: var(--text-primary);
+    font-weight: var(--font-weight-semibold);
+    font-size: var(--font-size-lg);
+    position: relative;
+    overflow: hidden;
+    min-height: 120px;
+    gap: var(--space-sm);
+}
+
+.landing-card-compact::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--primary-gradient);
+    opacity: 0;
+    transition: opacity var(--transition-base);
+    z-index: 0;
+}
+
+.landing-card-compact:hover::before {
+    opacity: 0.08;
+}
+
+[data-bs-theme="dark"] .landing-card-compact:hover::before {
+    opacity: 0.12;
+}
+
+.landing-card-compact:hover {
+    box-shadow: var(--card-shadow-hover);
+    transform: translateY(-1px);
+    color: var(--text-primary);
+}
+
+.landing-card-compact i {
+    font-size: 2.5rem;
+    color: var(--accent-blue);
+    transition: all var(--transition-base);
+    position: relative;
+    z-index: 1;
+    margin: 0;
+}
+
+.landing-card-compact span {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+}
+
+.landing-card-compact:hover i {
+    color: var(--accent-purple);
+    transform: scale(1.15);
+}
+
 /* Expense List Cards */
 .expense-card {
     background: var(--card-bg);
@@ -414,6 +483,16 @@
         font-size: var(--font-size-lg);
     }
 
+    .landing-card-compact {
+        padding: var(--space-lg);
+        font-size: var(--font-size-base);
+        min-height: 100px;
+    }
+
+    .landing-card-compact i {
+        font-size: 2rem;
+    }
+
     .chart-container-modern {
         padding: var(--space-lg);
     }
@@ -427,6 +506,7 @@
 @media (prefers-reduced-motion: reduce) {
     .modern-card,
     .landing-card,
+    .landing-card-compact,
     .expense-card,
     .btn-modern,
     .form-modern .form-control,
@@ -436,6 +516,7 @@
     }
 
     .landing-card:hover,
+    .landing-card-compact:hover,
     .modern-card:hover,
     .expense-card:hover {
         transform: none !important;
@@ -454,6 +535,7 @@
     }
 
     .landing-card:hover,
+    .landing-card-compact:hover,
     .modern-card:hover,
     .expense-card:hover,
     .btn-modern:hover {
@@ -468,12 +550,14 @@
     /* Reduce shadow complexity */
     .modern-card,
     .landing-card,
+    .landing-card-compact,
     .expense-card {
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
     }
 
     .modern-card:hover,
     .landing-card:hover,
+    .landing-card-compact:hover,
     .expense-card:hover {
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
     }
@@ -482,7 +566,8 @@
 /* Additional Raspberry Pi Zero optimizations */
 @media (max-width: 480px) {
     /* Reduce gradient complexity on very small devices */
-    .landing-card::before {
+    .landing-card::before,
+    .landing-card-compact::before {
         background: var(--accent-blue) !important;
         opacity: 0.05 !important;
     }
@@ -494,6 +579,7 @@
 
     /* Simplify transforms for better performance */
     .landing-card:hover,
+    .landing-card-compact:hover,
     .modern-card:hover {
         transform: none !important;
     }
@@ -528,6 +614,7 @@
 /* Focus States for Keyboard Navigation */
 .modern-card:focus,
 .landing-card:focus,
+.landing-card-compact:focus,
 .btn-modern:focus,
 .form-modern .form-control:focus,
 .form-modern .form-select:focus {
