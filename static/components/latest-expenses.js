@@ -34,7 +34,7 @@ class LatestExpenses extends HTMLElement {
                             Week
                         </button>
                         <button type="button" class="btn btn-outline-primary ${this.period === 'all' ? 'active' : ''}" data-period="all">
-                            All
+                            Month
                         </button>
                     </div>
                 </div>
@@ -173,7 +173,8 @@ class LatestExpenses extends HTMLElement {
                 this.currentPage = 1; // Reset to first page
                 buttons.forEach(btn => btn.classList.remove('active'));
                 e.target.classList.add('active');
-                this.filterAndDisplayExpenses();
+                // Reload expenses when period changes to fetch appropriate data
+                this.loadAllExpenses();
             });
         });
 
@@ -208,19 +209,33 @@ class LatestExpenses extends HTMLElement {
                 <div class="spinner-border text-primary" role="status">
                     <span class="visually-hidden">Loading...</span>
                 </div>
-                <p class="text-muted mt-2 small">Loading all expenses...</p>
+                <p class="text-muted mt-2 small">Loading expenses...</p>
             </div>
         `;
 
         try {
-            // Fetch ALL expenses from all months
-            const monthsResponse = await fetch('/api/months');
-            if (!monthsResponse.ok) throw new Error('Failed to fetch months');
+            const now = new Date();
+            const currentMonth = now.getMonth() + 1;
+            const currentYear = now.getFullYear();
 
-            const months = await monthsResponse.json();
+            // Only fetch what's needed based on period
+            let monthsToFetch = [];
 
-            // Fetch expenses from all available months
-            const allExpensesPromises = months.map(async ({ year, month }) => {
+            if (this.period === 'today' || this.period === 'week') {
+                // For today/week, fetch current month and previous month (in case week spans months)
+                monthsToFetch.push({ year: currentYear, month: currentMonth });
+
+                // Add previous month
+                const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+                const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+                monthsToFetch.push({ year: prevYear, month: prevMonth });
+            } else {
+                // For 'all', fetch current month only (not all history!)
+                monthsToFetch.push({ year: currentYear, month: currentMonth });
+            }
+
+            // Fetch expenses from selected months
+            const allExpensesPromises = monthsToFetch.map(async ({ year, month }) => {
                 const response = await fetch(`/api/expenses?month=${month}&year=${year}`);
                 if (!response.ok) return [];
                 const { expenses } = await response.json();
@@ -289,13 +304,13 @@ class LatestExpenses extends HTMLElement {
 
         if (!expenses || expenses.length === 0) {
             const periodLabel = this.period === 'today' ? 'today' :
-                               this.period === 'week' ? 'this week' : 'available';
+                               this.period === 'week' ? 'this week' : 'this month';
 
             listContainer.innerHTML = `
                 <div class="text-center py-5 text-muted">
                     <i class="bi bi-inbox fs-1 mb-2 d-block"></i>
                     <p class="mb-0">No expenses ${periodLabel}</p>
-                    ${this.period !== 'all' ? '<small>Try selecting "All" to see all expenses</small>' : ''}
+                    ${this.period !== 'all' ? '<small>Try selecting "Month" to see all expenses this month</small>' : ''}
                 </div>
             `;
             return;
