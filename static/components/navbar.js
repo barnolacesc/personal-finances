@@ -74,27 +74,46 @@ class NavBar extends HTMLElement {
                 </div>
             </nav>
             <style>
+                .navbar-modern .btn-modern {
+                    padding: 0.5rem 0.75rem;
+                    font-size: 0.9rem;
+                    border-radius: 8px;
+                }
+
                 /* Mobile responsive button styling */
                 @media (max-width: 767px) {
-                    .navbar .btn {
-                        padding: 0.5rem 0.75rem;
-                        font-size: 1.1rem;
-                        min-width: 44px;
-                        min-height: 44px;
+                    .navbar-modern {
+                        padding: 0.5rem 0;
+                    }
+
+                    .navbar-modern .btn-modern {
+                        padding: 0.4rem 0.6rem;
+                        font-size: 1rem;
+                        min-width: 40px;
+                        min-height: 40px;
                         display: flex;
                         align-items: center;
                         justify-content: center;
                     }
 
-                    .navbar .btn i {
-                        font-size: 1.2rem;
+                    .navbar-modern .btn-modern i {
+                        font-size: 1.1rem;
+                    }
+
+                    .navbar-modern .navbar-brand {
+                        font-size: 1rem;
+                    }
+
+                    .navbar-modern .d-flex.gap-2 {
+                        gap: 0.4rem !important;
                     }
                 }
 
                 /* Desktop styling */
                 @media (min-width: 768px) {
-                    .navbar .btn {
-                        padding: 0.5rem 1rem;
+                    .navbar-modern .btn-modern {
+                        padding: 0.5rem 0.875rem;
+                        font-size: 0.85rem;
                     }
                 }
             </style>

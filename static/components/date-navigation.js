@@ -27,7 +27,7 @@ class DateNavigation extends HTMLElement {
                 .date-nav-btn:hover {
                     color: var(--bs-primary, #0d6efd);
                 }
-                
+
                 /* Dark mode specific overrides */
                 [data-bs-theme="dark"] .date-nav-title {
                     color: #ffffff !important;
@@ -43,26 +43,26 @@ class DateNavigation extends HTMLElement {
                 }
             </style>
             <div class="d-flex flex-column align-items-center">
-                <div class="d-flex justify-content-center align-items-center gap-3 mb-2">
-                    <button id="prevMonthBtn" class="btn btn-link text-decoration-none p-0 fs-4 date-nav-btn">
+                <div class="d-flex justify-content-center align-items-center gap-2 mb-2">
+                    <button id="prevMonthBtn" class="btn btn-link text-decoration-none p-1 date-nav-btn" style="font-size: 1.1rem;">
                         <i class="bi bi-chevron-left"></i>
                     </button>
-                    <h1 id="currentMonthBtn" class="mb-0 text-center date-nav-title" style="min-width: 200px">
+                    <h3 id="currentMonthBtn" class="mb-0 text-center date-nav-title" style="min-width: 180px; font-size: 1.25rem;">
                         ${this.formatMonth()}
-                    </h1>
-                    <button id="nextMonthBtn" class="btn btn-link text-decoration-none p-0 fs-4 date-nav-btn">
+                    </h3>
+                    <button id="nextMonthBtn" class="btn btn-link text-decoration-none p-1 date-nav-btn" style="font-size: 1.1rem;">
                         <i class="bi bi-chevron-right"></i>
                     </button>
                 </div>
 
-                <div class="d-flex justify-content-center align-items-center gap-2 mb-4">
-                    <button id="prevWeekBtn" class="btn btn-link text-decoration-none p-0 date-nav-btn">
+                <div class="d-flex justify-content-center align-items-center gap-2 mb-3">
+                    <button id="prevWeekBtn" class="btn btn-link text-decoration-none p-0 date-nav-btn" style="font-size: 0.9rem;">
                         <i class="bi bi-chevron-left"></i>
                     </button>
-                    <h4 id="currentWeekBtn" class="mb-0 text-center date-nav-subtitle" style="min-width: 150px; font-size: 1.1rem;">
+                    <span id="currentWeekBtn" class="mb-0 text-center date-nav-subtitle" style="min-width: 100px; font-size: 0.9rem; cursor: pointer;">
                         All Month
-                    </h4>
-                    <button id="nextWeekBtn" class="btn btn-link text-decoration-none p-0 date-nav-btn">
+                    </span>
+                    <button id="nextWeekBtn" class="btn btn-link text-decoration-none p-0 date-nav-btn" style="font-size: 0.9rem;">
                         <i class="bi bi-chevron-right"></i>
                     </button>
                 </div>
@@ -93,11 +93,11 @@ class DateNavigation extends HTMLElement {
         // Create a new date object to avoid modifying the original
         const newDate = new Date(this.currentDate);
         newDate.setMonth(newDate.getMonth() + delta);
-        
+
         // Update the current date
         this.currentDate = newDate;
         this.currentWeek = 'all';
-        
+
         // Re-render and notify
         this.render();
         this.setupEventListeners(); // Reattach event listeners after render
@@ -107,14 +107,14 @@ class DateNavigation extends HTMLElement {
     changeWeek(delta) {
         const weeks = ['week1', 'week2', 'week3', 'week4', 'week5', 'all'];
         let currentIndex = weeks.indexOf(this.currentWeek);
-        
+
         // If current week is not found (shouldn't happen), default to first week
         if (currentIndex === -1) currentIndex = 0;
-        
+
         // Calculate new index with wrapping
         currentIndex = (currentIndex + delta + weeks.length) % weeks.length;
         this.currentWeek = weeks[currentIndex];
-        
+
         this.updateWeekDisplay();
         this.dispatchDateChange();
     }
@@ -122,11 +122,11 @@ class DateNavigation extends HTMLElement {
     updateWeekDisplay() {
         const weekBtn = this.querySelector('#currentWeekBtn');
         weekBtn.textContent = this.currentWeek === 'all' ? 'All Month' : `Week ${this.currentWeek.slice(-1)}`;
-        
+
         // Update week navigation buttons
         const prevWeekBtn = this.querySelector('#prevWeekBtn');
         const nextWeekBtn = this.querySelector('#nextWeekBtn');
-        
+
         // Always enable both buttons since we have circular navigation
         prevWeekBtn.disabled = false;
         nextWeekBtn.disabled = false;
@@ -136,10 +136,10 @@ class DateNavigation extends HTMLElement {
         const now = new Date();
         const currentMonth = now.getMonth();
         const currentYear = now.getFullYear();
-        
+
         const nextMonthBtn = this.querySelector('#nextMonthBtn');
-        nextMonthBtn.disabled = 
-            this.currentDate.getMonth() >= currentMonth && 
+        nextMonthBtn.disabled =
+            this.currentDate.getMonth() >= currentMonth &&
             this.currentDate.getFullYear() >= currentYear;
 
         const prevMonthBtn = this.querySelector('#prevMonthBtn');
@@ -169,4 +169,4 @@ class DateNavigation extends HTMLElement {
     }
 }
 
-customElements.define('date-navigation', DateNavigation); 
+customElements.define('date-navigation', DateNavigation);
