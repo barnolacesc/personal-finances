@@ -251,9 +251,12 @@ class LatestExpenses extends HTMLElement {
         } else if (this.period === 'week') {
             const weekAgo = new Date();
             weekAgo.setDate(weekAgo.getDate() - 7);
-            filtered = filtered.filter(exp =>
-                new Date(exp.date) >= weekAgo
-            );
+            weekAgo.setHours(0, 0, 0, 0); // Set to midnight for proper day comparison
+            filtered = filtered.filter(exp => {
+                const expenseDate = new Date(exp.date);
+                expenseDate.setHours(0, 0, 0, 0);
+                return expenseDate >= weekAgo;
+            });
         }
         // 'all' period returns all expenses (already sorted)
 
