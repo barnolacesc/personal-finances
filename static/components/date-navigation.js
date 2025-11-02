@@ -15,56 +15,95 @@ class DateNavigation extends HTMLElement {
     render() {
         this.innerHTML = `
             <style>
+                .date-nav-container {
+                    margin-bottom: 0.5rem;
+                }
+
                 .date-nav-title {
                     color: var(--bs-body-color, #000);
+                    font-size: 1rem;
+                    font-weight: 600;
                 }
-                .date-nav-subtitle {
-                    color: var(--bs-secondary-color, #6c757d);
-                }
+
                 .date-nav-btn {
                     color: var(--bs-body-color, #000);
+                    padding: 0.15rem 0.3rem;
+                    font-size: 0.9rem;
                 }
+
                 .date-nav-btn:hover {
                     color: var(--bs-primary, #0d6efd);
+                }
+
+                .week-pill {
+                    display: inline-block;
+                    padding: 0.2rem 0.5rem;
+                    font-size: 0.7rem;
+                    border-radius: 12px;
+                    background: var(--bs-secondary-bg, #f8f9fa);
+                    color: var(--bs-secondary-color, #6c757d);
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    border: 1px solid transparent;
+                    margin: 0 0.15rem;
+                }
+
+                .week-pill:hover {
+                    background: var(--bs-primary, #0d6efd);
+                    color: white;
+                }
+
+                .week-pill.active {
+                    background: var(--bs-primary, #0d6efd);
+                    color: white;
+                    font-weight: 600;
                 }
 
                 /* Dark mode specific overrides */
                 [data-bs-theme="dark"] .date-nav-title {
                     color: #ffffff !important;
                 }
-                [data-bs-theme="dark"] .date-nav-subtitle {
-                    color: #a0a0a0 !important;
-                }
+
                 [data-bs-theme="dark"] .date-nav-btn {
                     color: #e0e0e0 !important;
                 }
+
                 [data-bs-theme="dark"] .date-nav-btn:hover {
                     color: #0d6efd !important;
                 }
+
+                [data-bs-theme="dark"] .week-pill {
+                    background: rgba(255, 255, 255, 0.1);
+                    color: #a0a0a0;
+                }
+
+                [data-bs-theme="dark"] .week-pill:hover {
+                    background: var(--bs-primary, #0d6efd);
+                    color: white;
+                }
             </style>
-            <div class="d-flex flex-column align-items-center">
-                <div class="d-flex justify-content-center align-items-center gap-2 mb-2">
-                    <button id="prevMonthBtn" class="btn btn-link text-decoration-none p-1 date-nav-btn" style="font-size: 1.1rem;">
+            <div class="date-nav-container text-center">
+                <!-- Month selector: primary control -->
+                <div class="d-flex justify-content-center align-items-center gap-1 mb-2">
+                    <button id="prevMonthBtn" class="btn btn-link text-decoration-none date-nav-btn">
                         <i class="bi bi-chevron-left"></i>
                     </button>
-                    <h3 id="currentMonthBtn" class="mb-0 text-center date-nav-title" style="min-width: 180px; font-size: 1.25rem;">
+                    <span class="date-nav-title" style="min-width: 140px;">
                         ${this.formatMonth()}
-                    </h3>
-                    <button id="nextMonthBtn" class="btn btn-link text-decoration-none p-1 date-nav-btn" style="font-size: 1.1rem;">
+                    </span>
+                    <button id="nextMonthBtn" class="btn btn-link text-decoration-none date-nav-btn">
                         <i class="bi bi-chevron-right"></i>
                     </button>
                 </div>
 
-                <div class="d-flex justify-content-center align-items-center gap-2 mb-3">
-                    <button id="prevWeekBtn" class="btn btn-link text-decoration-none p-0 date-nav-btn" style="font-size: 0.9rem;">
-                        <i class="bi bi-chevron-left"></i>
-                    </button>
-                    <span id="currentWeekBtn" class="mb-0 text-center date-nav-subtitle" style="min-width: 100px; font-size: 0.9rem; cursor: pointer;">
-                        All Month
-                    </span>
-                    <button id="nextWeekBtn" class="btn btn-link text-decoration-none p-0 date-nav-btn" style="font-size: 0.9rem;">
-                        <i class="bi bi-chevron-right"></i>
-                    </button>
+                <!-- Week selector: compact pills, secondary control -->
+                <div class="d-flex justify-content-center align-items-center flex-wrap gap-1">
+                    <span class="week-pill ${this.currentWeek === 'all' ? 'active' : ''}" data-week="all">All</span>
+                    <span class="week-pill ${this.currentWeek === 'week1' ? 'active' : ''}" data-week="week1">W1</span>
+                    <span class="week-pill ${this.currentWeek === 'week2' ? 'active' : ''}" data-week="week2">W2</span>
+                    <span class="week-pill ${this.currentWeek === 'week3' ? 'active' : ''}" data-week="week3">W3</span>
+                    <span class="week-pill ${this.currentWeek === 'week4' ? 'active' : ''}" data-week="week4">W4</span>
+                    <span class="week-pill ${this.currentWeek === 'week5' ? 'active' : ''}" data-week="week5">W5</span>
                 </div>
             </div>
         `;
@@ -76,12 +115,15 @@ class DateNavigation extends HTMLElement {
     setupEventListeners() {
         this.querySelector('#prevMonthBtn').addEventListener('click', () => this.changeMonth(-1));
         this.querySelector('#nextMonthBtn').addEventListener('click', () => this.changeMonth(1));
-        this.querySelector('#prevWeekBtn').addEventListener('click', () => this.changeWeek(-1));
-        this.querySelector('#nextWeekBtn').addEventListener('click', () => this.changeWeek(1));
-        this.querySelector('#currentWeekBtn').addEventListener('click', () => {
-            this.currentWeek = 'all';
-            this.updateWeekDisplay();
-            this.dispatchDateChange();
+
+        // Week pill click handlers
+        this.querySelectorAll('.week-pill').forEach(pill => {
+            pill.addEventListener('click', (e) => {
+                const week = e.target.dataset.week;
+                this.currentWeek = week;
+                this.updateWeekDisplay();
+                this.dispatchDateChange();
+            });
         });
     }
 
@@ -104,32 +146,15 @@ class DateNavigation extends HTMLElement {
         this.dispatchDateChange();
     }
 
-    changeWeek(delta) {
-        const weeks = ['week1', 'week2', 'week3', 'week4', 'week5', 'all'];
-        let currentIndex = weeks.indexOf(this.currentWeek);
-
-        // If current week is not found (shouldn't happen), default to first week
-        if (currentIndex === -1) currentIndex = 0;
-
-        // Calculate new index with wrapping
-        currentIndex = (currentIndex + delta + weeks.length) % weeks.length;
-        this.currentWeek = weeks[currentIndex];
-
-        this.updateWeekDisplay();
-        this.dispatchDateChange();
-    }
-
     updateWeekDisplay() {
-        const weekBtn = this.querySelector('#currentWeekBtn');
-        weekBtn.textContent = this.currentWeek === 'all' ? 'All Month' : `Week ${this.currentWeek.slice(-1)}`;
-
-        // Update week navigation buttons
-        const prevWeekBtn = this.querySelector('#prevWeekBtn');
-        const nextWeekBtn = this.querySelector('#nextWeekBtn');
-
-        // Always enable both buttons since we have circular navigation
-        prevWeekBtn.disabled = false;
-        nextWeekBtn.disabled = false;
+        // Update active state on week pills
+        this.querySelectorAll('.week-pill').forEach(pill => {
+            if (pill.dataset.week === this.currentWeek) {
+                pill.classList.add('active');
+            } else {
+                pill.classList.remove('active');
+            }
+        });
     }
 
     updateNavigationState() {
