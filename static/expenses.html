@@ -1,21 +1,23 @@
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="light">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>View Expenses - Personal Finances</title>
 
     <!-- Icons -->
     <link rel="icon" href="/static/pficon.png">
     <link rel="apple-touch-icon" href="/static/pficon.png">
+    <link rel="manifest" href="/static/site.webmanifest">
 
     <!-- Mobile Web App -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Expenses">
     <meta name="application-name" content="Expenses">
-    <meta name="theme-color" content="#2563eb">
-    <meta name="msapplication-TileColor" content="#2563eb">
+    <meta name="theme-color" content="#007AFF">
+    <meta name="msapplication-TileColor" content="#007AFF">
     <meta name="msapplication-TileImage" content="/static/pficon.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
@@ -26,8 +28,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <!-- Custom Styles -->
     <link rel="stylesheet" href="/static/styles/theme.css">
-    <link rel="stylesheet" href="/static/styles/modern-theme.css">
 </head>
+
 <body>
     <nav-bar></nav-bar>
     <toast-container></toast-container>
@@ -66,7 +68,7 @@
 
     <script>
         // Dark mode initialization - run immediately
-        (function() {
+        (function () {
             const savedTheme = localStorage.getItem('theme');
             const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
             const theme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
@@ -91,4 +93,5 @@
         document.addEventListener('DOMContentLoaded', initDarkMode);
     </script>
 </body>
+
 </html>

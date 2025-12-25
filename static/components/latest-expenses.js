@@ -92,8 +92,8 @@ class LatestExpenses extends HTMLElement {
                 }
 
                 .period-btn:hover {
-                    background: rgba(59, 130, 246, 0.1);
-                    color: var(--accent-blue);
+                    background: rgba(0, 122, 255, 0.1);
+                    color: var(--primary-color);
                 }
 
                 .period-btn:hover i {
@@ -101,9 +101,9 @@ class LatestExpenses extends HTMLElement {
                 }
 
                 .period-btn.active {
-                    background: var(--primary-gradient);
+                    background: var(--primary-color);
                     color: white;
-                    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+                    box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
                 }
 
                 .period-btn.active i {
@@ -117,9 +117,10 @@ class LatestExpenses extends HTMLElement {
 
                 .expense-item {
                     padding: 0.875rem 1rem;
-                    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                    border-bottom: 1px solid var(--border-color);
                     transition: all 0.2s ease;
                     cursor: pointer;
+                    background: var(--bg-card);
                 }
 
                 .expense-item:last-child {
@@ -127,7 +128,7 @@ class LatestExpenses extends HTMLElement {
                 }
 
                 .expense-item:hover {
-                    background: rgba(255, 255, 255, 0.05);
+                    background: var(--bg-secondary);
                     transform: translateX(4px);
                 }
 
@@ -139,7 +140,7 @@ class LatestExpenses extends HTMLElement {
                 .expense-description {
                     font-size: 0.9rem;
                     margin-bottom: 0.25rem;
-                    color: var(--bs-light);
+                    color: var(--text-primary);
                 }
 
                 .expense-date {

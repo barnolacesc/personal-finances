@@ -66,10 +66,18 @@ except Exception as e:
 
 @app.after_request
 def add_header(response):
-    # Disable caching for all responses
-    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
+    # Cache static assets for 1 day, but disable caching for API responses
+    if request.path.startswith("/static"):
+        response.headers["Cache-Control"] = "public, max-age=86400"
+        response.headers["Expires"] = (
+            datetime.now(timezone.utc).replace(microsecond=0)
+        ).strftime("%a, %d %b %Y %H:%M:%S GMT")
+    else:
+        response.headers["Cache-Control"] = (
+            "no-store, no-cache, must-revalidate, max-age=0"
+        )
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
     return response
 
 
