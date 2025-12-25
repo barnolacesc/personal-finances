@@ -122,7 +122,7 @@ deploy:
 server {
     listen 80;
     server_name your-domain.com;
-    
+
     location / {
         proxy_pass http://localhost:5001;
         proxy_set_header Host $host;
@@ -209,4 +209,4 @@ docker inspect --format='{{.State.Health.Status}}' personal-finances-app
 - **Final Size**: ~80-100MB
 - **Memory Usage**: ~50-80MB at runtime
 - **CPU Usage**: Minimal (suitable for Raspberry Pi)
-- **Architecture**: Multi-arch (x86_64, ARM64, ARMv7) 
+- **Architecture**: Multi-arch (x86_64, ARM64, ARMv7)

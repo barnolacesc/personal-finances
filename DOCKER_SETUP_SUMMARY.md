@@ -4,7 +4,7 @@
 
 ### Core Files
 - **`Dockerfile`** - Lightweight Alpine-based container (~80MB)
-- **`compose.yml`** - Easy orchestration with volume persistence  
+- **`compose.yml`** - Easy orchestration with volume persistence
 - **`docker-entrypoint.sh`** - Smart startup script with database initialization
 - **`.dockerignore`** - Minimal build context for faster builds
 
@@ -62,7 +62,7 @@ docker compose logs -f
 ```bash
 # Docker commands
 docker compose up -d          # Start application
-docker compose down           # Stop application  
+docker compose down           # Stop application
 docker compose logs -f        # View logs
 docker compose restart        # Restart app
 docker compose ps             # Check status
@@ -120,7 +120,7 @@ docker inspect --format='{{.State.Health.Status}}' personal-finances-app
 ## 📊 Performance
 
 - **Image size**: ~80-100MB
-- **Memory usage**: ~50-80MB runtime  
+- **Memory usage**: ~50-80MB runtime
 - **CPU usage**: Minimal (perfect for Raspberry Pi)
 - **Startup time**: ~5-10 seconds
 
@@ -134,4 +134,4 @@ docker inspect --format='{{.State.Health.Status}}' personal-finances-app
 6. **Backup**: Simple file-based database backups
 7. **Scalability**: Ready for load balancing if needed
 
-The Docker implementation transforms your app from a local Python script to a production-ready, containerized service that can run anywhere! 
+The Docker implementation transforms your app from a local Python script to a production-ready, containerized service that can run anywhere!

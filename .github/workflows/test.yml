@@ -10,31 +10,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Cache virtual environment
-        uses: actions/cache@v4
-        with:
-          path: ci_venv
-          key: ${{ runner.os }}-venv-${{ hashFiles('requirements.txt', 'requirements-dev.txt') }}
-
-      - name: Set up Python environment and run tests
+      - name: Set up Python environment
         run: |
-          # Create virtual environment only if not cached
-          if [ ! -d "ci_venv" ]; then
-            echo "Creating new virtual environment..."
-            python3 -m venv ci_venv
-            source ci_venv/bin/activate
+          # Use persistent venv in runner's home directory
+          VENV_PATH="$HOME/.venvs/personal-finances"
+          mkdir -p "$HOME/.venvs"
+
+          REQUIREMENTS_HASH=$(cat requirements.txt requirements-dev.txt | md5sum | cut -d' ' -f1)
+          HASH_FILE="$VENV_PATH/.requirements_hash"
+
+          # Recreate venv if requirements changed or venv doesn't exist
+          if [ ! -d "$VENV_PATH" ] || [ ! -f "$HASH_FILE" ] || [ "$(cat $HASH_FILE)" != "$REQUIREMENTS_HASH" ]; then
+            echo "Creating/updating virtual environment..."
+            rm -rf "$VENV_PATH"
+            python3 -m venv "$VENV_PATH"
+            source "$VENV_PATH/bin/activate"
             pip install --upgrade pip
             pip install -r requirements.txt -r requirements-dev.txt
+            echo "$REQUIREMENTS_HASH" > "$HASH_FILE"
           else
-            echo "Using cached virtual environment..."
+            echo "Using existing virtual environment (requirements unchanged)"
           fi
 
-          source ci_venv/bin/activate
-
-          # Run all checks in sequence
+      - name: Run tests and checks
+        run: |
+          source "$HOME/.venvs/personal-finances/bin/activate"
           pytest -v --tb=short
-          flake8 --max-line-length=88 --extend-ignore=E203,W503 app.py tests/
-          black --check --diff app.py tests/
-
-          # Deactivate but keep venv for caching
-          deactivate
+          flake8 .
+          black --check --diff .

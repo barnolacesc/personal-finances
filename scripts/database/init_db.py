@@ -5,19 +5,19 @@ import time
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
+
 def init_database():
     # Get the database path from Flask's instance folder
-    db_path = os.path.join(app.instance_path, 'expenses.db')
-    
+    db_path = os.path.join(app.instance_path, "expenses.db")
+
     logger.info(f"Database path: {db_path}")
     logger.info(f"Current working directory: {os.getcwd()}")
     logger.info(f"Flask instance path: {app.instance_path}")
-    
+
     # Remove existing database if it exists
     if os.path.exists(db_path):
         try:
@@ -35,11 +35,11 @@ def init_database():
     try:
         with app.app_context():
             db.create_all()
-            logger.info(f"Successfully created database")
-            
+            logger.info("Successfully created database")
+
             # Wait a short moment to ensure the file system has processed the creation
             time.sleep(0.1)
-            
+
             # Verify database file exists
             if not os.path.exists(db_path):
                 logger.error(f"Database file not found at expected path: {db_path}")
@@ -49,24 +49,24 @@ def init_database():
                 parent_contents = os.listdir(os.path.dirname(app.instance_path))
                 logger.info(f"Parent directory contents: {parent_contents}")
                 return False
-                
+
             # Set proper permissions
             try:
                 os.chmod(db_path, 0o666)
-                logger.info(f"Set database permissions to 666")
+                logger.info("Set database permissions to 666")
             except Exception as e:
                 logger.error(f"Error setting database permissions: {e}")
                 return False
-            
+
             # Verify database is writable
             try:
-                with open(db_path, 'ab') as f:
+                with open(db_path, "ab"):
                     pass
                 logger.info("Successfully verified database is writable")
             except Exception as e:
                 logger.error(f"Database is not writable: {e}")
                 return False
-                
+
         return True
     except Exception as e:
         logger.error(f"Error creating database: {e}")
@@ -78,9 +78,10 @@ def init_database():
             logger.error(f"Error listing directory: {list_err}")
         return False
 
+
 if __name__ == "__main__":
     success = init_database()
     if success:
         logger.info("Database initialization completed successfully")
     else:
-        logger.error("Database initialization failed") 
+        logger.error("Database initialization failed")
