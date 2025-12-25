@@ -34,7 +34,7 @@ static/
   - Currency settings
   - UI constants
   - Validation rules
-- **Benefits**: 
+- **Benefits**:
   - Easy to update categories or colors
   - No duplication across components
   - Type-safe configuration access
@@ -127,7 +127,7 @@ class MyComponent extends BaseComponent {
         this.render();
         this.setupEventListeners();
     }
-    
+
     setupEventListeners() {
         // Automatic cleanup when component disconnects
         this.listenToGlobalEvent('expenseadded', this.handleUpdate.bind(this));
@@ -190,4 +190,4 @@ The refactoring maintains backward compatibility while introducing:
 - Better code organization
 - Enhanced maintainability
 
-Future components should follow this modular pattern for consistency. 
+Future components should follow this modular pattern for consistency.

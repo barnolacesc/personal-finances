@@ -64,13 +64,13 @@ class ToastContainer extends HTMLElement {
         const container = this.shadowRoot.querySelector('.toast-container');
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
-        
+
         const icon = document.createElement('i');
         icon.className = `bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'}`;
-        
+
         const text = document.createElement('span');
         text.textContent = message;
-        
+
         toast.appendChild(icon);
         toast.appendChild(text);
         container.appendChild(toast);
@@ -92,4 +92,4 @@ window.showToast = function(message, type = 'success') {
     if (toastContainer) {
         toastContainer.showToast(message, type);
     }
-}; 
+};

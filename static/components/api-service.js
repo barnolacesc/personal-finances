@@ -14,7 +14,7 @@ export class ApiService {
 
         try {
             const response = await fetch(url, config);
-            
+
             if (!response.ok) {
                 const errorText = await response.text();
                 throw new Error(`HTTP ${response.status}: ${errorText}`);
@@ -70,9 +70,9 @@ export class ApiService {
 export class ErrorHandler {
     static handle(error, context = '') {
         console.error(`Error in ${context}:`, error);
-        
+
         let message = 'An unexpected error occurred';
-        
+
         if (error.message.includes('Failed to fetch')) {
             message = 'Network error. Please check your connection.';
         } else if (error.message.includes('HTTP 400')) {
@@ -87,4 +87,4 @@ export class ErrorHandler {
             window.showToast(message, 'error');
         }
     }
-} 
+}

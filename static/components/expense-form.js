@@ -21,9 +21,9 @@ class ExpenseForm extends BaseComponent {
             <div class="card shadow-sm mb-4">
                 <div class="card-header py-3">
                     <h5 class="mb-0">
-                        <button class="btn btn-link text-decoration-none p-0 w-100 text-start d-flex justify-content-between align-items-center" 
-                                type="button" 
-                                data-bs-toggle="collapse" 
+                        <button class="btn btn-link text-decoration-none p-0 w-100 text-start d-flex justify-content-between align-items-center"
+                                type="button"
+                                data-bs-toggle="collapse"
                                 data-bs-target="#expenseFormSection">
                             <span><i class="bi bi-plus-circle me-2"></i>Add New Expense</span>
                             <i class="bi bi-chevron-down"></i>
@@ -38,10 +38,10 @@ class ExpenseForm extends BaseComponent {
                                     <label for="amount" class="form-label">Amount</label>
                                     <div class="input-group">
                                         <span class="input-group-text">${CONFIG.CURRENCY.symbol}</span>
-                                        <input type="text" 
-                                               class="form-control" 
-                                               id="amount" 
-                                               name="amount" 
+                                        <input type="text"
+                                               class="form-control"
+                                               id="amount"
+                                               name="amount"
                                                pattern="${CONFIG.VALIDATION.AMOUNT_PATTERN}"
                                                inputmode="decimal"
                                                placeholder="0.00"
@@ -57,11 +57,11 @@ class ExpenseForm extends BaseComponent {
                                 </div>
                                 <div class="col-12">
                                     <label for="description" class="form-label">Description</label>
-                                    <input type="text" 
-                                           class="form-control" 
-                                           id="description" 
-                                           name="description" 
-                                           maxlength="${CONFIG.VALIDATION.DESCRIPTION_MAX_LENGTH}" 
+                                    <input type="text"
+                                           class="form-control"
+                                           id="description"
+                                           name="description"
+                                           maxlength="${CONFIG.VALIDATION.DESCRIPTION_MAX_LENGTH}"
                                            required>
                                 </div>
                                 <div class="col-12">
@@ -93,7 +93,7 @@ class ExpenseForm extends BaseComponent {
 
     async handleSubmit(e) {
         e.preventDefault();
-        
+
         const formData = new FormData(e.target);
         const data = {
             amount: CurrencyHelper.parseAmount(formData.get('amount')),
@@ -103,10 +103,10 @@ class ExpenseForm extends BaseComponent {
 
         try {
             const result = await ApiService.createExpense(data);
-            
+
             e.target.reset();
             window.showToast('Expense added successfully', 'success');
-            
+
             // Emit event using the new event system
             EventManager.emitExpenseAdded(result);
         } catch (error) {
@@ -115,4 +115,4 @@ class ExpenseForm extends BaseComponent {
     }
 }
 
-customElements.define('expense-form', ExpenseForm); 
+customElements.define('expense-form', ExpenseForm);

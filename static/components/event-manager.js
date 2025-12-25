@@ -90,4 +90,4 @@ export class BaseComponent extends HTMLElement {
             window.showToast('An error occurred. Please try again.', 'error');
         }
     }
-} 
+}

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Make sure we're running as root
-if [ "$EUID" -ne 0 ]; then 
+if [ "$EUID" -ne 0 ]; then
     echo "Please run as root (use sudo)"
     exit 1
 fi
@@ -33,4 +33,4 @@ echo "  sudo systemctl stop personal-finances    # Stop service"
 echo "  sudo systemctl restart personal-finances # Restart service"
 echo "  sudo journalctl -u personal-finances    # View logs"
 echo -e "\nTo see detailed logs in real-time, use:"
-echo "  sudo journalctl -u personal-finances -f" 
+echo "  sudo journalctl -u personal-finances -f"

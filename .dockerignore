@@ -42,4 +42,4 @@ scripts/
 *.md
 .pytest_cache/
 .coverage
-htmlcov/ 
+htmlcov/

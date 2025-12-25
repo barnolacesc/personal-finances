@@ -32,7 +32,7 @@ INCOME_CATEGORIES: {
 - Color-coded warnings (yellow at 80%, red at 100%)
 - Simple budget setup modal
 
-**UX**: 
+**UX**:
 - Quick budget setup: "Set €200/month for Food & Drink"
 - Progress indicators in category chart
 - Gentle notifications when approaching limits
@@ -113,17 +113,17 @@ INCOME_CATEGORIES: {
 
 ## 🏗️ **Implementation Strategy**
 
-### Phase 1: Core Financial Features 
+### Phase 1: Core Financial Features
 1. Income tracking
 2. Balance dashboard
 3. Monthly budgets
 
-### Phase 2: Usability Improvements 
+### Phase 2: Usability Improvements
 4. Quick templates
 5. Search & filtering
 6. Basic analytics
 
-### Phase 3: Advanced Features 
+### Phase 3: Advanced Features
 7. Recurring transactions
 8. Multiple accounts
 9. Goals & savings
@@ -151,4 +151,4 @@ All features leverage existing modular system:
 - Use `ApiService` for new endpoints
 - Follow `BaseComponent` pattern
 - Maintain theme compatibility
-- Keep event-driven architecture 
+- Keep event-driven architecture
