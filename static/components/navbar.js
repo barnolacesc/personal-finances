@@ -49,8 +49,7 @@ class NavBar extends HTMLElement {
                         <div class="d-inline-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; background: var(--primary-gradient); border-radius: 8px;">
                             <i class="bi bi-wallet2 text-white fs-6"></i>
                         </div>
-                        <span class="d-none d-sm-inline">Personal Finances</span>
-                        <span class="d-sm-none">PF</span>
+                        <span>Finances</span>
                     </a>
 
                     <div class="d-flex align-items-center">

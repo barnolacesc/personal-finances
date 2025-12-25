@@ -29,24 +29,25 @@
     <div class="container py-3">
         <div class="row justify-content-center">
             <div class="col-md-10 col-lg-8">
-                <!-- Quick Actions - Compact buttons -->
-                <div class="row g-3 mb-4">
-                    <div class="col-6">
-                        <a href="/static/add-expense.html" class="landing-card-compact">
-                            <i class="bi bi-plus-circle-fill"></i>
-                            <span>Add Expense</span>
-                        </a>
-                    </div>
-                    <div class="col-6">
-                        <a href="/static/expenses.html" class="landing-card-compact">
-                            <i class="bi bi-bar-chart-fill"></i>
-                            <span>View Expenses</span>
-                        </a>
-                    </div>
+                <!-- Hero Action Buttons - Side by Side -->
+                <div class="home-hero-actions">
+                    <a href="/static/add-expense.html" class="home-hero-btn home-hero-primary">
+                        <i class="bi bi-plus-circle-fill"></i>
+                        <span>Add Expense</span>
+                    </a>
+                    <a href="/static/expenses.html" class="home-hero-btn home-hero-secondary">
+                        <i class="bi bi-list-ul"></i>
+                        <span>View All</span>
+                    </a>
                 </div>
 
-                <!-- Latest Expenses Widget -->
-                <latest-expenses limit="10" period="all"></latest-expenses>
+                <!-- Recent Expenses - Simple list, no selector -->
+                <div class="mt-4">
+                    <h6 class="text-muted mb-3" style="font-size: 0.85rem; font-weight: 600;">
+                        <i class="bi bi-clock-history me-1"></i> Recent
+                    </h6>
+                    <latest-expenses mode="recent" limit="5"></latest-expenses>
+                </div>
             </div>
         </div>
     </div>
