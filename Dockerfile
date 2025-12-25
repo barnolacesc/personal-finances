@@ -52,4 +52,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:5001/ || exit 1
 
 # Run the application
-ENTRYPOINT ["./docker-entrypoint.sh"] 
+ENTRYPOINT ["./docker-entrypoint.sh"]

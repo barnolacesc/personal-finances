@@ -50,7 +50,7 @@ python app.py
 ├── static/                     # Frontend assets
 │   ├── components/            # Modular JavaScript components
 │   │   ├── config.js         # Centralized configuration
-│   │   ├── api-service.js    # HTTP service layer  
+│   │   ├── api-service.js    # HTTP service layer
 │   │   ├── event-manager.js  # Event system
 │   │   ├── expense-form.js   # Expense creation form
 │   │   ├── expense-list.js   # Expense listing/editing
@@ -85,7 +85,7 @@ This application uses a **modular architecture** for improved maintainability:
 - **Backend**: Flask with SQLite database
 - **Frontend**: Vanilla JavaScript with Web Components
 - **Configuration**: Centralized config management
-- **API Layer**: Structured HTTP service layer  
+- **API Layer**: Structured HTTP service layer
 - **Event System**: Component communication via custom events
 - **Styling**: CSS variables for theming, external stylesheets
 
@@ -173,7 +173,7 @@ class MyComponent extends BaseComponent {
         this.render();
         this.setupEventListeners();
     }
-    
+
     setupEventListeners() {
         this.listenToGlobalEvent('expenseadded', this.handleUpdate.bind(this));
     }
@@ -190,6 +190,6 @@ class MyComponent extends BaseComponent {
 
 ## License
 
-MIT License - See [LICENSE](LICENSE) file for details. 
+MIT License - See [LICENSE](LICENSE) file for details.
 
-<!-- Test CI/CD workflow --> 
+<!-- Test CI/CD workflow -->

@@ -14,4 +14,4 @@ python3 export_csv.py
 # Deactivate virtual environment if it was activated
 if [ -n "$VIRTUAL_ENV" ]; then
     deactivate
-fi 
+fi

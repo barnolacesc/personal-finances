@@ -23,4 +23,4 @@ fi
 echo "Database ready. Starting Flask application..."
 
 # Start the Flask application
-exec python app.py 
+exec python app.py
