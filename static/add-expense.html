@@ -1,21 +1,23 @@
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="light">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Add Expense - Personal Finances</title>
 
     <!-- Icons -->
     <link rel="icon" href="/static/pficon.png">
     <link rel="apple-touch-icon" href="/static/pficon.png">
+    <link rel="manifest" href="/static/site.webmanifest">
 
     <!-- Mobile Web App -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Add Expense">
     <meta name="application-name" content="Add Expense">
-    <meta name="theme-color" content="#2563eb">
-    <meta name="msapplication-TileColor" content="#2563eb">
+    <meta name="theme-color" content="#007AFF">
+    <meta name="msapplication-TileColor" content="#007AFF">
     <meta name="msapplication-TileImage" content="/static/pficon.png">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
@@ -26,8 +28,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <!-- Custom Styles -->
     <link rel="stylesheet" href="/static/styles/theme.css">
-    <link rel="stylesheet" href="/static/styles/modern-theme.css">
 </head>
+
 <body>
     <nav-bar></nav-bar>
     <toast-container></toast-container>
@@ -39,7 +41,8 @@
                 <!-- Add Expense Form -->
                 <div class="modern-card chart-container-modern">
                     <div class="text-center mb-4">
-                        <div class="d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px; background: var(--primary-gradient); border-radius: 50%;">
+                        <div class="d-inline-flex align-items-center justify-content-center mb-3"
+                            style="width: 60px; height: 60px; background: var(--primary-gradient); border-radius: 50%;">
                             <i class="bi bi-plus-lg text-white fs-3"></i>
                         </div>
                         <h4 class="chart-title-modern mb-0" id="formTitle">Add New Expense</h4>
@@ -53,7 +56,8 @@
                 <!-- Success State (hidden by default) -->
                 <div id="successCard" class="modern-card chart-container-modern mt-4 d-none">
                     <div class="text-center">
-                        <div class="d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px; background: var(--success-gradient); border-radius: 50%;">
+                        <div class="d-inline-flex align-items-center justify-content-center mb-3"
+                            style="width: 80px; height: 80px; background: var(--success-gradient); border-radius: 50%;">
                             <i class="bi bi-check-lg text-white" style="font-size: 2.5rem;"></i>
                         </div>
                         <h5 class="text-success mb-3">Expense Added Successfully!</h5>
@@ -62,7 +66,8 @@
                             <button id="addAnotherBtn" class="btn-modern btn-modern-primary">
                                 <i class="bi bi-plus-circle me-2"></i>Add Another Expense
                             </button>
-                            <a href="/static/expenses.html" class="btn-modern btn-modern-secondary text-decoration-none">
+                            <a href="/static/expenses.html"
+                                class="btn-modern btn-modern-secondary text-decoration-none">
                                 <i class="bi bi-bar-chart me-2"></i>View All Expenses
                             </a>
                         </div>
@@ -87,7 +92,7 @@
 
     <script>
         // Dark mode initialization - run immediately
-        (function() {
+        (function () {
             const savedTheme = localStorage.getItem('theme');
             const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
             const theme = savedTheme || (systemPrefersDark ? 'dark' : 'light');
@@ -97,9 +102,9 @@
         })();
 
         // Handle success state
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const addAnotherBtn = document.getElementById('addAnotherBtn');
-            addAnotherBtn.addEventListener('click', function() {
+            addAnotherBtn.addEventListener('click', function () {
                 document.getElementById('successCard').classList.add('d-none');
                 document.querySelector('add-expense-form').resetForm();
                 document.querySelector('.card').scrollIntoView({ behavior: 'smooth' });
@@ -107,4 +112,5 @@
         });
     </script>
 </body>
+
 </html>
