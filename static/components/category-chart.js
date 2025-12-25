@@ -344,12 +344,12 @@ class CategoryChart extends HTMLElement {
                 return `
                     <div class="legend-item d-flex align-items-center justify-content-between py-2 px-3 rounded"
                          data-category="${category}"
-                         style="cursor: pointer; background: rgba(255,255,255,0.05); transition: all 0.2s ease;">
+                         style="cursor: pointer; background: var(--bg-secondary); transition: all 0.2s ease;">
                         <div class="d-flex align-items-center">
                             <div class="me-3" style="width: 12px; height: 12px; background: ${color}; border-radius: 50%;"></div>
-                            <span class="text-light">${this.formatCategory(category)}</span>
+                            <span style="color: var(--text-primary);">${this.formatCategory(category)}</span>
                         </div>
-                        <strong class="text-light">${this.formatAmount(amount)}</strong>
+                        <strong style="color: var(--text-primary);">${this.formatAmount(amount)}</strong>
                     </div>
                 `;
             }).join('');
@@ -586,22 +586,22 @@ class CategoryChart extends HTMLElement {
 
     render() {
         this.innerHTML = `
-            <div class="chart-container-modern">
-                <div class="card bg-dark text-light border-0">
+            <div class="chart-container-modern modern-card">
+                <div class="card border-0" style="background: var(--bg-card);">
                     <div class="card-header d-flex justify-content-between align-items-center border-0 bg-transparent">
-                        <div class="d-flex align-items-center">
+                        <div class="d-flex align-items-center" style="color: var(--text-primary);">
                             <i class="bi bi-pie-chart me-2"></i>
                             <span>Expense Distribution</span>
                         </div>
-                        <div class="fs-5 fw-bold text-primary" id="chartTotal">€0.00</div>
+                        <div class="fs-5 fw-bold" style="color: var(--primary-color);" id="chartTotal">€0.00</div>
                     </div>
                     <div class="card-body">
                         <div class="row align-items-center">
                             <div class="col-md-6 position-relative">
                                 <canvas id="categoryChart" style="max-height: 280px;"></canvas>
                                 <div id="chartCenterTotal" class="position-absolute top-50 start-50 translate-middle text-center">
-                                    <div class="fs-6 text-muted mb-1">Total</div>
-                                    <div class="fs-4 fw-bold text-light"></div>
+                                    <div class="fs-6 mb-1" style="color: var(--text-secondary);">Total</div>
+                                    <div class="fs-4 fw-bold" style="color: var(--text-primary);"></div>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -615,17 +615,17 @@ class CategoryChart extends HTMLElement {
                 </div>
                 <!-- Category Details Section -->
                 <div id="categoryDetails" class="collapse">
-                    <div class="card bg-dark text-light border-0 mt-3">
+                    <div class="card border-0 mt-3 modern-card" style="background: var(--bg-card);">
                         <div class="card-header d-flex justify-content-between align-items-center border-0 bg-transparent">
-                            <div class="d-flex align-items-center">
+                            <div class="d-flex align-items-center" style="color: var(--text-primary);">
                                 <span id="categoryDetailsTitle">Category Details</span>
                             </div>
-                            <button type="button" class="btn-close btn-close-white" aria-label="Close"></button>
+                            <button type="button" class="btn-close" aria-label="Close"></button>
                         </div>
                         <div class="card-body">
                         <!-- Desktop Table View -->
                         <div class="table-responsive d-none d-md-block">
-                            <table class="table table-dark table-hover mb-0">
+                            <table class="table table-hover mb-0" style="--bs-table-bg: var(--bg-card); color: var(--text-primary);">
                                 <thead>
                                     <tr>
                                         <th width="35%">
@@ -649,10 +649,10 @@ class CategoryChart extends HTMLElement {
                                     </tr>
                                 </thead>
                                 <tbody id="categoryExpensesList"></tbody>
-                                <tfoot class="table-dark">
+                                <tfoot style="background: var(--bg-secondary);">
                                     <tr>
-                                        <td colspan="3"><strong>Category Total</strong></td>
-                                        <td class="amount" id="categoryTotal">€0.00</td>
+                                        <td colspan="3"><strong style="color: var(--text-primary);">Category Total</strong></td>
+                                        <td class="amount" id="categoryTotal" style="color: var(--primary-color);">€0.00</td>
                                     </tr>
                                 </tfoot>
                             </table>

@@ -16,11 +16,14 @@
             "purpose": "any maskable"
         }
     ],
-    "theme_color": "#000000",
-    "background_color": "#ffffff",
+    "theme_color": "#007AFF",
+    "background_color": "#F2F2F7",
     "display": "standalone",
     "start_url": "/",
     "orientation": "portrait",
-    "categories": ["finance", "productivity"],
+    "categories": [
+        "finance",
+        "productivity"
+    ],
     "prefer_related_applications": false
 }

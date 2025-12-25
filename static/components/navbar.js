@@ -7,6 +7,7 @@ class NavBar extends HTMLElement {
     connectedCallback() {
         this.render();
         this.setupEventListeners();
+        this.updateActiveState();
     }
 
     getCurrentPage() {
@@ -16,167 +17,143 @@ class NavBar extends HTMLElement {
         return 'home';
     }
 
-    getContextualActions() {
-        switch (this.currentPage) {
-            case 'add-expense':
-                return [];
-            case 'expenses':
-                return [
-                    { icon: 'plus-circle', label: 'Add Expense', href: '/static/add-expense.html', variant: 'outline-primary' },
-                    { icon: 'download', label: 'Export', action: 'export', variant: 'outline-success' }
-                ];
-            default:
-                return [];
-        }
-    }
-
     render() {
         const actions = this.getContextualActions();
 
         const actionsHtml = actions.map(action => {
-            const buttonClass = action.variant.includes('primary') ? 'btn-modern btn-modern-primary' : 'btn-modern btn-modern-secondary';
+            // Mobile-friendly button styling
+            const isPrimary = action.variant && action.variant.includes('primary');
+            const btnClass = isPrimary ? 'btn-primary' : 'btn-link text-decoration-none text-muted';
+
             if (action.href) {
                 return `
-                    <a href="${action.href}" class="${buttonClass} d-flex align-items-center text-decoration-none">
-                        <i class="bi bi-${action.icon} d-md-none"></i>
-                        <span class="d-none d-md-inline">
-                            <i class="bi bi-${action.icon} me-2"></i>${action.label}
-                        </span>
+                    <a href="${action.href}" class="btn ${btnClass} d-flex align-items-center ms-2">
+                        <i class="bi bi-${action.icon} ${isPrimary ? '' : 'fs-5'}"></i>
+                        <span class="d-none d-md-inline ms-2">${action.label}</span>
                     </a>
                 `;
             } else {
                 return `
-                    <button class="${buttonClass} d-flex align-items-center" data-action="${action.action}">
-                        <i class="bi bi-${action.icon} d-md-none"></i>
-                        <span class="d-none d-md-inline">
-                            <i class="bi bi-${action.icon} me-2"></i>${action.label}
-                        </span>
+                    <button class="btn ${btnClass} d-flex align-items-center ms-2" data-action="${action.action}">
+                        <i class="bi bi-${action.icon} ${isPrimary ? '' : 'fs-5'}"></i>
+                        <span class="d-none d-md-inline ms-2">${action.label}</span>
                     </button>
                 `;
             }
         }).join('');
 
         this.innerHTML = `
-            <nav class="navbar navbar-modern navbar-expand-lg mb-2">
+            <nav class="navbar navbar-expand top-nav">
                 <div class="container">
                     <a class="navbar-brand fw-bold d-flex align-items-center" href="/static/index.html">
-                        <div class="d-inline-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; background: var(--primary-gradient); border-radius: 50%;">
+                        <div class="d-inline-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; background: var(--primary-gradient); border-radius: 8px;">
                             <i class="bi bi-wallet2 text-white fs-6"></i>
                         </div>
-                        Personal Finances
+                        <span>Finances</span>
                     </a>
-                    <div class="d-flex align-items-center gap-2">
+
+                    <div class="d-flex align-items-center">
                         ${actionsHtml}
-                        <button class="btn-modern btn-modern-secondary" id="themeToggle" aria-label="Toggle dark mode">
-                            <i class="bi bi-moon-fill"></i>
+                        <button class="btn btn-link text-muted ms-2" id="themeToggle" aria-label="Toggle dark mode">
+                            <i class="bi bi-moon-fill fs-5"></i>
                         </button>
                     </div>
                 </div>
             </nav>
-            <style>
-                .navbar-modern .btn-modern {
-                    padding: 0.5rem 0.75rem;
-                    font-size: 0.9rem;
-                    border-radius: 8px;
-                }
-
-                /* Mobile responsive button styling */
-                @media (max-width: 767px) {
-                    .navbar-modern {
-                        padding: 0.5rem 0;
-                    }
-
-                    .navbar-modern .btn-modern {
-                        padding: 0.4rem 0.6rem;
-                        font-size: 1rem;
-                        min-width: 40px;
-                        min-height: 40px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                    }
-
-                    .navbar-modern .btn-modern i {
-                        font-size: 1.1rem;
-                    }
-
-                    .navbar-modern .navbar-brand {
-                        font-size: 1rem;
-                    }
-
-                    .navbar-modern .d-flex.gap-2 {
-                        gap: 0.4rem !important;
-                    }
-                }
-
-                /* Desktop styling */
-                @media (min-width: 768px) {
-                    .navbar-modern .btn-modern {
-                        padding: 0.5rem 0.875rem;
-                        font-size: 0.85rem;
-                    }
-                }
-            </style>
         `;
     }
 
+    getContextualActions() {
+        const page = this.currentPage;
+        const actions = [];
+
+        if (page === 'home') {
+            // No specific actions for home, maybe just Add?
+            // User liked the big buttons, so maybe keep nav clean or add a small "Add"
+            // Let's add "Add" as a primary action for quick access
+            actions.push({
+                label: 'Add',
+                icon: 'plus-lg',
+                href: '/static/add-expense.html',
+                variant: 'primary'
+            });
+        } else if (page === 'expenses') {
+            actions.push({
+                label: 'Export',
+                icon: 'download',
+                action: 'export',
+                variant: 'secondary'
+            });
+            actions.push({
+                label: 'Add',
+                icon: 'plus-lg',
+                href: '/static/add-expense.html',
+                variant: 'primary'
+            });
+        } else if (page === 'add-expense') {
+            actions.push({
+                label: 'Expenses',
+                icon: 'list-ul',
+                href: '/static/expenses.html',
+                variant: 'secondary'
+            });
+        }
+
+        return actions;
+    }
+
     setupEventListeners() {
+        // Theme Toggle
         const themeToggle = this.querySelector('#themeToggle');
-        themeToggle.addEventListener('click', () => {
-            const currentTheme = document.documentElement.getAttribute('data-bs-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        if (themeToggle) {
+            themeToggle.addEventListener('click', () => {
+                const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
 
-            document.documentElement.setAttribute('data-bs-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
+                document.documentElement.setAttribute('data-bs-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                this.updateThemeIcons(newTheme);
 
-            // Update icon
-            themeToggle.innerHTML = newTheme === 'dark'
-                ? '<i class="bi bi-sun-fill"></i>'
-                : '<i class="bi bi-moon-fill"></i>';
+                // Update chart if it exists
+                if (window.categoryChart) {
+                    window.categoryChart.update();
+                }
+            });
+        }
 
-            // Update chart if it exists
-            if (window.categoryChart) {
-                window.categoryChart.update();
-            }
-        });
+        // Initial Icon State
+        const currentTheme = document.documentElement.getAttribute('data-bs-theme') || 'light';
+        this.updateThemeIcons(currentTheme);
 
-        // Set initial icon based on current theme
-        const currentTheme = document.documentElement.getAttribute('data-bs-theme');
-        themeToggle.innerHTML = currentTheme === 'dark'
-            ? '<i class="bi bi-sun-fill"></i>'
-            : '<i class="bi bi-moon-fill"></i>';
-
-        // Handle contextual action buttons
+        // Contextual Actions
         const actionButtons = this.querySelectorAll('[data-action]');
         actionButtons.forEach(button => {
             button.addEventListener('click', (e) => {
                 const action = e.currentTarget.dataset.action;
-                this.handleAction(action, e.currentTarget);
+                if (action === 'export') {
+                    this.showExportModal();
+                }
             });
         });
     }
 
-    handleAction(action, button) {
-        switch (action) {
-            case 'export':
-                this.handleExport(button);
-                break;
-            default:
-                console.warn(`Unknown action: ${action}`);
+    updateThemeIcons(theme) {
+        const icon = this.querySelector('#themeToggle i');
+        if (icon) {
+            icon.className = theme === 'dark' ? 'bi bi-sun-fill fs-5' : 'bi bi-moon-fill fs-5';
         }
     }
 
-    async handleExport(button) {
-        // Create and show export modal similar to backup-button component
-        this.showExportModal();
+    updateActiveState() {
+        // Handled in render for simplicity, but could be dynamic here
     }
 
     showExportModal() {
-        // Remove any existing modal
+        // Reuse the existing export modal logic or create a new one
+        // For now, we'll create a simple one compatible with the new UI
         const oldModal = document.getElementById('navbarExportModal');
         if (oldModal) oldModal.remove();
 
-        // Create modal HTML
         const modal = document.createElement('div');
         modal.id = 'navbarExportModal';
         modal.className = 'modal fade';
@@ -184,35 +161,26 @@ class NavBar extends HTMLElement {
         modal.innerHTML = `
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">
-                            <i class="bi bi-download me-2"></i>Export Your Data
-                        </h5>
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title fw-bold">Export Data</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="modal-body">
-                        <p class="mb-3">Choose how you want to export and backup your expense data:</p>
+                    <div class="modal-body pt-4">
                         <div class="d-grid gap-3">
-                            <button id="navbarDownloadBackupBtn" class="btn btn-success btn-lg">
-                                <i class="bi bi-download me-2"></i>
-                                <div class="d-flex flex-column align-items-start">
-                                    <span class="fw-bold">Download to Device</span>
-                                    <small class="text-white-50">Save CSV file to your device</small>
+                            <button id="navbarDownloadBackupBtn" class="btn btn-light p-3 text-start d-flex align-items-center">
+                                <i class="bi bi-phone fs-4 me-3 text-primary"></i>
+                                <div>
+                                    <div class="fw-bold">Save to Device</div>
+                                    <div class="small text-muted">Download CSV file</div>
                                 </div>
                             </button>
-                            <button id="navbarBackupToServerBtn" class="btn btn-outline-primary btn-lg">
-                                <i class="bi bi-cloud-upload me-2"></i>
-                                <div class="d-flex flex-column align-items-start">
-                                    <span class="fw-bold">Backup to Server</span>
-                                    <small class="text-muted">Create server backup for later download</small>
+                            <button id="navbarBackupToServerBtn" class="btn btn-light p-3 text-start d-flex align-items-center">
+                                <i class="bi bi-cloud-arrow-up fs-4 me-3 text-primary"></i>
+                                <div>
+                                    <div class="fw-bold">Backup to Server</div>
+                                    <div class="small text-muted">Save to Pi storage</div>
                                 </div>
                             </button>
-                        </div>
-                        <div class="mt-3 text-center">
-                            <small class="text-muted">
-                                <i class="bi bi-info-circle me-1"></i>
-                                Both options export all your expense data to CSV format
-                            </small>
                         </div>
                     </div>
                 </div>
@@ -220,7 +188,6 @@ class NavBar extends HTMLElement {
         `;
         document.body.appendChild(modal);
 
-        // Setup event listeners
         modal.querySelector('#navbarBackupToServerBtn').addEventListener('click', () => {
             this.hideExportModal();
             this.handleBackup();
@@ -230,7 +197,6 @@ class NavBar extends HTMLElement {
             this.downloadBackup();
         });
 
-        // Show the modal
         const modalInstance = new bootstrap.Modal(modal);
         modalInstance.show();
         this._exportModalInstance = modalInstance;
@@ -243,27 +209,20 @@ class NavBar extends HTMLElement {
     }
 
     async handleBackup() {
-        if (!confirm('Are you sure you want to create a backup of all data to CSV?')) return;
-
+        if (!confirm('Create server backup?')) return;
         try {
             const res = await fetch('/api/backup', { method: 'POST' });
             const data = await res.json();
-            if (data.success) {
-                window.showToast ? window.showToast('Backup created successfully!', 'success') : alert('Backup created successfully!');
-            } else {
-                window.showToast ? window.showToast('Backup failed: ' + (data.error || 'Unknown error'), 'error') : alert('Backup failed: ' + (data.error || 'Unknown error'));
-            }
+            this.showToast(data.success ? 'Backup created!' : 'Failed: ' + data.error, data.success ? 'success' : 'error');
         } catch (e) {
-            window.showToast ? window.showToast('Backup failed: ' + e, 'error') : alert('Backup failed: ' + e);
+            this.showToast('Error: ' + e, 'error');
         }
     }
 
     async downloadBackup() {
-        if (!confirm('Are you sure you want to download a backup of all data to CSV?')) return;
-
         try {
             const res = await fetch('/api/backup/download');
-            if (!res.ok) throw new Error('Failed to download backup');
+            if (!res.ok) throw new Error('Failed');
             const blob = await res.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -273,9 +232,17 @@ class NavBar extends HTMLElement {
             a.click();
             a.remove();
             window.URL.revokeObjectURL(url);
-            window.showToast ? window.showToast('Backup downloaded!', 'success') : alert('Backup downloaded!');
+            this.showToast('Download started', 'success');
         } catch (e) {
-            window.showToast ? window.showToast('Download failed: ' + e, 'error') : alert('Download failed: ' + e);
+            this.showToast('Download failed', 'error');
+        }
+    }
+
+    showToast(message, type = 'success') {
+        if (window.showToast) {
+            window.showToast(message, type);
+        } else {
+            alert(message);
         }
     }
 }
