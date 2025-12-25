@@ -4,10 +4,6 @@ on:
   pull_request:
     branches: [ develop, main ]
 
-env:
-  # Persistent venv location on the Pi (outside workspace)
-  VENV_PATH: /home/runner/.venvs/personal-finances
-
 jobs:
   test:
     runs-on: self-hosted
@@ -16,7 +12,10 @@ jobs:
 
       - name: Set up Python environment
         run: |
-          # Use persistent venv on the Pi's local disk
+          # Use persistent venv in runner's home directory
+          VENV_PATH="$HOME/.venvs/personal-finances"
+          mkdir -p "$HOME/.venvs"
+
           REQUIREMENTS_HASH=$(cat requirements.txt requirements-dev.txt | md5sum | cut -d' ' -f1)
           HASH_FILE="$VENV_PATH/.requirements_hash"
 
@@ -35,7 +34,7 @@ jobs:
 
       - name: Run tests and checks
         run: |
-          source "$VENV_PATH/bin/activate"
+          source "$HOME/.venvs/personal-finances/bin/activate"
           pytest -v --tb=short
           flake8 .
           black --check --diff .
