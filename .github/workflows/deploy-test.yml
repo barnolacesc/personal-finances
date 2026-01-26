@@ -10,16 +10,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install sshpass
-        run: sudo apt-get install -y sshpass
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
       - name: Deploy to Test VPS
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
         run: |
-          sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=no $VPS_USER@$VPS_HOST << 'ENDSSH'
+          ssh -i ~/.ssh/deploy_key $VPS_USER@$VPS_HOST << 'ENDSSH'
             set -e
             cd ~/personal-finances-test
 
@@ -46,12 +49,11 @@ jobs:
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
         run: |
           MAX_RETRIES=6
           for i in $(seq 1 $MAX_RETRIES); do
             echo "Health check attempt $i of $MAX_RETRIES..."
-            if sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=no $VPS_USER@$VPS_HOST "curl -s -f -m 5 http://localhost:5001/" > /dev/null; then
+            if ssh -i ~/.ssh/deploy_key $VPS_USER@$VPS_HOST "curl -s -f -m 5 http://localhost:5001/" > /dev/null; then
               echo "Test environment is healthy!"
               exit 0
             fi
