@@ -1,0 +1,63 @@
+name: Deploy to Test Environment
+
+on:
+  push:
+    branches: [develop]
+
+jobs:
+  deploy-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to Test VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh -i ~/.ssh/deploy_key $VPS_USER@$VPS_HOST << 'ENDSSH'
+            set -e
+            cd ~/personal-finances-test
+
+            # Pull latest develop branch
+            git fetch origin
+            git checkout -f origin/develop
+
+            # Create/update virtual environment
+            python3 -m venv venv
+            source venv/bin/activate
+            pip install -q -r requirements.txt
+
+            # Initialize test database with sample data
+            python scripts/database/create_test_data.py
+
+            # Restart the test service
+            sudo systemctl restart personal-finances-test
+          ENDSSH
+
+      - name: Wait for service to start
+        run: sleep 5
+
+      - name: Health check
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          MAX_RETRIES=6
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Health check attempt $i of $MAX_RETRIES..."
+            if ssh -i ~/.ssh/deploy_key $VPS_USER@$VPS_HOST "curl -s -f -m 5 http://localhost:5001/" > /dev/null; then
+              echo "Test environment is healthy!"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Health check failed"
+          exit 1
