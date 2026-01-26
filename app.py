@@ -109,6 +109,23 @@ def inject_test_banner(response):
     return response
 
 
+@app.route("/api/debug/env")
+def debug_env():
+    """Debug endpoint to check environment detection."""
+    return jsonify(
+        {
+            "FLASK_ENV": os.environ.get("FLASK_ENV"),
+            "FLASK_DEBUG": os.environ.get("FLASK_DEBUG"),
+            "app.debug": app.debug,
+            "is_dev": (
+                os.environ.get("FLASK_ENV") == "development"
+                or os.environ.get("FLASK_DEBUG") == "1"
+                or app.debug
+            ),
+        }
+    )
+
+
 @app.route("/")
 def serve_index():
     return send_from_directory("static", "index.html")
