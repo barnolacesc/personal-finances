@@ -11,6 +11,8 @@ class CategoryChart extends HTMLElement {
         this.currentWeek = 'all';
         // Categories and colors loaded from config
         this.categoryColors = {};
+        // Store current expenses for click handlers
+        this.currentExpenses = [];
     }
 
     async connectedCallback() {
@@ -41,6 +43,30 @@ class CategoryChart extends HTMLElement {
                 this.chart.update('none');
                 this.activeCategory = null;
                 this.activeCategoryIndex = null;
+            }
+        });
+
+        // Event delegation for expense list clicks (Desktop) - added once
+        this.querySelector('#categoryExpensesList').addEventListener('click', (e) => {
+            const row = e.target.closest('.expense-row');
+            if (row) {
+                const expenseId = row.dataset.expenseId;
+                const expense = this.currentExpenses.find(exp => exp.id == expenseId);
+                if (expense) {
+                    this.editExpense(expense);
+                }
+            }
+        });
+
+        // Event delegation for expense list clicks (Mobile) - added once
+        this.querySelector('#categoryExpensesListMobile').addEventListener('click', (e) => {
+            const row = e.target.closest('.expense-card');
+            if (row) {
+                const expenseId = row.dataset.expenseId;
+                const expense = this.currentExpenses.find(exp => exp.id == expenseId);
+                if (expense) {
+                    this.editExpense(expense);
+                }
             }
         });
 
@@ -177,6 +203,9 @@ class CategoryChart extends HTMLElement {
             console.error('Chart not properly initialized, initialized:', this.isInitialized, 'Chart available:', !!window.Chart);
             return;
         }
+
+        // Store expenses for click handlers to access current data
+        this.currentExpenses = expenses;
 
         // If no expenses, show empty state
         if (!expenses || expenses.length === 0) {
@@ -330,7 +359,7 @@ class CategoryChart extends HTMLElement {
                         onClick: (e, elements) => {
                             if (elements && elements.length > 0) {
                                 const category = this.currentCategories[elements[0].index][0];
-                                this.showCategoryDetails(category, expenses);
+                                this.showCategoryDetails(category, this.currentExpenses);
                             }
                         }
                     }
@@ -374,7 +403,7 @@ class CategoryChart extends HTMLElement {
 
                     // Trigger chart interaction to highlight the segment
                     if (this.chart) {
-                        const categoryIndex = sortedCategories.findIndex(([cat]) => cat === category);
+                        const categoryIndex = this.currentCategories.findIndex(([cat]) => cat === category);
                         if (categoryIndex !== -1) {
                             // Store the active category for persistent highlighting
                             this.activeCategory = category;
@@ -388,7 +417,7 @@ class CategoryChart extends HTMLElement {
                         }
                     }
 
-                    this.showCategoryDetails(category, expenses);
+                    this.showCategoryDetails(category, this.currentExpenses);
                 });
             });
 
@@ -400,7 +429,7 @@ class CategoryChart extends HTMLElement {
                     // Trigger chart interaction to highlight the segment
                     if (this.chart) {
                         // Find the index of this category in the sorted categories
-                        const categoryIndex = sortedCategories.findIndex(([cat]) => cat === category);
+                        const categoryIndex = this.currentCategories.findIndex(([cat]) => cat === category);
                         if (categoryIndex !== -1) {
                             // Store the active category for persistent highlighting
                             this.activeCategory = category;
@@ -414,7 +443,7 @@ class CategoryChart extends HTMLElement {
                         }
                     }
 
-                    this.showCategoryDetails(category, expenses);
+                    this.showCategoryDetails(category, this.currentExpenses);
                 });
             });
         } catch (error) {
@@ -523,30 +552,6 @@ class CategoryChart extends HTMLElement {
                     </div>
                 </div>
             `).join('');
-
-        // Add click handlers for editing expenses (Desktop)
-        this.querySelector('#categoryExpensesList').addEventListener('click', (e) => {
-            const row = e.target.closest('.expense-row');
-            if (row) {
-                const expenseId = row.dataset.expenseId;
-                const expense = categoryExpenses.find(e => e.id == expenseId);
-                if (expense) {
-                    this.editExpense(expense);
-                }
-            }
-        });
-
-        // Add click handlers for editing expenses (Mobile)
-        this.querySelector('#categoryExpensesListMobile').addEventListener('click', (e) => {
-            const row = e.target.closest('.expense-card');
-            if (row) {
-                const expenseId = row.dataset.expenseId;
-                const expense = categoryExpenses.find(e => e.id == expenseId);
-                if (expense) {
-                    this.editExpense(expense);
-                }
-            }
-        });
 
         // Show the section
         const categoryDetails = this.querySelector('#categoryDetails');
