@@ -8,6 +8,30 @@ class NavBar extends HTMLElement {
         this.render();
         this.setupEventListeners();
         this.updateActiveState();
+        this.checkTestEnvironment();
+    }
+
+    async checkTestEnvironment() {
+        try {
+            const response = await fetch('/api/env');
+            const data = await response.json();
+            if (data.is_test) {
+                this.showTestBadge();
+            }
+        } catch (error) {
+            // Silently ignore - not critical
+        }
+    }
+
+    showTestBadge() {
+        const brand = this.querySelector('.navbar-brand span');
+        if (brand) {
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-danger ms-2';
+            badge.style.cssText = 'font-size: 0.6rem; vertical-align: middle;';
+            badge.textContent = 'TEST';
+            brand.appendChild(badge);
+        }
     }
 
     getCurrentPage() {

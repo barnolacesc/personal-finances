@@ -81,6 +81,21 @@ def add_header(response):
     return response
 
 
+def is_test_environment():
+    """Check if running in test/development environment."""
+    return (
+        os.environ.get("FLASK_ENV") == "development"
+        or os.environ.get("FLASK_DEBUG") == "1"
+        or app.debug
+    )
+
+
+@app.route("/api/env")
+def get_environment():
+    """Return environment info for frontend (e.g., navbar badge)."""
+    return jsonify({"is_test": is_test_environment()})
+
+
 @app.route("/")
 def serve_index():
     return send_from_directory("static", "index.html")
