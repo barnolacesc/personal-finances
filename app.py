@@ -81,15 +81,6 @@ def add_header(response):
     return response
 
 
-# Test environment banner - only injected when FLASK_ENV=development
-TEST_BANNER_HTML = (
-    '<div style="position:fixed;top:12px;right:-35px;background:#ef4444;'
-    "color:white;padding:4px 40px;font-size:11px;font-weight:bold;"
-    "letter-spacing:1px;transform:rotate(45deg);z-index:9999;"
-    'box-shadow:0 2px 8px rgba(0,0,0,0.3);pointer-events:none;">TEST</div>'
-)
-
-
 def is_test_environment():
     """Check if running in test/development environment."""
     return (
@@ -99,23 +90,15 @@ def is_test_environment():
     )
 
 
-def serve_html_with_banner(filename):
-    """Serve HTML file with test banner injected in dev mode."""
-    filepath = os.path.join(app.static_folder, filename)
-    with open(filepath, "r") as f:
-        html = f.read()
-
-    if is_test_environment() and "<body>" in html:
-        html = html.replace("<body>", f"<body>{TEST_BANNER_HTML}", 1)
-
-    from flask import Response
-
-    return Response(html, mimetype="text/html")
+@app.route("/api/env")
+def get_environment():
+    """Return environment info for frontend (e.g., navbar badge)."""
+    return jsonify({"is_test": is_test_environment()})
 
 
 @app.route("/")
 def serve_index():
-    return serve_html_with_banner("index.html")
+    return send_from_directory("static", "index.html")
 
 
 @app.route("/add")
@@ -125,15 +108,7 @@ def serve_add():
 
 @app.route("/expenses")
 def serve_expenses():
-    return serve_html_with_banner("expenses.html")
-
-
-@app.route("/static/<path:filename>")
-def serve_static_with_banner(filename):
-    """Serve static files, injecting banner for HTML files in dev mode."""
-    if filename.endswith(".html"):
-        return serve_html_with_banner(filename)
-    return send_from_directory("static", filename)
+    return send_from_directory("static", "expenses.html")
 
 
 @app.route("/styles.css")
