@@ -90,45 +90,32 @@ TEST_BANNER_HTML = (
 )
 
 
-@app.after_request
-def inject_test_banner(response):
-    """Inject test environment banner into HTML responses when in dev mode."""
-    is_dev = (
+def is_test_environment():
+    """Check if running in test/development environment."""
+    return (
         os.environ.get("FLASK_ENV") == "development"
         or os.environ.get("FLASK_DEBUG") == "1"
         or app.debug
     )
-    if is_dev and response.content_type and "text/html" in response.content_type:
-        try:
-            html = response.get_data(as_text=True)
-            if "<body>" in html:
-                html = html.replace("<body>", f"<body>{TEST_BANNER_HTML}", 1)
-                response.set_data(html)
-        except Exception:
-            pass  # Don't break the response if injection fails
-    return response
 
 
-@app.route("/api/debug/env")
-def debug_env():
-    """Debug endpoint to check environment detection."""
-    return jsonify(
-        {
-            "FLASK_ENV": os.environ.get("FLASK_ENV"),
-            "FLASK_DEBUG": os.environ.get("FLASK_DEBUG"),
-            "app.debug": app.debug,
-            "is_dev": (
-                os.environ.get("FLASK_ENV") == "development"
-                or os.environ.get("FLASK_DEBUG") == "1"
-                or app.debug
-            ),
-        }
-    )
+def serve_html_with_banner(filename):
+    """Serve HTML file with test banner injected in dev mode."""
+    filepath = os.path.join(app.static_folder, filename)
+    with open(filepath, "r") as f:
+        html = f.read()
+
+    if is_test_environment() and "<body>" in html:
+        html = html.replace("<body>", f"<body>{TEST_BANNER_HTML}", 1)
+
+    from flask import Response
+
+    return Response(html, mimetype="text/html")
 
 
 @app.route("/")
 def serve_index():
-    return send_from_directory("static", "index.html")
+    return serve_html_with_banner("index.html")
 
 
 @app.route("/add")
@@ -138,7 +125,15 @@ def serve_add():
 
 @app.route("/expenses")
 def serve_expenses():
-    return send_from_directory("static", "expenses.html")
+    return serve_html_with_banner("expenses.html")
+
+
+@app.route("/static/<path:filename>")
+def serve_static_with_banner(filename):
+    """Serve static files, injecting banner for HTML files in dev mode."""
+    if filename.endswith(".html"):
+        return serve_html_with_banner(filename)
+    return send_from_directory("static", filename)
 
 
 @app.route("/styles.css")
