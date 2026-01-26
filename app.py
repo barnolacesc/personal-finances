@@ -81,6 +81,30 @@ def add_header(response):
     return response
 
 
+# Test environment banner - only injected when FLASK_ENV=development
+TEST_BANNER_HTML = (
+    '<div style="position:fixed;top:12px;right:-35px;background:#ef4444;'
+    "color:white;padding:4px 40px;font-size:11px;font-weight:bold;"
+    "letter-spacing:1px;transform:rotate(45deg);z-index:9999;"
+    'box-shadow:0 2px 8px rgba(0,0,0,0.3);pointer-events:none;">TEST</div>'
+)
+
+
+@app.after_request
+def inject_test_banner(response):
+    """Inject test environment banner into HTML responses when in dev mode."""
+    is_dev = os.environ.get("FLASK_ENV") == "development" or app.debug
+    if is_dev and response.content_type and "text/html" in response.content_type:
+        try:
+            html = response.get_data(as_text=True)
+            if "<body>" in html:
+                html = html.replace("<body>", f"<body>{TEST_BANNER_HTML}", 1)
+                response.set_data(html)
+        except Exception:
+            pass  # Don't break the response if injection fails
+    return response
+
+
 @app.route("/")
 def serve_index():
     return send_from_directory("static", "index.html")
