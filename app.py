@@ -93,7 +93,11 @@ TEST_BANNER_HTML = (
 @app.after_request
 def inject_test_banner(response):
     """Inject test environment banner into HTML responses when in dev mode."""
-    is_dev = os.environ.get("FLASK_ENV") == "development" or app.debug
+    is_dev = (
+        os.environ.get("FLASK_ENV") == "development"
+        or os.environ.get("FLASK_DEBUG") == "1"
+        or app.debug
+    )
     if is_dev and response.content_type and "text/html" in response.content_type:
         try:
             html = response.get_data(as_text=True)
