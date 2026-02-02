@@ -38,6 +38,7 @@ class NavBar extends HTMLElement {
         const path = window.location.pathname;
         if (path.includes('add-expense.html')) return 'add-expense';
         if (path.includes('expenses.html')) return 'expenses';
+        if (path.includes('recurring')) return 'recurring';
         return 'home';
     }
 
@@ -96,12 +97,24 @@ class NavBar extends HTMLElement {
             // User liked the big buttons, so maybe keep nav clean or add a small "Add"
             // Let's add "Add" as a primary action for quick access
             actions.push({
+                label: 'Recurring',
+                icon: 'arrow-repeat',
+                href: '/recurring',
+                variant: 'secondary'
+            });
+            actions.push({
                 label: 'Add',
                 icon: 'plus-lg',
                 href: '/static/add-expense.html',
                 variant: 'primary'
             });
         } else if (page === 'expenses') {
+            actions.push({
+                label: 'Recurring',
+                icon: 'arrow-repeat',
+                href: '/recurring',
+                variant: 'secondary'
+            });
             actions.push({
                 label: 'Export',
                 icon: 'download',
@@ -120,6 +133,19 @@ class NavBar extends HTMLElement {
                 icon: 'list-ul',
                 href: '/static/expenses.html',
                 variant: 'secondary'
+            });
+        } else if (page === 'recurring') {
+            actions.push({
+                label: 'Expenses',
+                icon: 'list-ul',
+                href: '/static/expenses.html',
+                variant: 'secondary'
+            });
+            actions.push({
+                label: 'Add',
+                icon: 'plus-lg',
+                href: '/static/add-expense.html',
+                variant: 'primary'
             });
         }
 
