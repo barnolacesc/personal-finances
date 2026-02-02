@@ -20,6 +20,7 @@ jobs:
           if ! sshpass -p "$PI_PASSWORD" ssh -o StrictHostKeyChecking=no $PI_USER@$PI_HOST "cd /home/cesc/personal-finances && \
             git stash && \
             git pull origin main && \
+            ./venv/bin/pip install -r requirements.txt && \
             sudo systemctl stop personal-finances && \
             sudo systemctl start personal-finances"; then
             echo "::error::Deployment failed - could not update and restart the service"
