@@ -5,7 +5,10 @@ export const CONFIG = {
         BASE_URL: '/api',
         ENDPOINTS: {
             EXPENSES: '/api/expenses',
-            MONTHS: '/api/months'
+            MONTHS: '/api/months',
+            RECURRING: '/api/recurring',
+            RECURRING_APPLY: '/api/recurring/apply',
+            RECURRING_PENDING: '/api/recurring/pending'
         }
     },
 
