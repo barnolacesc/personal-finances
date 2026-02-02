@@ -155,13 +155,9 @@ def apply_due_recurring_expenses():
                         db.session.add(expense)
                         recurring.last_applied_date = today
                         applied_count += 1
-                        logger.info(
-                            f"Applied recurring: {recurring.description}"
-                        )
+                        logger.info(f"Applied recurring: {recurring.description}")
                     else:
-                        logger.info(
-                            f"Skipping duplicate: {recurring.description}"
-                        )
+                        logger.info(f"Skipping duplicate: {recurring.description}")
 
             db.session.commit()
             logger.info(f"Applied {applied_count} recurring expenses")
