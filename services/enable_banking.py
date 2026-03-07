@@ -49,7 +49,7 @@ def _headers() -> dict:
 
 
 def get_auth_url(state: str = "") -> str:
-    """Return the OAuth authorization URL to redirect the user to."""
+    """Call Enable Banking /auth API and return the redirect URL for the user."""
     if not state:
         state = str(uuid.uuid4())
     params = {
@@ -59,8 +59,15 @@ def get_auth_url(state: str = "") -> str:
         "state": state,
         "scope": "aisp",
     }
-    param_str = "&".join(f"{k}={v}" for k, v in params.items())
-    return f"{_BASE_URL}/auth?{param_str}"
+    resp = requests.get(
+        f"{_BASE_URL}/auth",
+        params=params,
+        headers=_headers(),
+        timeout=15,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    return data["url"]
 
 
 def exchange_code(code: str) -> dict:
