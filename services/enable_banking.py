@@ -26,7 +26,17 @@ _SANDBOX = os.environ.get("ENABLE_BANKING_SANDBOX", "true").lower() == "true"
 _BASE_URL = "https://api.tilisy.com" if _SANDBOX else "https://api.enablebanking.com"
 _APP_ID = os.environ.get("ENABLE_BANKING_APPLICATION_ID", "")
 _REDIRECT_URI = os.environ.get("ENABLE_BANKING_REDIRECT_URI", "")
-_PRIVATE_KEY_PEM = os.environ.get("ENABLE_BANKING_PRIVATE_KEY", "").replace("\\n", "\n")
+
+
+def _load_private_key() -> str:
+    key_path = os.environ.get("ENABLE_BANKING_PRIVATE_KEY_PATH", "")
+    if key_path:
+        with open(key_path) as f:
+            return f.read()
+    return os.environ.get("ENABLE_BANKING_PRIVATE_KEY", "").replace("\\n", "\n")
+
+
+_PRIVATE_KEY_PEM = _load_private_key()
 
 
 def _make_jwt() -> str:
