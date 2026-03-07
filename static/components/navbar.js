@@ -18,6 +18,9 @@ class NavBar extends HTMLElement {
             if (data.is_test) {
                 this.showTestBadge();
             }
+            if (data.version) {
+                this.showVersion(data.version);
+            }
         } catch (error) {
             // Silently ignore - not critical
         }
@@ -31,6 +34,16 @@ class NavBar extends HTMLElement {
             badge.style.cssText = 'font-size: 0.6rem; vertical-align: middle;';
             badge.textContent = 'TEST';
             brand.appendChild(badge);
+        }
+    }
+
+    showVersion(version) {
+        const brand = this.querySelector('.navbar-brand span');
+        if (brand) {
+            const ver = document.createElement('span');
+            ver.style.cssText = 'font-size: 0.55rem; vertical-align: middle; opacity: 0.4; margin-left: 5px; font-family: monospace;';
+            ver.textContent = version;
+            brand.appendChild(ver);
         }
     }
 
