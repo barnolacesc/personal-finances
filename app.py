@@ -347,6 +347,24 @@ def is_test_environment():
     )
 
 
+def _get_git_version():
+    try:
+        result = run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True,
+            text=True,
+            cwd=current_dir,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception:
+        pass
+    return "unknown"
+
+
+APP_VERSION = _get_git_version()
+
+
 # ---------------------------------------------------------------------------
 # Page routes
 # ---------------------------------------------------------------------------
@@ -355,7 +373,7 @@ def is_test_environment():
 @app.route("/api/env")
 def get_environment():
     """Return environment info for frontend (e.g., navbar badge)."""
-    return jsonify({"is_test": is_test_environment()})
+    return jsonify({"is_test": is_test_environment(), "version": APP_VERSION})
 
 
 @app.route("/")
