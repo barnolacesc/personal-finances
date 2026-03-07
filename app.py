@@ -912,7 +912,6 @@ def bank_callback():
 
 
 @app.route("/api/bank/sync", methods=["POST"])
-@require_internal_key
 def bank_sync_now():
     """Manually trigger a bank transaction sync."""
     try:
