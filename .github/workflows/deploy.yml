@@ -20,6 +20,7 @@ jobs:
           if ! sshpass -p "$PI_PASSWORD" ssh -o StrictHostKeyChecking=no $PI_USER@$PI_HOST "cd /home/cesc/personal-finances && \
             git stash && \
             git pull origin main && \
+            ./venv/bin/pip install -r requirements.txt && \
             python3 scripts/database/migrate_bank_fields.py && \
             sudo systemctl stop personal-finances && \
             sudo systemctl start personal-finances"; then
