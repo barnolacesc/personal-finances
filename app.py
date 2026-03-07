@@ -2,7 +2,9 @@ from flask import Flask, request, jsonify, send_from_directory, redirect, send_f
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timezone
 import os
+import json
 import logging
+import functools
 from werkzeug.serving import run_simple
 from sqlalchemy import extract
 from subprocess import run, CalledProcessError
@@ -37,14 +39,23 @@ app.config["TEMPLATES_AUTO_RELOAD"] = True
 db = SQLAlchemy(app)
 
 
+# ---------------------------------------------------------------------------
+# Models
+# ---------------------------------------------------------------------------
+
+
 class Expense(db.Model):
     __tablename__ = "expense"
 
     id = db.Column(db.Integer, primary_key=True)
     amount = db.Column(db.Float, nullable=False)
     category = db.Column(db.String(50), nullable=False)
-    description = db.Column(db.String(50), nullable=False)
+    description = db.Column(db.String(200), nullable=False)
     date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    # Bank sync fields (added via migration script on existing DBs)
+    source = db.Column(db.String(20), default="manual")
+    external_id = db.Column(db.String(100), nullable=True, unique=True)
+    merchant = db.Column(db.String(200), nullable=True)
 
     def to_dict(self):
         return {
@@ -53,6 +64,62 @@ class Expense(db.Model):
             "category": self.category,
             "description": self.description,
             "date": self.date.isoformat(),
+            "source": self.source,
+            "external_id": self.external_id,
+            "merchant": self.merchant,
+        }
+
+
+class MerchantMapping(db.Model):
+    __tablename__ = "merchant_mapping"
+
+    id = db.Column(db.Integer, primary_key=True)
+    pattern = db.Column(db.String(200), nullable=False, unique=True)  # e.g. "MERCADONA"
+    category = db.Column(db.String(50), nullable=False)
+    description = db.Column(db.String(200), nullable=False)  # human label
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "pattern": self.pattern,
+            "category": self.category,
+            "description": self.description,
+        }
+
+
+class AppToken(db.Model):
+    __tablename__ = "app_token"
+
+    key = db.Column(db.String(50), primary_key=True)
+    value = db.Column(db.Text, nullable=False)  # JSON blob
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    def to_dict(self):
+        return {
+            "key": self.key,
+            "value": json.loads(self.value),
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class SyncLog(db.Model):
+    __tablename__ = "sync_log"
+
+    id = db.Column(db.Integer, primary_key=True)
+    ran_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    status = db.Column(db.String(20))  # ok | error
+    expenses_added = db.Column(db.Integer, default=0)
+    unclassified = db.Column(db.Integer, default=0)
+    error_message = db.Column(db.Text, nullable=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "ran_at": self.ran_at.isoformat() if self.ran_at else None,
+            "status": self.status,
+            "expenses_added": self.expenses_added,
+            "unclassified": self.unclassified,
+            "error_message": self.error_message,
         }
 
 
@@ -204,13 +271,54 @@ def is_due_today(recurring, today):
     return False
 
 
-# Initialize scheduler
+# ---------------------------------------------------------------------------
+# Auth helpers
+# ---------------------------------------------------------------------------
+
+
+def require_internal_key(f):
+    """Decorator: require X-Internal-Key header matching INTERNAL_API_KEY env var."""
+
+    @functools.wraps(f)
+    def decorated(*args, **kwargs):
+        expected = os.environ.get("INTERNAL_API_KEY", "")
+        if not expected:
+            logger.warning("INTERNAL_API_KEY not set — endpoint is unprotected!")
+        provided = request.headers.get("X-Internal-Key", "")
+        if expected and provided != expected:
+            return jsonify({"error": "Unauthorized"}), 401
+        return f(*args, **kwargs)
+
+    return decorated
+
+
+# ---------------------------------------------------------------------------
+# Scheduler
+# ---------------------------------------------------------------------------
+
+
+def _run_bank_sync():
+    """Wrapper so APScheduler can call bank_sync without import-time circular deps."""
+    try:
+        from services.bank_sync import sync_transactions
+
+        sync_transactions()
+    except Exception as e:
+        logger.error(f"Scheduler bank_sync error: {e}", exc_info=True)
+
+
 scheduler = BackgroundScheduler()
 scheduler.add_job(
     apply_due_recurring_expenses, "cron", hour=0, minute=0, id="apply_recurring"
 )
+scheduler.add_job(_run_bank_sync, "interval", hours=6, id="bank_sync")
 scheduler.start()
-logger.info("Scheduler started for recurring expenses")
+logger.info("Scheduler started (recurring @ midnight, bank_sync every 6h)")
+
+
+# ---------------------------------------------------------------------------
+# Middleware
+# ---------------------------------------------------------------------------
 
 
 @app.after_request
@@ -239,10 +347,33 @@ def is_test_environment():
     )
 
 
+def _get_git_version():
+    try:
+        result = run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True,
+            text=True,
+            cwd=current_dir,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception:
+        pass
+    return "unknown"
+
+
+APP_VERSION = _get_git_version()
+
+
+# ---------------------------------------------------------------------------
+# Page routes
+# ---------------------------------------------------------------------------
+
+
 @app.route("/api/env")
 def get_environment():
     """Return environment info for frontend (e.g., navbar badge)."""
-    return jsonify({"is_test": is_test_environment()})
+    return jsonify({"is_test": is_test_environment(), "version": APP_VERSION})
 
 
 @app.route("/")
@@ -265,9 +396,24 @@ def serve_recurring():
     return send_from_directory("static", "recurring.html")
 
 
+@app.route("/bank")
+def serve_bank():
+    return send_from_directory("static", "bank.html")
+
+
+@app.route("/unclassified")
+def serve_unclassified():
+    return send_from_directory("static", "unclassified.html")
+
+
 @app.route("/styles.css")
 def serve_css():
     return send_from_directory("static", "styles.css", mimetype="text/css")
+
+
+# ---------------------------------------------------------------------------
+# Expenses API
+# ---------------------------------------------------------------------------
 
 
 @app.route("/api/expenses", methods=["GET", "POST"])
@@ -317,7 +463,6 @@ def handle_expenses():
 
     # GET request
     try:
-        # Get month and year from query parameters, default to current month
         now = datetime.now(timezone.utc)
         month = int(request.args.get("month", now.month))
         year = int(request.args.get("year", now.year))
@@ -354,10 +499,24 @@ def handle_expenses():
         return jsonify({"error": "Server error fetching expenses"}), 500
 
 
+@app.route("/api/expenses/unclassified", methods=["GET"])
+def get_unclassified_expenses():
+    """Expenses imported from bank sync that could not be mapped to a category."""
+    try:
+        expenses = (
+            Expense.query.filter_by(source="bank_sync", category="other")
+            .order_by(Expense.date.desc())
+            .all()
+        )
+        return jsonify({"expenses": [e.to_dict() for e in expenses]})
+    except Exception as e:
+        logger.error(f"Error fetching unclassified expenses: {e}")
+        return jsonify({"error": "Server error"}), 500
+
+
 @app.route("/api/months", methods=["GET"])
 def get_months():
     try:
-        # Get distinct months and years from expenses
         results = (
             db.session.query(
                 extract("year", Expense.date).label("year"),
@@ -367,10 +526,7 @@ def get_months():
             .order_by("year", "month")
             .all()
         )
-
-        # Format results
         months = [{"year": int(r.year), "month": int(r.month)} for r in results]
-
         return jsonify(months)
     except Exception as e:
         logger.error(f"Error fetching months: {e}")
@@ -400,7 +556,6 @@ def update_expense(expense_id):
         if data is None:
             return jsonify({"error": "No JSON data received"}), 400
 
-        # Validate required fields
         required_fields = ["amount", "category", "description"]
         for field in required_fields:
             if field not in data:
@@ -420,7 +575,6 @@ def update_expense(expense_id):
         if not category or not description:
             return jsonify({"error": "Category and description cannot be empty"}), 400
 
-        # Update expense
         expense.amount = amount
         expense.category = category
         expense.description = description
@@ -433,6 +587,11 @@ def update_expense(expense_id):
         logger.error(f"Error updating expense {expense_id}: {e}")
         db.session.rollback()
         return jsonify({"error": "Server error updating expense"}), 500
+
+
+# ---------------------------------------------------------------------------
+# Backup API
+# ---------------------------------------------------------------------------
 
 
 @app.route("/api/backup", methods=["POST"])
@@ -451,7 +610,6 @@ def backup_database():
 
 @app.route("/api/backup/download", methods=["GET"])
 def download_backup():
-    # Run the export script
     try:
         run(
             ["python3", "scripts/database/export_csv.py"],
@@ -461,7 +619,6 @@ def download_backup():
         )
     except CalledProcessError as e:
         return jsonify({"success": False, "error": e.stderr.strip() or str(e)}), 500
-    # Find the most recent CSV file
     export_dir = Path("scripts/database/exports")
     files = sorted(
         glob.glob(str(export_dir / "expenses_*.csv")),
@@ -693,9 +850,183 @@ def get_pending_recurring():
         return jsonify({"error": "Server error"}), 500
 
 
+# ---------------------------------------------------------------------------
+# Bank OAuth + sync API
+# ---------------------------------------------------------------------------
+
+
+@app.route("/api/bank/auth-url", methods=["GET"])
+def bank_auth_url():
+    """Generate and return the Enable Banking OAuth authorization URL."""
+    try:
+        from services.enable_banking import get_auth_url
+
+        url = get_auth_url()
+        return jsonify({"url": url})
+    except Exception as e:
+        logger.error(f"Error generating bank auth URL: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/bank/callback", methods=["GET", "POST"])
+def bank_callback():
+    """Receive OAuth code — either direct GET (VPS/sandbox) or POST relay (Pi/prod)."""
+    if request.method == "POST":
+        # Called by cluster-api relay — requires internal key
+        expected = os.environ.get("INTERNAL_API_KEY", "")
+        provided = request.headers.get("X-Internal-Key", "")
+        if expected and provided != expected:
+            return jsonify({"error": "Unauthorized"}), 401
+        data = request.get_json()
+        code = data.get("code") if data else None
+    else:
+        # Direct OAuth redirect from Enable Banking (sandbox / VPS)
+        code = request.args.get("code")
+
+    if not code:
+        return jsonify({"error": "Missing code"}), 400
+
+    try:
+        from services.enable_banking import exchange_code
+
+        tokens = exchange_code(code)
+        tokens["last_sync_at"] = None
+
+        record = AppToken.query.get("enable_banking")
+        if record:
+            record.value = json.dumps(tokens)
+            record.updated_at = datetime.now(timezone.utc)
+        else:
+            record = AppToken(key="enable_banking", value=json.dumps(tokens))
+            db.session.add(record)
+
+        db.session.commit()
+        logger.info("bank_callback: tokens stored successfully")
+        if request.method == "GET":
+            return "<h2>Authorization complete. You can close this tab.</h2>", 200
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        logger.error(f"bank_callback error: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/bank/sync", methods=["POST"])
+@require_internal_key
+def bank_sync_now():
+    """Manually trigger a bank transaction sync."""
+    try:
+        from services.bank_sync import sync_transactions
+
+        sync_transactions()
+        last_log = SyncLog.query.order_by(SyncLog.ran_at.desc()).first()
+        return jsonify(last_log.to_dict() if last_log else {"status": "ok"})
+    except Exception as e:
+        logger.error(f"bank_sync_now error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/bank/status", methods=["GET"])
+def bank_status():
+    """Return current token info and last sync time."""
+    try:
+        record = AppToken.query.get("enable_banking")
+        if not record:
+            return jsonify({"connected": False})
+        token_data = json.loads(record.value)
+        last_log = SyncLog.query.order_by(SyncLog.ran_at.desc()).first()
+        return jsonify(
+            {
+                "connected": True,
+                "expires_at": token_data.get("expires_at"),
+                "last_sync_at": token_data.get("last_sync_at"),
+                "updated_at": (
+                    record.updated_at.isoformat() if record.updated_at else None
+                ),
+                "last_log": last_log.to_dict() if last_log else None,
+            }
+        )
+    except Exception as e:
+        logger.error(f"bank_status error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/bank/logs", methods=["GET"])
+def bank_logs():
+    """Return last 20 SyncLog entries, newest first."""
+    try:
+        logs = SyncLog.query.order_by(SyncLog.ran_at.desc()).limit(20).all()
+        return jsonify({"logs": [log.to_dict() for log in logs]})
+    except Exception as e:
+        logger.error(f"bank_logs error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Merchant mappings API
+# ---------------------------------------------------------------------------
+
+
+@app.route("/api/merchants", methods=["GET", "POST"])
+def handle_merchants():
+    if request.method == "POST":
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({"error": "No JSON data received"}), 400
+            for field in ("pattern", "category", "description"):
+                if not data.get(field):
+                    return jsonify({"error": f"{field} is required"}), 400
+
+            pattern = data["pattern"].strip().upper()
+            existing = MerchantMapping.query.filter_by(pattern=pattern).first()
+            if existing:
+                existing.category = data["category"].strip()
+                existing.description = data["description"].strip()
+            else:
+                existing = MerchantMapping(
+                    pattern=pattern,
+                    category=data["category"].strip(),
+                    description=data["description"].strip(),
+                )
+                db.session.add(existing)
+
+            db.session.commit()
+            return jsonify(existing.to_dict()), 201
+        except Exception as e:
+            logger.error(f"Error creating merchant mapping: {e}")
+            db.session.rollback()
+            return jsonify({"error": str(e)}), 500
+
+    # GET
+    try:
+        mappings = MerchantMapping.query.order_by(MerchantMapping.pattern).all()
+        return jsonify({"mappings": [m.to_dict() for m in mappings]})
+    except Exception as e:
+        logger.error(f"Error fetching merchant mappings: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/merchants/<int:mapping_id>", methods=["DELETE"])
+def delete_merchant(mapping_id):
+    try:
+        mapping = MerchantMapping.query.get_or_404(mapping_id)
+        db.session.delete(mapping)
+        db.session.commit()
+        return "", 204
+    except Exception as e:
+        logger.error(f"Error deleting merchant mapping {mapping_id}: {e}")
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Dev server
+# ---------------------------------------------------------------------------
+
+
 def run_dev_server():
     extra_files = []
-    # Watch static directory for changes
     for root, dirs, files in os.walk("static"):
         for file in files:
             extra_files.append(os.path.join(root, file))
