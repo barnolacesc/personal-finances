@@ -850,18 +850,28 @@ def bank_auth_url():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/bank/callback", methods=["POST"])
-@require_internal_key
+@app.route("/api/bank/callback", methods=["GET", "POST"])
 def bank_callback():
-    """Receive OAuth code (relayed from cluster-api) and exchange for tokens."""
-    try:
+    """Receive OAuth code — either direct GET (VPS/sandbox) or POST relay (Pi/prod)."""
+    if request.method == "POST":
+        # Called by cluster-api relay — requires internal key
+        expected = os.environ.get("INTERNAL_API_KEY", "")
+        provided = request.headers.get("X-Internal-Key", "")
+        if expected and provided != expected:
+            return jsonify({"error": "Unauthorized"}), 401
         data = request.get_json()
-        if not data or "code" not in data:
-            return jsonify({"error": "Missing code"}), 400
+        code = data.get("code") if data else None
+    else:
+        # Direct OAuth redirect from Enable Banking (sandbox / VPS)
+        code = request.args.get("code")
 
+    if not code:
+        return jsonify({"error": "Missing code"}), 400
+
+    try:
         from services.enable_banking import exchange_code
 
-        tokens = exchange_code(data["code"])
+        tokens = exchange_code(code)
         tokens["last_sync_at"] = None
 
         record = AppToken.query.get("enable_banking")
@@ -874,6 +884,8 @@ def bank_callback():
 
         db.session.commit()
         logger.info("bank_callback: tokens stored successfully")
+        if request.method == "GET":
+            return "<h2>Authorization complete. You can close this tab.</h2>", 200
         return jsonify({"status": "ok"})
     except Exception as e:
         logger.error(f"bank_callback error: {e}")
