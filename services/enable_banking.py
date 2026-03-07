@@ -44,6 +44,7 @@ def _make_jwt() -> str:
     now = int(time.time())
     payload = {
         "iss": _APP_ID,
+        "aud": _BASE_URL,
         "iat": now,
         "exp": now + 3600,
         "jti": str(uuid.uuid4()),
