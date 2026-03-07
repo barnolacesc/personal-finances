@@ -1,14 +1,21 @@
 """
 Enable Banking API client.
 
-Handles JWT generation, OAuth flow, token management, and transaction fetching.
+Handles JWT generation, OAuth flow, session management, and transaction fetching.
 All communication with the Enable Banking API is done here.
 
+Authentication: every request carries a freshly signed RS256 JWT in the
+Authorization header. There are no OAuth access tokens or refresh tokens —
+the JWT itself is the credential.
+
 Required environment variables:
-    ENABLE_BANKING_APPLICATION_ID  - from Enable Banking dashboard
-    ENABLE_BANKING_PRIVATE_KEY     - PEM RSA private key content (newlines as \\n)
-    ENABLE_BANKING_REDIRECT_URI    - OAuth callback URL registered in dashboard
-    ENABLE_BANKING_SANDBOX         - "true" for sandbox, "false" for production
+    ENABLE_BANKING_APPLICATION_ID   - from Enable Banking dashboard
+    ENABLE_BANKING_PRIVATE_KEY_PATH - path to PEM RSA private key file (preferred)
+    ENABLE_BANKING_PRIVATE_KEY      - PEM RSA private key content (fallback)
+    ENABLE_BANKING_REDIRECT_URI     - OAuth callback URL registered in dashboard
+    ENABLE_BANKING_SANDBOX          - "true" for sandbox, "false" for production
+    ENABLE_BANKING_ASPSP_NAME       - bank name (default: BBVA)
+    ENABLE_BANKING_ASPSP_COUNTRY    - bank country ISO code (default: ES)
 """
 
 import os
@@ -26,6 +33,8 @@ _SANDBOX = os.environ.get("ENABLE_BANKING_SANDBOX", "true").lower() == "true"
 _BASE_URL = "https://api.tilisy.com" if _SANDBOX else "https://api.enablebanking.com"
 _APP_ID = os.environ.get("ENABLE_BANKING_APPLICATION_ID", "")
 _REDIRECT_URI = os.environ.get("ENABLE_BANKING_REDIRECT_URI", "")
+_ASPSP_NAME = os.environ.get("ENABLE_BANKING_ASPSP_NAME", "BBVA")
+_ASPSP_COUNTRY = os.environ.get("ENABLE_BANKING_ASPSP_COUNTRY", "ES")
 
 
 def _load_private_key() -> str:
@@ -62,82 +71,63 @@ def _headers() -> dict:
 
 
 def get_auth_url(state: str = "") -> str:
-    """Call Enable Banking /auth API and return the redirect URL for the user."""
+    """POST /auth to initiate bank authorization. Returns the bank redirect URL."""
     if not state:
         state = str(uuid.uuid4())
-    params = {
-        "response_type": "code",
-        "client_id": _APP_ID,
-        "redirect_uri": _REDIRECT_URI,
+    valid_until = (datetime.now(timezone.utc) + timedelta(days=90)).strftime(
+        "%Y-%m-%dT%H:%M:%S.000000+00:00"
+    )
+    body = {
+        "access": {
+            "balances": True,
+            "transactions": True,
+            "valid_until": valid_until,
+        },
+        "aspsp": {
+            "name": _ASPSP_NAME,
+            "country": _ASPSP_COUNTRY,
+        },
         "state": state,
-        "scope": "aisp",
+        "redirect_url": _REDIRECT_URI,
+        "psu_type": "personal",
     }
-    resp = requests.get(
+    resp = requests.post(
         f"{_BASE_URL}/auth",
-        params=params,
+        json=body,
         headers=_headers(),
         timeout=15,
     )
     resp.raise_for_status()
-    data = resp.json()
-    return data["url"]
+    return resp.json()["url"]
 
 
 def exchange_code(code: str) -> dict:
-    """Exchange an authorization code for access/refresh tokens.
+    """POST /sessions to complete authorization.
 
-    Returns dict with keys: access_token, refresh_token, expires_at (ISO string)
+    Returns dict with keys: session_id, accounts, expires_at (ISO string)
     """
     resp = requests.post(
-        f"{_BASE_URL}/token",
-        json={
-            "grant_type": "authorization_code",
-            "code": code,
-            "redirect_uri": _REDIRECT_URI,
-        },
+        f"{_BASE_URL}/sessions",
+        json={"code": code},
         headers=_headers(),
         timeout=15,
     )
     resp.raise_for_status()
     data = resp.json()
-    expires_at = datetime.now(timezone.utc) + timedelta(
-        seconds=data.get("expires_in", 3600)
-    )
+    accounts = [
+        a.get("uid") or a.get("id") or a.get("account_id")
+        for a in data.get("accounts", [])
+    ]
+    expires_at = datetime.now(timezone.utc) + timedelta(days=90)
     return {
-        "access_token": data["access_token"],
-        "refresh_token": data.get("refresh_token", ""),
+        "session_id": data.get("session_id", ""),
+        "accounts": accounts,
         "expires_at": expires_at.isoformat(),
     }
 
 
-def refresh_access_token(refresh_token: str) -> dict:
-    """Refresh an expired access token.
-
-    Returns dict with keys: access_token, refresh_token, expires_at (ISO string)
-    """
-    resp = requests.post(
-        f"{_BASE_URL}/token",
-        json={
-            "grant_type": "refresh_token",
-            "refresh_token": refresh_token,
-        },
-        headers=_headers(),
-        timeout=15,
-    )
-    resp.raise_for_status()
-    data = resp.json()
-    expires_at = datetime.now(timezone.utc) + timedelta(
-        seconds=data.get("expires_in", 3600)
-    )
-    return {
-        "access_token": data["access_token"],
-        "refresh_token": data.get("refresh_token", refresh_token),
-        "expires_at": expires_at.isoformat(),
-    }
-
-
-def get_transactions(access_token: str, account_id: str, date_from: datetime) -> list:
-    """Fetch booked (settled) transactions for a given account since date_from.
+def get_transactions(account_id: str, date_from: datetime) -> list:
+    """Fetch booked transactions for an account since date_from.
 
     Returns a list of dicts with keys:
         external_id, amount, currency, date, merchant, description
@@ -148,10 +138,7 @@ def get_transactions(access_token: str, account_id: str, date_from: datetime) ->
             "date_from": date_from.strftime("%Y-%m-%d"),
             "status": "booked",
         },
-        headers={
-            **_headers(),
-            "Authorization": f"Bearer {access_token}",
-        },
+        headers=_headers(),
         timeout=30,
     )
     resp.raise_for_status()
@@ -159,7 +146,6 @@ def get_transactions(access_token: str, account_id: str, date_from: datetime) ->
 
     transactions = []
     for txn in raw.get("transactions", []):
-        # Normalise fields across different bank formats
         amount = txn.get("transaction_amount", {})
         amount_value = abs(float(amount.get("amount", 0)))
         # Only ingest debits (expenses)

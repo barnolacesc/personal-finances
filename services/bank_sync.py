@@ -31,19 +31,7 @@ def sync_transactions():
 
             token_data = json.loads(token_record.value)
 
-            # 2. Refresh access token if expiring within 5 minutes
-            expires_at = datetime.fromisoformat(token_data["expires_at"])
-            if expires_at.tzinfo is None:
-                expires_at = expires_at.replace(tzinfo=timezone.utc)
-            if expires_at - datetime.now(timezone.utc) < timedelta(minutes=5):
-                logger.info("bank_sync: refreshing access token")
-                new_tokens = eb.refresh_access_token(token_data["refresh_token"])
-                token_data.update(new_tokens)
-                token_record.value = json.dumps(token_data)
-                token_record.updated_at = datetime.now(timezone.utc)
-                db.session.flush()
-
-            # 3. Determine sync window
+            # 2. Determine sync window
             last_sync_raw = token_data.get("last_sync_at")
             if last_sync_raw:
                 date_from = datetime.fromisoformat(last_sync_raw)
@@ -57,9 +45,7 @@ def sync_transactions():
                 raise ValueError("ENABLE_BANKING_ACCOUNT_ID env var not set")
 
             # 4. Fetch transactions
-            transactions = eb.get_transactions(
-                token_data["access_token"], account_id, date_from
-            )
+            transactions = eb.get_transactions(account_id, date_from)
 
             # 5. Load merchant mappings (case-insensitive substring match)
             mappings = MerchantMapping.query.all()
