@@ -6,6 +6,7 @@ After=network.target
 User=cesc
 WorkingDirectory=/home/cesc/personal-finances
 Environment="PATH=/home/cesc/personal-finances/venv/bin"
+EnvironmentFile=-/home/cesc/personal-finances/.env
 ExecStart=/home/cesc/personal-finances/venv/bin/python app.py
 Restart=always
 RestartSec=10

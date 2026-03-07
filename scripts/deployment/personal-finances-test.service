@@ -1,0 +1,15 @@
+[Unit]
+Description=Personal Finances Flask Application (Test)
+After=network.target
+
+[Service]
+User=cesc
+WorkingDirectory=/home/cesc/personal-finances-test
+Environment="PATH=/home/cesc/personal-finances-test/venv/bin"
+EnvironmentFile=-/home/cesc/personal-finances-test/.env
+ExecStart=/home/cesc/personal-finances-test/venv/bin/python app.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

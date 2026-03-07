@@ -39,6 +39,8 @@ class NavBar extends HTMLElement {
         if (path.includes('add-expense.html')) return 'add-expense';
         if (path.includes('expenses.html')) return 'expenses';
         if (path.includes('recurring')) return 'recurring';
+        if (path === '/bank') return 'bank';
+        if (path === '/unclassified') return 'unclassified';
         return 'home';
     }
 
@@ -93,9 +95,12 @@ class NavBar extends HTMLElement {
         const actions = [];
 
         if (page === 'home') {
-            // No specific actions for home, maybe just Add?
-            // User liked the big buttons, so maybe keep nav clean or add a small "Add"
-            // Let's add "Add" as a primary action for quick access
+            actions.push({
+                label: 'Bank',
+                icon: 'bank',
+                href: '/bank',
+                variant: 'secondary'
+            });
             actions.push({
                 label: 'Recurring',
                 icon: 'arrow-repeat',
@@ -135,6 +140,19 @@ class NavBar extends HTMLElement {
                 variant: 'secondary'
             });
         } else if (page === 'recurring') {
+            actions.push({
+                label: 'Expenses',
+                icon: 'list-ul',
+                href: '/static/expenses.html',
+                variant: 'secondary'
+            });
+            actions.push({
+                label: 'Add',
+                icon: 'plus-lg',
+                href: '/static/add-expense.html',
+                variant: 'primary'
+            });
+        } else if (page === 'bank' || page === 'unclassified') {
             actions.push({
                 label: 'Expenses',
                 icon: 'list-ul',
