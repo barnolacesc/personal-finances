@@ -11,6 +11,12 @@ services:
       - ./data:/app/instance:rw
     environment:
       - FLASK_ENV=production
+      - ENABLE_BANKING_APPLICATION_ID=${ENABLE_BANKING_APPLICATION_ID}
+      - ENABLE_BANKING_PRIVATE_KEY=${ENABLE_BANKING_PRIVATE_KEY}
+      - ENABLE_BANKING_ACCOUNT_ID=${ENABLE_BANKING_ACCOUNT_ID}
+      - ENABLE_BANKING_REDIRECT_URI=${ENABLE_BANKING_REDIRECT_URI}
+      - ENABLE_BANKING_SANDBOX=${ENABLE_BANKING_SANDBOX:-false}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/"]
