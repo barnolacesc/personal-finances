@@ -48,7 +48,9 @@ def _make_jwt() -> str:
         "exp": now + 3600,
         "jti": str(uuid.uuid4()),
     }
-    return jwt.encode(payload, _PRIVATE_KEY_PEM, algorithm="RS256")
+    return jwt.encode(
+        payload, _PRIVATE_KEY_PEM, algorithm="RS256", headers={"kid": _APP_ID}
+    )
 
 
 def _headers() -> dict:
