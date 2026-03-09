@@ -16,9 +16,9 @@ class NavBar extends HTMLElement {
             const data = await response.json();
             if (data.is_test) {
                 this.showTestBadge();
-            }
-            if (data.version) {
-                this.showVersion(data.version);
+                if (data.version) {
+                    this.showVersion(data.version);
+                }
             }
         } catch (error) {
             // Silently ignore - not critical

@@ -4,6 +4,9 @@ A simple, modular web application to track daily expenses. Built with Flask back
 
 ## Features
 
+- **Bank Sync via Open Banking**: Automatic transaction import from BBVA using [Enable Banking](https://enablebanking.com/) (PSD2)
+- **Unclassified Transactions**: Review and categorize bank-imported expenses
+- **Recurring Expenses**: Track and manage recurring payments
 - **Modular Architecture**: Clean separation of concerns with reusable components
 - **Dark/Light Theme**: Full theme support with automatic system preference detection
 - **Real-time Expense Tracking**: Add, edit, and delete expenses with instant feedback
@@ -41,10 +44,36 @@ python app.py
 
 4. **Access**: Navigate to `http://localhost:5001` or `http://<your-ip>:5001`
 
+## Bank Sync Architecture
+
+The app integrates with BBVA (and potentially other banks) through Enable Banking's PSD2 open banking API:
+
+```
+┌──────────┐     OAuth      ┌──────────────────────┐     Relay     ┌─────────────┐
+│  Enable   │ ──redirect──→ │  api.barnola.net      │ ──────────→  │ Raspberry Pi │
+│  Banking  │               │  (K8s cluster relay)   │              │ :5001        │
+└──────────┘               └──────────────────────┘              └─────────────┘
+      │                                                                  │
+      │  PSD2 API                                              Store token &
+      │  (transactions)                                        sync transactions
+      ▼                                                                  ▼
+┌──────────┐                                                   ┌─────────────┐
+│   BBVA   │                                                   │  SQLite DB  │
+└──────────┘                                                   └─────────────┘
+```
+
+1. User initiates OAuth flow from the `/bank` page
+2. Enable Banking redirects to `api.barnola.net/finances/oauth/callback` (public endpoint)
+3. The cluster relays the callback to the Pi's internal API
+4. Transactions are fetched and stored, ready for categorization
+
 ## Project Structure
 
 ```
 ├── app.py                      # Flask backend application
+├── services/                   # Business logic services
+│   ├── enable_banking.py      # Enable Banking API client (JWT/RS256)
+│   └── bank_sync.py           # Transaction sync and categorization
 ├── data/                       # Database and exports
 │   └── expenses.db            # SQLite database
 ├── static/                     # Frontend assets
@@ -55,6 +84,8 @@ python app.py
 │   │   ├── expense-form.js   # Expense creation form
 │   │   ├── expense-list.js   # Expense listing/editing
 │   │   ├── category-chart.js # Interactive charts
+│   │   ├── bank-status.js    # Bank sync dashboard
+│   │   ├── unclassified-list.js # Unclassified expense review
 │   │   ├── date-navigation.js # Date/week navigation
 │   │   ├── navbar.js         # Navigation component
 │   │   └── toast.js          # Notification system
@@ -62,11 +93,14 @@ python app.py
 │   │   └── theme.css         # Centralized styling & themes
 │   ├── index.html            # Home page
 │   ├── expenses.html         # Main application
+│   ├── bank.html             # Bank sync dashboard
+│   ├── unclassified.html     # Unclassified expenses review
 │   └── pficon.png           # App icon
 ├── scripts/                   # Organized utility scripts
 │   ├── database/             # Database management
 │   │   ├── init_db.py       # Database initialization
 │   │   ├── create_sample_db.py # Sample data generator
+│   │   ├── migrate_bank_fields.py # Bank sync DB migration
 │   │   ├── restore_csv.py   # CSV import utility
 │   │   └── export_csv.py    # CSV export utility
 │   └── deployment/           # Deployment utilities
@@ -140,6 +174,22 @@ sudo systemctl status personal-finances  # Check status
 5. Access via server IP on port 5001
 
 ## Configuration
+
+### Bank Sync (Enable Banking)
+
+To enable automatic bank transaction import:
+
+1. Register an application at [enablebanking.com](https://enablebanking.com/)
+2. Generate RSA keys: `openssl genrsa -out private.key 4096`
+3. Set environment variables (via systemd or `.env`):
+   - `ENABLE_BANKING_APPLICATION_ID` — your app ID from Enable Banking
+   - `ENABLE_BANKING_PRIVATE_KEY_PATH` — path to the RSA private key file
+   - `ENABLE_BANKING_REDIRECT_URI` — OAuth callback URL
+   - `ENABLE_BANKING_ACCOUNT_ID` — your bank account UUID (shown after OAuth)
+   - `ENABLE_BANKING_SANDBOX` — `true` for testing, `false` for production
+   - `INTERNAL_API_KEY` — shared secret for the OAuth relay
+4. Authorize your bank from the `/bank` page
+5. Transactions sync automatically or on demand via "Sync Now"
 
 ### Adding Categories
 1. Edit `static/components/config.js` - add to `CONFIG.CATEGORIES`
