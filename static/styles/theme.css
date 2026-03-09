@@ -68,7 +68,7 @@ body {
     color: var(--text-primary);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    padding-top: var(--nav-height-desktop);
+    padding-top: calc(var(--nav-height-desktop) + env(safe-area-inset-top));
 }
 
 /* Glassmorphism Utilities */
@@ -82,8 +82,7 @@ body {
 /* Toast styling */
 .toast-container {
     position: fixed;
-    top: 1rem;
-    /* Moved to top for better mobile visibility */
+    top: calc(1rem + env(safe-area-inset-top));
     left: 50%;
     transform: translateX(-50%);
     z-index: 2000;
@@ -278,7 +277,8 @@ body {
     top: 0;
     left: 0;
     right: 0;
-    height: var(--nav-height-desktop);
+    height: calc(var(--nav-height-desktop) + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
     background: var(--glass-bg);
     backdrop-filter: blur(var(--glass-blur));
     -webkit-backdrop-filter: blur(var(--glass-blur));
