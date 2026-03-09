@@ -32,8 +32,8 @@
     --glass-blur: 20px;
 
     /* Navbar */
-    --nav-height-mobile: 83px;
-    --nav-height-desktop: 64px;
+    --nav-height: 56px;
+    --bottom-nav-height: 56px;
 }
 
 [data-bs-theme="dark"] {
@@ -68,7 +68,8 @@ body {
     color: var(--text-primary);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    padding-top: calc(var(--nav-height-desktop) + env(safe-area-inset-top));
+    padding-top: calc(var(--nav-height) + env(safe-area-inset-top));
+    padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom));
 }
 
 /* Glassmorphism Utilities */
@@ -82,7 +83,7 @@ body {
 /* Toast styling */
 .toast-container {
     position: fixed;
-    top: calc(1rem + env(safe-area-inset-top));
+    top: calc(var(--nav-height) + env(safe-area-inset-top) + 0.5rem);
     left: 50%;
     transform: translateX(-50%);
     z-index: 2000;
@@ -271,20 +272,71 @@ body {
     transform: translateY(-1px);
 }
 
-/* Top Navigation (Always Visible) */
+/* Top Navigation */
 .top-nav {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    height: calc(var(--nav-height-desktop) + env(safe-area-inset-top));
     padding-top: env(safe-area-inset-top);
     background: var(--glass-bg);
     backdrop-filter: blur(var(--glass-blur));
     -webkit-backdrop-filter: blur(var(--glass-blur));
     border-bottom: 1px solid var(--border-color);
     z-index: 1030;
+}
+
+.top-nav-inner {
     display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: var(--nav-height);
+}
+
+/* Bottom Tab Bar */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border-top: 1px solid var(--border-color);
+    z-index: 1030;
+    display: flex;
+}
+
+.bottom-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    height: var(--bottom-nav-height);
+    text-decoration: none;
+    color: var(--text-secondary);
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    -webkit-tap-highlight-color: transparent;
+    transition: color 0.15s ease;
+}
+
+.bottom-nav-item i {
+    font-size: 1.35rem;
+    line-height: 1;
+}
+
+.bottom-nav-item.active {
+    color: var(--primary-color);
+}
+
+.bottom-nav-item:not(.active):active {
+    color: var(--primary-color);
+    opacity: 0.7;
 }
 
 /* Raspberry Pi / Low Power Optimizations */
