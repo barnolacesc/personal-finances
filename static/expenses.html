@@ -38,6 +38,12 @@
         <div class="row justify-content-center">
             <div class="col-md-10 col-lg-8">
 
+                <div class="d-flex align-items-center justify-content-end mb-1">
+                    <button class="btn btn-link text-muted p-1" id="exportBtn" aria-label="Export">
+                        <i class="bi bi-download fs-5"></i>
+                    </button>
+                </div>
+
                 <date-navigation></date-navigation>
                 <category-chart></category-chart>
 
@@ -91,6 +97,28 @@
 
         // Initialize dark mode on page load
         document.addEventListener('DOMContentLoaded', initDarkMode);
+
+        // Export button
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('exportBtn').addEventListener('click', async function () {
+                try {
+                    const res = await fetch('/api/backup/download');
+                    if (!res.ok) throw new Error('Failed');
+                    const blob = await res.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'expenses_backup.csv';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(url);
+                    window.showToast('Download started', 'success');
+                } catch (e) {
+                    window.showToast('Download failed', 'error');
+                }
+            });
+        });
     </script>
 </body>
 
