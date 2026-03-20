@@ -370,8 +370,6 @@ class ExpenseList extends HTMLElement {
                     <div class="expense-info">
                         <div class="expense-desc">${expense.description}</div>
                         <div class="expense-meta">
-                            <span>${CategoryHelper.getCategoryLabel(expense.category)}</span>
-                            <span class="dot"></span>
                             <span>${this.formatDate(expense.date)}</span>
                             <span class="dot"></span>
                             <span class="source-badge source-${source}">${source === 'bank_sync' ? 'Bank' : 'Manual'}</span>

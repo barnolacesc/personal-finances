@@ -27,6 +27,7 @@ class CategoryChart extends HTMLElement {
             this.querySelector('#categoryDetails').classList.remove('show');
             this.activeCategory = null;
             this.updateDonutHighlight();
+            this.querySelectorAll('.legend-item').forEach(i => i.classList.remove('active'));
         });
 
         // Expense list click delegation
@@ -124,6 +125,7 @@ class CategoryChart extends HTMLElement {
         // Render SVG donut
         if (donutContainer) {
             donutContainer.innerHTML = this.renderDonut(sortedCategories, total);
+            this.setupSegmentListeners();
         }
 
         // Render legend
@@ -155,6 +157,9 @@ class CategoryChart extends HTMLElement {
                     this.activeCategory = category;
                     this.updateDonutHighlight();
                     this.showCategoryDetails(category, this.currentExpenses);
+                    legendContainer.querySelectorAll('.legend-item').forEach(i => {
+                        i.classList.toggle('active', i.dataset.category === category);
+                    });
                 });
             });
         }
@@ -162,16 +167,16 @@ class CategoryChart extends HTMLElement {
 
     renderEmptyDonut() {
         return `
-            <svg viewBox="0 0 200 200" width="200" height="200">
-                <circle cx="100" cy="100" r="80" fill="none" stroke="var(--surface-container-highest)" stroke-width="24"/>
-                <text x="100" y="95" text-anchor="middle" fill="var(--outline)" font-family="Inter" font-size="11">No data</text>
-                <text x="100" y="115" text-anchor="middle" fill="var(--on-surface)" font-family="Manrope" font-weight="800" font-size="16">${this.formatAmount(0)}</text>
+            <svg viewBox="0 0 200 200" class="donut-svg">
+                <circle cx="100" cy="100" r="78" fill="none" stroke="var(--surface-container-highest)" stroke-width="22"/>
+                <text x="100" y="96" text-anchor="middle" fill="var(--outline)" font-family="Inter" font-size="11">No data</text>
+                <text x="100" y="114" text-anchor="middle" fill="var(--on-surface)" font-family="Manrope" font-weight="800" font-size="14">${this.formatAmount(0)}</text>
             </svg>
         `;
     }
 
     renderDonut(categories, total) {
-        const cx = 100, cy = 100, r = 80;
+        const cx = 100, cy = 100, r = 78;
         const circumference = 2 * Math.PI * r;
         let offset = 0;
         const gap = 2; // gap in degrees between segments
@@ -192,10 +197,10 @@ class CategoryChart extends HTMLElement {
                     cx="${cx}" cy="${cy}" r="${r}"
                     fill="none"
                     stroke="${color}"
-                    stroke-width="24"
+                    stroke-width="22"
                     stroke-dasharray="${dashLength} ${dashGap}"
                     transform="rotate(${rotation} ${cx} ${cy})"
-                    style="cursor: pointer; transition: stroke-width 0.2s ease, opacity 0.2s ease;"
+                    style="cursor: pointer;"
                 />
             `;
             offset += pct;
@@ -203,26 +208,44 @@ class CategoryChart extends HTMLElement {
         });
 
         return `
-            <svg viewBox="0 0 200 200" width="200" height="200" class="donut-svg">
+            <svg viewBox="0 0 200 200" class="donut-svg">
                 ${segments.join('')}
                 <circle cx="${cx}" cy="${cy}" r="56" fill="var(--surface-container-lowest)"/>
-                <text x="${cx}" y="${cy - 8}" text-anchor="middle" fill="var(--outline)" font-family="Inter" font-size="10" letter-spacing="0.1em">TOTAL</text>
-                <text x="${cx}" y="${cy + 14}" text-anchor="middle" fill="var(--on-surface)" font-family="Manrope" font-weight="800" font-size="16">${this.formatAmount(total)}</text>
+                <text x="${cx}" y="${cy - 6}" text-anchor="middle" fill="var(--outline)" font-family="Inter" font-size="9" letter-spacing="0.12em">TOTAL</text>
+                <text x="${cx}" y="${cy + 12}" text-anchor="middle" fill="var(--on-surface)" font-family="Manrope" font-weight="800" font-size="13">${this.formatAmount(total)}</text>
             </svg>
         `;
+    }
+
+    setupSegmentListeners() {
+        this.querySelectorAll('.donut-segment').forEach(seg => {
+            seg.addEventListener('click', () => {
+                const category = seg.dataset.category;
+                this.activeCategory = category;
+                this.updateDonutHighlight();
+                this.showCategoryDetails(category, this.currentExpenses);
+                // Also highlight matching legend item
+                this.querySelectorAll('.legend-item').forEach(item => {
+                    item.classList.toggle('active', item.dataset.category === category);
+                });
+            });
+        });
     }
 
     updateDonutHighlight() {
         this.querySelectorAll('.donut-segment').forEach(seg => {
             if (this.activeCategory && seg.dataset.category !== this.activeCategory) {
-                seg.style.opacity = '0.3';
+                seg.style.opacity = '0.25';
                 seg.style.strokeWidth = '20';
+                seg.classList.remove('active');
             } else if (this.activeCategory && seg.dataset.category === this.activeCategory) {
                 seg.style.opacity = '1';
-                seg.style.strokeWidth = '28';
+                seg.style.strokeWidth = '30';
+                seg.classList.add('active');
             } else {
                 seg.style.opacity = '1';
                 seg.style.strokeWidth = '24';
+                seg.classList.remove('active');
             }
         });
     }
@@ -302,53 +325,62 @@ class CategoryChart extends HTMLElement {
                 .chart-body {
                     display: flex;
                     align-items: center;
-                    gap: 1.5rem;
-                }
-                @media (max-width: 600px) {
-                    .chart-body {
-                        flex-direction: column;
-                    }
+                    gap: 1rem;
                 }
                 .donut-container {
                     flex-shrink: 0;
                     display: flex;
                     justify-content: center;
+                    width: 160px;
+                    height: 160px;
                 }
                 .donut-svg {
+                    width: 160px;
+                    height: 160px;
                     filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
                 }
-                .donut-segment:hover {
-                    stroke-width: 28 !important;
-                    filter: brightness(1.2);
+                .donut-segment {
+                    transition: stroke-width 0.2s ease, opacity 0.2s ease;
+                }
+                .donut-segment:hover, .donut-segment.active {
+                    stroke-width: 30 !important;
+                    filter: brightness(1.15);
                 }
                 .legend-container {
                     flex: 1;
                     display: flex;
                     flex-direction: column;
-                    gap: 0.375rem;
+                    gap: 0.25rem;
                     min-width: 0;
+                    overflow: hidden;
                 }
                 .legend-item {
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
-                    padding: 0.5rem 0.625rem;
-                    border-radius: 0.625rem;
+                    padding: 0.375rem 0.5rem;
+                    border-radius: 0.5rem;
                     cursor: pointer;
-                    transition: background 0.15s ease, transform 0.15s ease;
+                    transition: background 0.15s ease;
+                    gap: 0.5rem;
                 }
-                .legend-item:hover {
+                .legend-item:hover, .legend-item.active {
                     background: var(--surface-container-high);
-                    transform: translateX(2px);
+                }
+                .legend-item.active {
+                    border-left: 2px solid var(--primary-container);
                 }
                 .legend-left {
                     display: flex;
                     align-items: center;
-                    gap: 0.5rem;
+                    gap: 0.375rem;
+                    min-width: 0;
+                    flex: 1;
+                    overflow: hidden;
                 }
                 .legend-icon-dot {
-                    width: 24px;
-                    height: 24px;
+                    width: 22px;
+                    height: 22px;
                     border-radius: 50%;
                     display: flex;
                     align-items: center;
@@ -356,25 +388,29 @@ class CategoryChart extends HTMLElement {
                     flex-shrink: 0;
                 }
                 .legend-label {
-                    font-size: 0.8125rem;
+                    font-size: 0.75rem;
                     color: var(--on-surface);
                     font-weight: 500;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
                 }
                 .legend-right {
                     display: flex;
                     align-items: center;
-                    gap: 0.5rem;
+                    gap: 0.375rem;
+                    flex-shrink: 0;
                 }
                 .legend-amount {
                     font-family: 'Manrope', sans-serif;
                     font-weight: 700;
-                    font-size: 0.8125rem;
+                    font-size: 0.75rem;
                     color: var(--on-surface);
                 }
                 .legend-pct {
-                    font-size: 0.6875rem;
+                    font-size: 0.625rem;
                     color: var(--outline);
-                    min-width: 28px;
+                    min-width: 24px;
                     text-align: right;
                 }
 
