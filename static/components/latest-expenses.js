@@ -533,7 +533,6 @@ class LatestExpenses extends HTMLElement {
 
             const editBtn = swipeContainer.querySelector('[data-action="edit"]');
             const deleteBtn = swipeContainer.querySelector('[data-action="delete"]');
-            const hintBtn = swipeContainer.querySelector('.swipe-hint-btn');
 
             editBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -545,20 +544,6 @@ class LatestExpenses extends HTMLElement {
             deleteBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.confirmDelete(expense, swipeContainer);
-            });
-
-            hintBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (this.activeSwipeItem && this.activeSwipeItem !== expenseItem) {
-                    this.activeSwipeItem.classList.remove('swiped');
-                }
-                if (expenseItem.classList.contains('swiped')) {
-                    expenseItem.classList.remove('swiped');
-                    this.activeSwipeItem = null;
-                } else {
-                    expenseItem.classList.add('swiped');
-                    this.activeSwipeItem = expenseItem;
-                }
             });
         });
 
