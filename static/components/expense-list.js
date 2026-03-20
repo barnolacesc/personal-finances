@@ -96,6 +96,8 @@ class ExpenseList extends HTMLElement {
                     margin-top: 0.125rem;
                     font-size: 0.6875rem;
                     color: var(--outline);
+                    white-space: nowrap;
+                    overflow: hidden;
                 }
                 .expense-meta .dot {
                     width: 3px;

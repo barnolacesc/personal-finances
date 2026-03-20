@@ -410,7 +410,6 @@ class LatestExpenses extends HTMLElement {
         listContainer.innerHTML = expenses.map(expense => {
             const categoryColor = CategoryHelper.getCategoryColor(expense.category);
             const categoryIcon = CategoryHelper.getCategoryIcon(expense.category);
-            const categoryLabel = CategoryHelper.getCategoryLabel(expense.category);
             const sourceBadge = expense.source === 'bank_sync'
                 ? `<span class="source-badge bank"><span class="material-symbols-outlined" style="font-size: 0.625rem;">account_balance</span>Bank</span>`
                 : expense.source === 'manual'
@@ -430,26 +429,21 @@ class LatestExpenses extends HTMLElement {
                         </button>
                     </div>
                     <div class="expense-item d-flex align-items-center justify-content-between">
-                        <div class="d-flex align-items-center flex-grow-1 me-3">
-                            <div class="expense-category-icon me-3">
+                        <div class="d-flex align-items-center" style="flex: 1; min-width: 0; margin-right: 0.75rem;">
+                            <div class="expense-category-icon me-3" style="flex-shrink: 0;">
                                 <span class="material-symbols-outlined" style="color: ${categoryColor}; font-size: 1.25rem;">${categoryIcon}</span>
                             </div>
-                            <div class="flex-grow-1 min-width-0">
+                            <div style="min-width: 0; flex: 1;">
                                 <div class="expense-description text-truncate">${expense.description}</div>
-                                <div class="expense-date text-muted d-flex align-items-center gap-2">
-                                    <span>${categoryLabel}</span>
-                                    <span style="width: 3px; height: 3px; border-radius: 50%; background: var(--outline-variant); display: inline-block;"></span>
+                                <div class="expense-date text-muted" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px;">
                                     <span>${this.formatExpenseDate(expense.date)}</span>
                                     ${sourceBadge}
                                 </div>
                             </div>
                         </div>
-                        <div class="expense-amount text-end text-nowrap">
+                        <div class="expense-amount" style="flex-shrink: 0; white-space: nowrap;">
                             ${CurrencyHelper.format(expense.amount)}
                         </div>
-                        <button class="swipe-hint-btn" title="Edit or Delete">
-                            <span class="material-symbols-outlined" style="font-size: 1rem;">more_horiz</span>
-                        </button>
                     </div>
                 </div>
             `;
@@ -640,11 +634,11 @@ class LatestExpenses extends HTMLElement {
         const expenseDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
         if (expenseDate.getTime() === today.getTime()) {
-            return `Today, ${date.toLocaleTimeString('default', { hour: '2-digit', minute: '2-digit' })}`;
+            return 'Today';
         } else if (expenseDate.getTime() === yesterday.getTime()) {
-            return `Yesterday, ${date.toLocaleTimeString('default', { hour: '2-digit', minute: '2-digit' })}`;
+            return 'Yesterday';
         } else {
-            return date.toLocaleDateString('default', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            return date.toLocaleDateString('default', { month: 'short', day: 'numeric' });
         }
     }
 
