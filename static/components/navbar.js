@@ -6,7 +6,6 @@ class NavBar extends HTMLElement {
 
     connectedCallback() {
         this.render();
-        this.setupEventListeners();
         this.checkTestEnvironment();
     }
 
@@ -16,9 +15,9 @@ class NavBar extends HTMLElement {
             const data = await response.json();
             if (data.is_test) {
                 this.showTestBadge();
-            }
-            if (data.version) {
-                this.showVersion(data.version);
+                if (data.version) {
+                    this.showVersion(data.version);
+                }
             }
         } catch (error) {
             // Silently ignore - not critical
@@ -26,18 +25,18 @@ class NavBar extends HTMLElement {
     }
 
     showTestBadge() {
-        const brand = this.querySelector('.navbar-brand span');
+        const brand = this.querySelector('.vault-brand');
         if (brand) {
             const badge = document.createElement('span');
-            badge.className = 'badge bg-danger ms-2';
-            badge.style.cssText = 'font-size: 0.6rem; vertical-align: middle;';
+            badge.className = 'badge bg-danger';
+            badge.style.cssText = 'font-size: 0.5rem; vertical-align: middle; margin-left: 6px; padding: 0.2em 0.5em;';
             badge.textContent = 'TEST';
             brand.appendChild(badge);
         }
     }
 
     showVersion(version) {
-        const brand = this.querySelector('.navbar-brand span');
+        const brand = this.querySelector('.vault-brand');
         if (brand) {
             const ver = document.createElement('span');
             ver.style.cssText = 'font-size: 0.55rem; vertical-align: middle; opacity: 0.4; margin-left: 5px; font-family: monospace;';
@@ -48,10 +47,11 @@ class NavBar extends HTMLElement {
 
     getCurrentPage() {
         const path = window.location.pathname;
-        if (path.includes('add-expense')) return 'add-expense';
+        if (path.includes('add-expense')) return 'add';
         if (path.includes('expenses')) return 'expenses';
-        if (path.includes('recurring')) return 'recurring';
+        if (path.includes('trends')) return 'trends';
         if (path === '/bank') return 'bank';
+        if (path === '/recurring') return 'bank';
         if (path === '/unclassified') return 'unclassified';
         return 'home';
     }
@@ -60,18 +60,28 @@ class NavBar extends HTMLElement {
         const page = this.currentPage;
 
         const tabs = [
-            { id: 'home',        label: 'Home',      icon: 'house-fill',      href: '/' },
-            { id: 'add-expense', label: 'Add',       icon: 'plus-circle-fill', href: '/static/add-expense.html' },
-            { id: 'expenses',    label: 'Expenses',  icon: 'list-ul',         href: '/static/expenses.html' },
-            { id: 'recurring',   label: 'Recurring', icon: 'arrow-repeat',    href: '/recurring' },
-            { id: 'bank',        label: 'Bank',      icon: 'bank',            href: '/bank' },
+            { id: 'home',         label: 'Home',         icon: 'home',     href: '/' },
+            { id: 'expenses',     label: 'Expenses',     icon: 'payments', href: '/expenses' },
+            { id: 'add',          label: 'Add',          icon: 'add',      href: '/add', isFab: true },
+            { id: 'unclassified', label: 'Unclassified', icon: 'category', href: '/unclassified' },
+            { id: 'trends',       label: 'Trends',       icon: 'insights', href: '/trends' },
         ];
 
         const tabsHtml = tabs.map(tab => {
-            const isActive = tab.id === page || (tab.id === 'bank' && page === 'unclassified');
+            if (tab.isFab) {
+                return `
+                    <a href="${tab.href}" class="fab-add">
+                        <div class="fab-add-btn">
+                            <span class="material-symbols-outlined">add</span>
+                        </div>
+                        <span class="fab-add-label">Add</span>
+                    </a>
+                `;
+            }
+            const isActive = tab.id === page;
             return `
                 <a href="${tab.href}" class="bottom-nav-item${isActive ? ' active' : ''}">
-                    <i class="bi bi-${tab.icon}"></i>
+                    <span class="material-symbols-outlined">${tab.icon}</span>
                     <span>${tab.label}</span>
                 </a>
             `;
@@ -79,48 +89,19 @@ class NavBar extends HTMLElement {
 
         this.innerHTML = `
             <nav class="top-nav">
-                <div class="container top-nav-inner">
-                    <a class="navbar-brand fw-bold d-flex align-items-center" href="/">
-                        <div class="d-inline-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; background: var(--primary-gradient); border-radius: 8px;">
-                            <i class="bi bi-wallet2 text-white fs-6"></i>
-                        </div>
-                        <span>Finances</span>
+                <div class="top-nav-inner">
+                    <a class="vault-brand d-flex align-items-center" href="/" style="text-decoration: none;">
+                        <span class="font-headline" style="font-size: 1.25rem; font-weight: 800; color: var(--primary-container); letter-spacing: -0.03em; text-transform: uppercase;">Vault</span>
                     </a>
-                    <button class="btn btn-link text-muted p-2" id="themeToggle" aria-label="Toggle dark mode">
-                        <i class="bi bi-moon-fill fs-5"></i>
-                    </button>
+                    <div class="d-flex align-items-center gap-2" id="syncStatus" style="color: var(--on-surface-variant); font-size: 0.625rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; opacity: 0.5;">
+                        <span class="material-symbols-outlined" style="font-size: 1rem; font-variation-settings: 'wght' 700; color: var(--primary-container);">sync</span>
+                    </div>
                 </div>
             </nav>
             <nav class="bottom-nav">
                 ${tabsHtml}
             </nav>
         `;
-    }
-
-    setupEventListeners() {
-        const themeToggle = this.querySelector('#themeToggle');
-        if (themeToggle) {
-            themeToggle.addEventListener('click', () => {
-                const currentTheme = document.documentElement.getAttribute('data-bs-theme');
-                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-                document.documentElement.setAttribute('data-bs-theme', newTheme);
-                localStorage.setItem('theme', newTheme);
-                this.updateThemeIcon(newTheme);
-                if (window.categoryChart) {
-                    window.categoryChart.update();
-                }
-            });
-        }
-
-        const currentTheme = document.documentElement.getAttribute('data-bs-theme') || 'light';
-        this.updateThemeIcon(currentTheme);
-    }
-
-    updateThemeIcon(theme) {
-        const icon = this.querySelector('#themeToggle i');
-        if (icon) {
-            icon.className = theme === 'dark' ? 'bi bi-sun-fill fs-5' : 'bi bi-moon-fill fs-5';
-        }
     }
 }
 
