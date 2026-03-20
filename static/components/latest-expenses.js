@@ -5,27 +5,21 @@ class LatestExpenses extends HTMLElement {
         super();
         this.currentPage = 1;
         this.perPage = parseInt(this.getAttribute('limit')) || 6;
-        this.period = this.getAttribute('period') || 'all'; // 'all', 'week', 'today'
-        this.mode = this.getAttribute('mode') || 'default'; // 'default', 'recent'
-        this.allExpenses = []; // Store all fetched expenses
+        this.period = this.getAttribute('period') || 'all';
+        this.mode = this.getAttribute('mode') || 'default';
+        this.allExpenses = [];
         this.totalExpenses = 0;
-        this.activeSwipeItem = null; // Track currently swiped item
+        this.activeSwipeItem = null;
 
-        // For syncing with date-navigation on expenses page
         this.selectedMonth = new Date().getMonth() + 1;
         this.selectedYear = new Date().getFullYear();
         this.selectedWeek = 'all';
-        this.useDateNavigation = false; // Will be true if date-navigation exists on page
+        this.useDateNavigation = false;
     }
 
     connectedCallback() {
-        // Check if we're on a page with date-navigation
         this.useDateNavigation = !!document.querySelector('date-navigation');
-
-        // Recent mode is simple - no selectors, no date-navigation sync
-        if (this.mode === 'recent') {
-            this.useDateNavigation = false;
-        }
+        if (this.mode === 'recent') this.useDateNavigation = false;
 
         this.render();
         this.setupDateChangeListener();
@@ -33,37 +27,35 @@ class LatestExpenses extends HTMLElement {
     }
 
     setupDateChangeListener() {
-        // Listen for date changes from date-navigation component
         document.addEventListener('datechange', (e) => {
             if (this.useDateNavigation) {
                 this.selectedMonth = e.detail.month;
                 this.selectedYear = e.detail.year;
                 this.selectedWeek = e.detail.week;
-                this.currentPage = 1; // Reset to first page
+                this.currentPage = 1;
                 this.loadAllExpenses();
             }
         });
     }
 
     render() {
-        // Hide period selector in recent mode or when using date-navigation
         const showPeriodSelector = this.mode !== 'recent' && !this.useDateNavigation;
 
         this.innerHTML = `
-            <div class="modern-card ${this.mode === 'recent' ? 'recent-expenses-card' : 'chart-container-modern'}">
+            <div class="modern-card ${this.mode === 'recent' ? '' : 'chart-container-modern'}">
                 ${showPeriodSelector ? `
                 <div class="text-center mb-3">
-                    <div class="period-selector-modern">
+                    <div class="period-selector">
                         <button type="button" class="period-btn ${this.period === 'today' ? 'active' : ''}" data-period="today">
-                            <i class="bi bi-calendar-day"></i>
+                            <span class="material-symbols-outlined" style="font-size: 1rem;">today</span>
                             <span>Today</span>
                         </button>
                         <button type="button" class="period-btn ${this.period === 'week' ? 'active' : ''}" data-period="week">
-                            <i class="bi bi-calendar-week"></i>
+                            <span class="material-symbols-outlined" style="font-size: 1rem;">date_range</span>
                             <span>Week</span>
                         </button>
                         <button type="button" class="period-btn ${this.period === 'all' ? 'active' : ''}" data-period="all">
-                            <i class="bi bi-calendar-month"></i>
+                            <span class="material-symbols-outlined" style="font-size: 1rem;">calendar_month</span>
                             <span>Month</span>
                         </button>
                     </div>
@@ -72,97 +64,74 @@ class LatestExpenses extends HTMLElement {
 
                 <div id="latestExpensesList" class="expenses-list">
                     <div class="text-center py-5">
-                        <div class="spinner-border text-primary" role="status">
+                        <div class="spinner-border" role="status">
                             <span class="visually-hidden">Loading...</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Pagination Controls -->
                 <div id="paginationControls" class="d-none mt-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <button id="prevPageBtn" class="btn btn-sm btn-outline-primary" disabled>
-                            <i class="bi bi-chevron-left"></i> Previous
+                            <span class="material-symbols-outlined" style="font-size: 1rem;">chevron_left</span> Prev
                         </button>
-                        <span class="text-muted small" id="pageInfo">Page 1</span>
+                        <span class="text-muted" style="font-size: 0.8125rem;" id="pageInfo">Page 1</span>
                         <button id="nextPageBtn" class="btn btn-sm btn-outline-primary" disabled>
-                            Next <i class="bi bi-chevron-right"></i>
+                            Next <span class="material-symbols-outlined" style="font-size: 1rem;">chevron_right</span>
                         </button>
                     </div>
                 </div>
             </div>
 
             <style>
-                /* Period Selector - Modern Pill Style */
-                .period-selector-modern {
+                .period-selector {
                     display: inline-flex;
-                    gap: 0.375rem;
+                    gap: 0.25rem;
                     padding: 0.25rem;
-                    background: var(--surface-secondary);
-                    border-radius: 10px;
-                    border: 1px solid var(--card-border);
+                    background: var(--surface-container-high);
+                    border-radius: 0.75rem;
                 }
 
                 .period-btn {
                     display: flex;
                     flex-direction: column;
                     align-items: center;
-                    justify-content: center;
-                    gap: 0.15rem;
-                    padding: 0.45rem 0.75rem;
+                    gap: 0.1rem;
+                    padding: 0.4rem 0.7rem;
                     border: none;
                     background: transparent;
-                    color: var(--text-secondary);
-                    border-radius: 7px;
-                    font-size: 0.7rem;
-                    font-weight: 500;
-                    transition: all 0.2s ease;
+                    color: var(--on-surface-variant);
+                    border-radius: 0.5rem;
+                    font-size: 0.65rem;
+                    font-weight: 600;
+                    font-family: 'Inter', sans-serif;
                     cursor: pointer;
-                    min-width: 55px;
-                }
-
-                .period-btn i {
-                    font-size: 0.95rem;
-                    transition: transform 0.2s ease;
+                    transition: all 0.15s ease;
+                    min-width: 50px;
                 }
 
                 .period-btn:hover {
-                    background: rgba(0, 122, 255, 0.1);
-                    color: var(--primary-color);
-                }
-
-                .period-btn:hover i {
-                    transform: scale(1.1);
+                    background: rgba(255, 140, 0, 0.1);
+                    color: var(--primary);
                 }
 
                 .period-btn.active {
-                    background: var(--primary-color);
-                    color: white;
-                    box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
-                }
-
-                .period-btn.active i {
-                    transform: scale(1.05);
+                    background: var(--primary-container);
+                    color: var(--on-primary);
                 }
 
                 .expenses-list {
-                    min-height: 300px;
-                    border-radius: 0.5rem;
+                    min-height: 200px;
                 }
 
-                /* Swipeable expense item container */
                 .swipe-container {
                     position: relative;
                     overflow: hidden;
-                    border-bottom: 1px solid var(--border-color);
-                    background: var(--bg-card);
+                    border-bottom: 1px solid rgba(86, 67, 52, 0.08);
+                    background: var(--surface-container);
                 }
+                .swipe-container:last-child { border-bottom: none; }
 
-                .swipe-container:last-child {
-                    border-bottom: none;
-                }
-
-                /* Action buttons behind the content - only visible when swiped */
                 .swipe-actions {
                     position: absolute;
                     right: 0;
@@ -174,10 +143,7 @@ class LatestExpenses extends HTMLElement {
                     opacity: 0;
                     transition: opacity 0.2s;
                 }
-
-                .swipe-container:has(.expense-item.swiped) .swipe-actions {
-                    opacity: 1;
-                }
+                .swipe-container:has(.expense-item.swiped) .swipe-actions { opacity: 1; }
 
                 .swipe-action {
                     display: flex;
@@ -186,137 +152,79 @@ class LatestExpenses extends HTMLElement {
                     width: 60px;
                     margin: 0.5rem 0.25rem;
                     color: white;
-                    font-size: 0.7rem;
-                    font-weight: 600;
+                    font-size: 0.65rem;
+                    font-weight: 700;
                     flex-direction: column;
-                    gap: 0.25rem;
+                    gap: 0.2rem;
                     border: none;
-                    border-radius: 12px;
+                    border-radius: 0.75rem;
                     cursor: pointer;
+                    font-family: 'Inter', sans-serif;
                 }
+                .swipe-action-edit { background: var(--primary-container); color: var(--on-primary); }
+                .swipe-action-delete { background: var(--error-container); color: var(--on-error-container); }
+                .swipe-action:active { opacity: 0.8; transform: scale(0.95); }
 
-                .swipe-action i {
-                    font-size: 1.1rem;
-                }
-
-                .swipe-action-edit {
-                    background: var(--primary-color, #007AFF);
-                }
-
-                .swipe-action-delete {
-                    background: #FF3B30;
-                }
-
-                .swipe-action:active {
-                    opacity: 0.8;
-                    transform: scale(0.95);
-                }
-
-                /* The actual expense content */
                 .expense-item {
                     position: relative;
                     padding: 0.875rem 1rem;
-                    background-color: var(--bg-card);
+                    background: var(--surface-container);
                     transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
                     z-index: 2;
                     touch-action: pan-y;
                     -webkit-user-select: none;
                     user-select: none;
-                    margin: 0;
-                    width: 100%;
-                    box-sizing: border-box;
                 }
+                .expense-item.swiping { transition: none; }
+                .expense-item.swiped { transform: translateX(-135px); }
 
-                .expense-item.swiping {
-                    transition: none;
-                }
-
-                .expense-item.swiped {
-                    transform: translateX(-135px);
-                }
-
-
-                /* Swipe hint button (three dots) */
                 .swipe-hint-btn {
-                    background: var(--bg-secondary);
+                    background: var(--surface-container-high);
                     border: none;
                     border-radius: 50%;
                     width: 32px;
                     height: 32px;
-                    padding: 0;
-                    margin-left: 0.75rem;
-                    color: var(--text-secondary);
-                    font-size: 1rem;
+                    color: var(--on-surface-variant);
                     cursor: pointer;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     flex-shrink: 0;
+                    margin-left: 0.5rem;
                 }
-
-                .swipe-hint-btn:active {
-                    background: var(--border-color);
-                }
+                .swipe-hint-btn:active { background: var(--surface-bright); }
 
                 .expense-amount {
+                    font-family: 'Manrope', sans-serif;
                     font-size: 1rem;
-                    font-weight: 600;
+                    font-weight: 700;
                 }
 
                 .expense-description {
                     font-size: 0.9rem;
-                    margin-bottom: 0.25rem;
-                    color: var(--text-primary);
+                    font-weight: 600;
+                    color: var(--on-surface);
+                    margin-bottom: 0.125rem;
                 }
 
-                .expense-date {
-                    font-size: 0.75rem;
-                    opacity: 0.7;
-                }
+                .expense-date { font-size: 0.75rem; }
 
                 .expense-category-icon {
-                    width: 40px;
-                    height: 40px;
-                    border-radius: 50%;
+                    width: 48px;
+                    height: 48px;
+                    border-radius: 0.75rem;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     flex-shrink: 0;
+                    background: var(--surface-container-highest);
                 }
 
                 @media (max-width: 768px) {
-                    .period-selector-modern {
-                        gap: 0.3rem;
-                        padding: 0.2rem;
-                    }
-
-                    .period-btn {
-                        padding: 0.4rem 0.65rem;
-                        font-size: 0.65rem;
-                        min-width: 50px;
-                        gap: 0.1rem;
-                    }
-
-                    .period-btn i {
-                        font-size: 0.9rem;
-                    }
-
-                    .expense-item {
-                        padding: 0.75rem 0.8rem;
-                    }
-
-                    .expense-amount {
-                        font-size: 0.9rem;
-                    }
-
-                    .expense-description {
-                        font-size: 0.85rem;
-                    }
-
-                    .expense-category-icon {
-                        width: 36px;
-                        height: 36px;
-                    }
+                    .expense-item { padding: 0.75rem 0.8rem; }
+                    .expense-category-icon { width: 40px; height: 40px; }
+                    .expense-amount { font-size: 0.9rem; }
+                    .expense-description { font-size: 0.85rem; }
                 }
             </style>
         `;
@@ -325,20 +233,18 @@ class LatestExpenses extends HTMLElement {
     }
 
     setupEventListeners() {
-        // Period filter buttons
         const buttons = this.querySelectorAll('[data-period]');
         buttons.forEach(button => {
             button.addEventListener('click', (e) => {
-                this.period = e.target.dataset.period;
-                this.currentPage = 1; // Reset to first page
-                buttons.forEach(btn => btn.classList.remove('active'));
-                e.target.classList.add('active');
-                // Reload expenses when period changes to fetch appropriate data
+                const btn = e.target.closest('[data-period]');
+                this.period = btn.dataset.period;
+                this.currentPage = 1;
+                buttons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
                 this.loadAllExpenses();
             });
         });
 
-        // Pagination buttons
         const prevBtn = this.querySelector('#prevPageBtn');
         const nextBtn = this.querySelector('#nextPageBtn');
 
@@ -366,10 +272,8 @@ class LatestExpenses extends HTMLElement {
         const listContainer = this.querySelector('#latestExpensesList');
         listContainer.innerHTML = `
             <div class="text-center py-5">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-                <p class="text-muted mt-2 small">Loading expenses...</p>
+                <div class="spinner-border" role="status"></div>
+                <p class="text-muted mt-2" style="font-size: 0.8125rem;">Loading expenses...</p>
             </div>
         `;
 
@@ -377,28 +281,21 @@ class LatestExpenses extends HTMLElement {
             let monthsToFetch = [];
 
             if (this.mode === 'recent') {
-                // Recent mode - fetch last 2 months to get recent expenses
                 const now = new Date();
                 const currentMonth = now.getMonth() + 1;
                 const currentYear = now.getFullYear();
                 monthsToFetch.push({ year: currentYear, month: currentMonth });
-
-                // Add previous month
                 const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
                 const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
                 monthsToFetch.push({ year: prevYear, month: prevMonth });
             } else if (this.useDateNavigation) {
-                // On expenses page - use the selected month/year from date-navigation
                 monthsToFetch.push({ year: this.selectedYear, month: this.selectedMonth });
             } else {
-                // On home page with period selector
                 const now = new Date();
                 const currentMonth = now.getMonth() + 1;
                 const currentYear = now.getFullYear();
-
                 if (this.period === 'today' || this.period === 'week') {
                     monthsToFetch.push({ year: currentYear, month: currentMonth });
-
                     const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
                     const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
                     monthsToFetch.push({ year: prevYear, month: prevMonth });
@@ -407,7 +304,6 @@ class LatestExpenses extends HTMLElement {
                 }
             }
 
-            // Fetch expenses from selected months
             const allExpensesPromises = monthsToFetch.map(async ({ year, month }) => {
                 const response = await fetch(`/api/expenses?month=${month}&year=${year}`);
                 if (!response.ok) return [];
@@ -415,23 +311,15 @@ class LatestExpenses extends HTMLElement {
                 return expenses;
             });
 
-            // Wait for all requests to complete
             const expensesArrays = await Promise.all(allExpensesPromises);
-
-            // Flatten and sort by date (newest first)
-            this.allExpenses = expensesArrays
-                .flat()
-                .sort((a, b) => new Date(b.date) - new Date(a.date));
-
+            this.allExpenses = expensesArrays.flat().sort((a, b) => new Date(b.date) - new Date(a.date));
             this.totalExpenses = this.allExpenses.length;
-
-            // Display filtered expenses
             this.filterAndDisplayExpenses();
         } catch (error) {
             console.error('Error loading expenses:', error);
             listContainer.innerHTML = `
-                <div class="text-center py-5 text-danger">
-                    <i class="bi bi-exclamation-triangle fs-1 mb-2 d-block"></i>
+                <div class="text-center py-5" style="color: var(--error);">
+                    <span class="material-symbols-outlined" style="font-size: 2.5rem; display: block; margin-bottom: 0.5rem;">error</span>
                     <p class="mb-1">Failed to load expenses</p>
                     <small class="text-muted">${error.message}</small>
                 </div>
@@ -443,10 +331,8 @@ class LatestExpenses extends HTMLElement {
         let filtered = [...this.allExpenses];
 
         if (this.mode === 'recent') {
-            // Recent mode - no filtering, just return all (already sorted by date)
             return filtered;
         } else if (this.useDateNavigation) {
-            // On expenses page - filter by week if selected
             if (this.selectedWeek !== 'all') {
                 filtered = filtered.filter(expense => {
                     const date = new Date(expense.date);
@@ -454,25 +340,21 @@ class LatestExpenses extends HTMLElement {
                     const firstDayOfWeek = firstDay.getDay();
                     const dayOffset = date.getDate() + firstDayOfWeek - 1;
                     const weekNumber = Math.ceil(dayOffset / 7);
-                    const weekKey = `week${weekNumber}`;
-                    return weekKey === this.selectedWeek;
+                    return `week${weekNumber}` === this.selectedWeek;
                 });
             }
         } else {
-            // On home page - use period selector
             if (this.period === 'today') {
                 const today = new Date().toDateString();
-                filtered = filtered.filter(exp =>
-                    new Date(exp.date).toDateString() === today
-                );
+                filtered = filtered.filter(exp => new Date(exp.date).toDateString() === today);
             } else if (this.period === 'week') {
                 const weekAgo = new Date();
                 weekAgo.setDate(weekAgo.getDate() - 7);
                 weekAgo.setHours(0, 0, 0, 0);
                 filtered = filtered.filter(exp => {
-                    const expenseDate = new Date(exp.date);
-                    expenseDate.setHours(0, 0, 0, 0);
-                    return expenseDate >= weekAgo;
+                    const d = new Date(exp.date);
+                    d.setHours(0, 0, 0, 0);
+                    return d >= weekAgo;
                 });
             }
         }
@@ -484,10 +366,8 @@ class LatestExpenses extends HTMLElement {
         const filteredExpenses = this.getFilteredExpenses();
 
         if (this.mode === 'recent') {
-            // Recent mode - just show first N items, no pagination
             const recentExpenses = filteredExpenses.slice(0, this.perPage);
             this.renderExpenses(recentExpenses, recentExpenses.length);
-            // Hide pagination in recent mode
             const paginationDiv = this.querySelector('#paginationControls');
             if (paginationDiv) paginationDiv.classList.add('d-none');
         } else {
@@ -513,20 +393,13 @@ class LatestExpenses extends HTMLElement {
                 hint = '<small>Add your first expense to get started!</small>';
             } else if (this.useDateNavigation) {
                 periodLabel = this.selectedWeek === 'all' ? 'this month' : `week ${this.selectedWeek.replace('week', '')}`;
-                if (this.selectedWeek !== 'all') {
-                    hint = '<small>Try selecting "All" to see all expenses this month</small>';
-                }
             } else {
-                periodLabel = this.period === 'today' ? 'today' :
-                              this.period === 'week' ? 'this week' : 'this month';
-                if (this.period !== 'all') {
-                    hint = '<small>Try selecting "Month" to see all expenses this month</small>';
-                }
+                periodLabel = this.period === 'today' ? 'today' : this.period === 'week' ? 'this week' : 'this month';
             }
 
             listContainer.innerHTML = `
                 <div class="text-center py-4 text-muted">
-                    <i class="bi bi-inbox fs-2 mb-2 d-block"></i>
+                    <span class="material-symbols-outlined" style="font-size: 2rem; display: block; margin-bottom: 0.5rem;">inbox</span>
                     <p class="mb-0">No expenses ${periodLabel}</p>
                     ${hint}
                 </div>
@@ -538,47 +411,50 @@ class LatestExpenses extends HTMLElement {
             const categoryColor = CategoryHelper.getCategoryColor(expense.category);
             const categoryIcon = CategoryHelper.getCategoryIcon(expense.category);
             const categoryLabel = CategoryHelper.getCategoryLabel(expense.category);
+            const sourceBadge = expense.source === 'bank_sync'
+                ? `<span class="source-badge bank"><span class="material-symbols-outlined" style="font-size: 0.625rem;">account_balance</span>Bank</span>`
+                : expense.source === 'manual'
+                ? `<span class="source-badge manual"><span class="material-symbols-outlined" style="font-size: 0.625rem;">edit</span>Manual</span>`
+                : '';
 
             return `
                 <div class="swipe-container" data-expense-id="${expense.id}">
                     <div class="swipe-actions">
                         <button class="swipe-action swipe-action-edit" data-action="edit">
-                            <i class="bi bi-pencil"></i>
+                            <span class="material-symbols-outlined" style="font-size: 1.125rem;">edit</span>
                             <span>Edit</span>
                         </button>
                         <button class="swipe-action swipe-action-delete" data-action="delete">
-                            <i class="bi bi-trash"></i>
+                            <span class="material-symbols-outlined" style="font-size: 1.125rem;">delete</span>
                             <span>Delete</span>
                         </button>
                     </div>
                     <div class="expense-item d-flex align-items-center justify-content-between">
                         <div class="d-flex align-items-center flex-grow-1 me-3">
-                            <div class="expense-category-icon me-3"
-                                 style="background: ${categoryColor}20;">
-                                <i class="bi bi-${categoryIcon}" style="color: ${categoryColor}; font-size: 1.1rem;"></i>
+                            <div class="expense-category-icon me-3">
+                                <span class="material-symbols-outlined" style="color: ${categoryColor}; font-size: 1.25rem;">${categoryIcon}</span>
                             </div>
                             <div class="flex-grow-1 min-width-0">
                                 <div class="expense-description text-truncate">${expense.description}</div>
                                 <div class="expense-date text-muted d-flex align-items-center gap-2">
-                                    <span class="badge badge-sm category-${expense.category}" style="font-size: 0.65rem;">
-                                        ${categoryLabel}
-                                    </span>
+                                    <span>${categoryLabel}</span>
+                                    <span style="width: 3px; height: 3px; border-radius: 50%; background: var(--outline-variant); display: inline-block;"></span>
                                     <span>${this.formatExpenseDate(expense.date)}</span>
+                                    ${sourceBadge}
                                 </div>
                             </div>
                         </div>
-                        <div class="expense-amount text-end text-nowrap" style="color: ${categoryColor};">
+                        <div class="expense-amount text-end text-nowrap">
                             ${CurrencyHelper.format(expense.amount)}
                         </div>
                         <button class="swipe-hint-btn" title="Edit or Delete">
-                            <i class="bi bi-three-dots"></i>
+                            <span class="material-symbols-outlined" style="font-size: 1rem;">more_horiz</span>
                         </button>
                     </div>
                 </div>
             `;
         }).join('');
 
-        // Set up swipe and click handlers
         this.setupSwipeHandlers(listContainer, expenses);
     }
 
@@ -590,19 +466,13 @@ class LatestExpenses extends HTMLElement {
             const expenseId = swipeContainer.dataset.expenseId;
             const expense = expenses.find(e => e.id == expenseId);
 
-            let startX = 0;
-            let startY = 0;
-            let currentX = 0;
-            let isDragging = false;
-            let isHorizontalSwipe = false;
+            let startX = 0, startY = 0, currentX = 0;
+            let isDragging = false, isHorizontalSwipe = false;
 
-            // Touch events for mobile
             expenseItem.addEventListener('touchstart', (e) => {
-                // Close any other open swipe items
                 if (this.activeSwipeItem && this.activeSwipeItem !== expenseItem) {
                     this.activeSwipeItem.classList.remove('swiped');
                 }
-
                 startX = e.touches[0].clientX;
                 startY = e.touches[0].clientY;
                 currentX = startX;
@@ -613,81 +483,60 @@ class LatestExpenses extends HTMLElement {
 
             expenseItem.addEventListener('touchmove', (e) => {
                 if (!isDragging) return;
-
                 currentX = e.touches[0].clientX;
                 const diffX = currentX - startX;
                 const diffY = e.touches[0].clientY - startY;
 
-                // Determine if this is a horizontal swipe (more X movement than Y)
                 if (!isHorizontalSwipe && Math.abs(diffX) > 10) {
                     isHorizontalSwipe = Math.abs(diffX) > Math.abs(diffY);
                 }
 
-                // Only handle horizontal swipes
                 if (isHorizontalSwipe) {
-                    e.preventDefault(); // Prevent browser back/forward navigation
-
-                    // Only allow left swipe (negative diff)
+                    e.preventDefault();
                     if (diffX < 0) {
-                        const translateX = Math.max(diffX, -135);
-                        expenseItem.style.transform = `translateX(${translateX}px)`;
+                        expenseItem.style.transform = `translateX(${Math.max(diffX, -135)}px)`;
                     } else if (expenseItem.classList.contains('swiped')) {
-                        // If already swiped, allow closing by swiping right
-                        const translateX = Math.min(-135 + diffX, 0);
-                        expenseItem.style.transform = `translateX(${translateX}px)`;
+                        expenseItem.style.transform = `translateX(${Math.min(-135 + diffX, 0)}px)`;
                     }
                 }
             }, { passive: false });
 
-            expenseItem.addEventListener('touchend', (e) => {
+            expenseItem.addEventListener('touchend', () => {
                 if (!isDragging) return;
                 isDragging = false;
                 expenseItem.classList.remove('swiping');
-
                 const diffX = currentX - startX;
 
-                // Only process swipe if it was horizontal
                 if (isHorizontalSwipe) {
                     if (diffX < -50) {
-                        // Swiped left enough - reveal actions
                         expenseItem.classList.add('swiped');
                         expenseItem.style.transform = '';
                         this.activeSwipeItem = expenseItem;
                     } else if (diffX > 50 && expenseItem.classList.contains('swiped')) {
-                        // Swiped right - close
                         expenseItem.classList.remove('swiped');
                         expenseItem.style.transform = '';
                         this.activeSwipeItem = null;
                     } else {
-                        // Not enough movement - snap back
                         expenseItem.style.transform = '';
                     }
                 } else if (Math.abs(diffX) < 10) {
-                    // It was a tap - just close if swiped, don't navigate
                     if (expenseItem.classList.contains('swiped')) {
                         expenseItem.classList.remove('swiped');
                         expenseItem.style.transform = '';
                         this.activeSwipeItem = null;
                     }
                 }
-
-                startX = 0;
-                startY = 0;
-                currentX = 0;
-                isHorizontalSwipe = false;
+                startX = 0; startY = 0; currentX = 0; isHorizontalSwipe = false;
             });
 
-            // Mouse click for desktop - just close swipe if open, no direct edit
             expenseItem.addEventListener('click', (e) => {
                 if (e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) return;
-
                 if (expenseItem.classList.contains('swiped')) {
                     expenseItem.classList.remove('swiped');
                     this.activeSwipeItem = null;
                 }
             });
 
-            // Action button handlers
             const editBtn = swipeContainer.querySelector('[data-action="edit"]');
             const deleteBtn = swipeContainer.querySelector('[data-action="delete"]');
             const hintBtn = swipeContainer.querySelector('.swipe-hint-btn');
@@ -704,16 +553,11 @@ class LatestExpenses extends HTMLElement {
                 this.confirmDelete(expense, swipeContainer);
             });
 
-            // Three-dots button toggles swipe actions
             hintBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-
-                // Close any other open item
                 if (this.activeSwipeItem && this.activeSwipeItem !== expenseItem) {
                     this.activeSwipeItem.classList.remove('swiped');
                 }
-
-                // Toggle this item
                 if (expenseItem.classList.contains('swiped')) {
                     expenseItem.classList.remove('swiped');
                     this.activeSwipeItem = null;
@@ -724,7 +568,6 @@ class LatestExpenses extends HTMLElement {
             });
         });
 
-        // Close swipe when clicking elsewhere
         document.addEventListener('click', (e) => {
             if (this.activeSwipeItem && !e.target.closest('.swipe-container')) {
                 this.activeSwipeItem.classList.remove('swiped');
@@ -734,18 +577,12 @@ class LatestExpenses extends HTMLElement {
     }
 
     async confirmDelete(expense, container) {
-        // Show iOS-style confirmation
         const confirmed = confirm(`Delete "${expense.description}" (${CurrencyHelper.format(expense.amount)})?`);
-
         if (confirmed) {
             try {
-                const response = await fetch(`/api/expenses/${expense.id}`, {
-                    method: 'DELETE'
-                });
-
+                const response = await fetch(`/api/expenses/${expense.id}`, { method: 'DELETE' });
                 if (!response.ok) throw new Error('Failed to delete');
 
-                // Animate removal
                 container.style.transition = 'all 0.3s ease';
                 container.style.transform = 'translateX(-100%)';
                 container.style.opacity = '0';
@@ -755,29 +592,19 @@ class LatestExpenses extends HTMLElement {
                     container.style.maxHeight = '0';
                     container.style.padding = '0';
                     container.style.margin = '0';
-                    container.style.borderWidth = '0';
                 }, 300);
 
                 setTimeout(() => {
-                    // Refresh the list
                     this.loadAllExpenses();
-                    if (window.showToast) {
-                        window.showToast('Expense deleted', 'success');
-                    }
+                    if (window.showToast) window.showToast('Expense deleted', 'success');
                 }, 500);
-
             } catch (error) {
-                console.error('Error deleting expense:', error);
-                if (window.showToast) {
-                    window.showToast('Failed to delete expense', 'error');
-                }
-                // Reset swipe state
+                if (window.showToast) window.showToast('Failed to delete expense', 'error');
                 const expenseItem = container.querySelector('.expense-item');
                 expenseItem.classList.remove('swiped');
                 this.activeSwipeItem = null;
             }
         } else {
-            // User cancelled - reset swipe state
             const expenseItem = container.querySelector('.expense-item');
             expenseItem.classList.remove('swiped');
             this.activeSwipeItem = null;
@@ -796,12 +623,9 @@ class LatestExpenses extends HTMLElement {
         }
 
         paginationDiv.classList.remove('d-none');
-
-        // Update button states
         prevBtn.disabled = this.currentPage === 1;
         nextBtn.disabled = this.currentPage === totalPages;
 
-        // Update page info
         const startItem = (this.currentPage - 1) * this.perPage + 1;
         const endItem = Math.min(this.currentPage * this.perPage, totalCount);
         pageInfo.textContent = `${startItem}-${endItem} of ${totalCount}`;
@@ -813,7 +637,6 @@ class LatestExpenses extends HTMLElement {
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
-
         const expenseDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
         if (expenseDate.getTime() === today.getTime()) {
@@ -821,17 +644,12 @@ class LatestExpenses extends HTMLElement {
         } else if (expenseDate.getTime() === yesterday.getTime()) {
             return `Yesterday, ${date.toLocaleTimeString('default', { hour: '2-digit', minute: '2-digit' })}`;
         } else {
-            return date.toLocaleDateString('default', {
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
+            return date.toLocaleDateString('default', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
         }
     }
 
     editExpense(expense) {
-        const editUrl = `/static/add-expense.html?edit=${expense.id}&amount=${expense.amount}&category=${expense.category}&description=${encodeURIComponent(expense.description)}`;
+        const editUrl = `/add?edit=${expense.id}&amount=${expense.amount}&category=${expense.category}&description=${encodeURIComponent(expense.description)}`;
         window.location.href = editUrl;
     }
 }

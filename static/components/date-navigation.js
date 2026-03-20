@@ -8,7 +8,6 @@ class DateNavigation extends HTMLElement {
     connectedCallback() {
         this.render();
         this.setupEventListeners();
-        // Dispatch initial date state
         this.dispatchDateChange();
     }
 
@@ -20,95 +19,91 @@ class DateNavigation extends HTMLElement {
                 }
 
                 .date-nav-title {
-                    color: var(--bs-body-color, #000);
-                    font-size: 1rem;
-                    font-weight: 600;
+                    color: var(--on-surface);
+                    font-family: 'Manrope', sans-serif;
+                    font-size: 1.125rem;
+                    font-weight: 700;
+                    letter-spacing: -0.01em;
                 }
 
                 .date-nav-btn {
-                    color: var(--bs-body-color, #000);
-                    padding: 0.15rem 0.3rem;
-                    font-size: 0.9rem;
+                    width: 40px;
+                    height: 40px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 50%;
+                    background: var(--surface-container-highest);
+                    border: none;
+                    color: var(--on-surface);
+                    cursor: pointer;
+                    transition: background 0.15s ease;
                 }
 
                 .date-nav-btn:hover {
-                    color: var(--bs-primary, #0d6efd);
+                    background: rgba(255, 140, 0, 0.2);
+                }
+
+                .date-nav-btn:disabled {
+                    opacity: 0.3;
+                    pointer-events: none;
+                }
+
+                .date-nav-pill {
+                    background: var(--surface-container);
+                    border-radius: 0.75rem;
+                    padding: 1rem;
+                    border: 1px solid rgba(86, 67, 52, 0.1);
                 }
 
                 .week-pill {
                     display: inline-block;
-                    padding: 0.2rem 0.5rem;
-                    font-size: 0.7rem;
-                    border-radius: 12px;
-                    background: var(--bs-secondary-bg, #f8f9fa);
-                    color: var(--bs-secondary-color, #6c757d);
+                    padding: 0.25rem 0.6rem;
+                    font-size: 0.6875rem;
+                    font-weight: 600;
+                    border-radius: 9999px;
+                    background: rgba(255, 255, 255, 0.06);
+                    color: var(--on-surface-variant);
                     cursor: pointer;
-                    transition: all 0.2s ease;
-                    border: 1px solid transparent;
-                    margin: 0 0.15rem;
+                    transition: all 0.15s ease;
+                    border: none;
+                    font-family: 'Inter', sans-serif;
                 }
 
                 .week-pill:hover {
-                    background: var(--bs-primary, #0d6efd);
-                    color: white;
+                    background: var(--primary-container);
+                    color: var(--on-primary);
                 }
 
                 .week-pill.active {
-                    background: var(--bs-primary, #0d6efd);
-                    color: white;
-                    font-weight: 600;
-                }
-
-                /* Dark mode specific overrides */
-                [data-bs-theme="dark"] .date-nav-title {
-                    color: #ffffff !important;
-                }
-
-                [data-bs-theme="dark"] .date-nav-btn {
-                    color: #e0e0e0 !important;
-                }
-
-                [data-bs-theme="dark"] .date-nav-btn:hover {
-                    color: #0d6efd !important;
-                }
-
-                [data-bs-theme="dark"] .week-pill {
-                    background: rgba(255, 255, 255, 0.1);
-                    color: #a0a0a0;
-                }
-
-                [data-bs-theme="dark"] .week-pill:hover {
-                    background: var(--bs-primary, #0d6efd);
-                    color: white;
+                    background: var(--primary-container);
+                    color: var(--on-primary);
+                    font-weight: 700;
                 }
             </style>
-            <div class="date-nav-container text-center">
-                <!-- Month selector: primary control -->
-                <div class="d-flex justify-content-center align-items-center gap-1 mb-2">
-                    <button id="prevMonthBtn" class="btn btn-link text-decoration-none date-nav-btn">
-                        <i class="bi bi-chevron-left"></i>
+            <div class="date-nav-container">
+                <div class="date-nav-pill d-flex align-items-center justify-content-between">
+                    <button id="prevMonthBtn" class="date-nav-btn">
+                        <span class="material-symbols-outlined">chevron_left</span>
                     </button>
-                    <span class="date-nav-title" style="min-width: 140px;">
-                        ${this.formatMonth()}
-                    </span>
-                    <button id="nextMonthBtn" class="btn btn-link text-decoration-none date-nav-btn">
-                        <i class="bi bi-chevron-right"></i>
+                    <div class="text-center">
+                        <p class="date-nav-title mb-0">${this.formatMonth()}</p>
+                        <div class="d-flex justify-content-center gap-1 mt-2">
+                            <span class="week-pill ${this.currentWeek === 'all' ? 'active' : ''}" data-week="all">All</span>
+                            <span class="week-pill ${this.currentWeek === 'week1' ? 'active' : ''}" data-week="week1">W1</span>
+                            <span class="week-pill ${this.currentWeek === 'week2' ? 'active' : ''}" data-week="week2">W2</span>
+                            <span class="week-pill ${this.currentWeek === 'week3' ? 'active' : ''}" data-week="week3">W3</span>
+                            <span class="week-pill ${this.currentWeek === 'week4' ? 'active' : ''}" data-week="week4">W4</span>
+                            <span class="week-pill ${this.currentWeek === 'week5' ? 'active' : ''}" data-week="week5">W5</span>
+                        </div>
+                    </div>
+                    <button id="nextMonthBtn" class="date-nav-btn">
+                        <span class="material-symbols-outlined">chevron_right</span>
                     </button>
-                </div>
-
-                <!-- Week selector: compact pills, secondary control -->
-                <div class="d-flex justify-content-center align-items-center flex-wrap gap-1">
-                    <span class="week-pill ${this.currentWeek === 'all' ? 'active' : ''}" data-week="all">All</span>
-                    <span class="week-pill ${this.currentWeek === 'week1' ? 'active' : ''}" data-week="week1">W1</span>
-                    <span class="week-pill ${this.currentWeek === 'week2' ? 'active' : ''}" data-week="week2">W2</span>
-                    <span class="week-pill ${this.currentWeek === 'week3' ? 'active' : ''}" data-week="week3">W3</span>
-                    <span class="week-pill ${this.currentWeek === 'week4' ? 'active' : ''}" data-week="week4">W4</span>
-                    <span class="week-pill ${this.currentWeek === 'week5' ? 'active' : ''}" data-week="week5">W5</span>
                 </div>
             </div>
         `;
 
-        // Update navigation button states
         this.updateNavigationState();
     }
 
@@ -116,7 +111,6 @@ class DateNavigation extends HTMLElement {
         this.querySelector('#prevMonthBtn').addEventListener('click', () => this.changeMonth(-1));
         this.querySelector('#nextMonthBtn').addEventListener('click', () => this.changeMonth(1));
 
-        // Week pill click handlers
         this.querySelectorAll('.week-pill').forEach(pill => {
             pill.addEventListener('click', (e) => {
                 const week = e.target.dataset.week;
@@ -132,22 +126,16 @@ class DateNavigation extends HTMLElement {
     }
 
     changeMonth(delta) {
-        // Create a new date object to avoid modifying the original
         const newDate = new Date(this.currentDate);
         newDate.setMonth(newDate.getMonth() + delta);
-
-        // Update the current date
         this.currentDate = newDate;
         this.currentWeek = 'all';
-
-        // Re-render and notify
         this.render();
-        this.setupEventListeners(); // Reattach event listeners after render
+        this.setupEventListeners();
         this.dispatchDateChange();
     }
 
     updateWeekDisplay() {
-        // Update active state on week pills
         this.querySelectorAll('.week-pill').forEach(pill => {
             if (pill.dataset.week === this.currentWeek) {
                 pill.classList.add('active');
@@ -168,7 +156,7 @@ class DateNavigation extends HTMLElement {
             this.currentDate.getFullYear() >= currentYear;
 
         const prevMonthBtn = this.querySelector('#prevMonthBtn');
-        prevMonthBtn.disabled = false; // Allow navigating to past months
+        prevMonthBtn.disabled = false;
     }
 
     dispatchDateChange() {
@@ -182,15 +170,7 @@ class DateNavigation extends HTMLElement {
             }
         });
         this.dispatchEvent(event);
-        // Also dispatch to document for components that might be in different shadow DOMs
         document.dispatchEvent(event);
-
-        // Log the date change for debugging
-        console.log('Date changed:', {
-            month: this.currentDate.getMonth() + 1,
-            year: this.currentDate.getFullYear(),
-            week: this.currentWeek
-        });
     }
 }
 

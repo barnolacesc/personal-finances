@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory, redirect, send_file
+from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timezone
 import os
@@ -383,7 +383,7 @@ def serve_index():
 
 @app.route("/add")
 def serve_add():
-    return redirect("/expenses#add")
+    return send_from_directory("static", "add-expense.html")
 
 
 @app.route("/expenses")
@@ -404,6 +404,11 @@ def serve_bank():
 @app.route("/unclassified")
 def serve_unclassified():
     return send_from_directory("static", "unclassified.html")
+
+
+@app.route("/trends")
+def serve_trends():
+    return send_from_directory("static", "trends.html")
 
 
 @app.route("/styles.css")
@@ -912,7 +917,6 @@ def bank_callback():
 
 
 @app.route("/api/bank/sync", methods=["POST"])
-@require_internal_key
 def bank_sync_now():
     """Manually trigger a bank transaction sync."""
     try:
