@@ -324,19 +324,19 @@ class CategoryChart extends HTMLElement {
                 }
                 .chart-body {
                     display: flex;
-                    align-items: center;
+                    flex-direction: column;
                     gap: 1rem;
                 }
                 .donut-container {
-                    flex-shrink: 0;
                     display: flex;
                     justify-content: center;
-                    width: 160px;
-                    height: 160px;
+                    width: 180px;
+                    height: 180px;
+                    margin: 0 auto;
                 }
                 .donut-svg {
-                    width: 160px;
-                    height: 160px;
+                    width: 180px;
+                    height: 180px;
                     filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
                 }
                 .donut-segment {
@@ -347,18 +347,15 @@ class CategoryChart extends HTMLElement {
                     filter: brightness(1.15);
                 }
                 .legend-container {
-                    flex: 1;
                     display: flex;
                     flex-direction: column;
-                    gap: 0.25rem;
-                    min-width: 0;
-                    overflow: hidden;
+                    gap: 0.125rem;
+                    width: 100%;
                 }
                 .legend-item {
                     display: flex;
                     align-items: center;
-                    justify-content: space-between;
-                    padding: 0.375rem 0.5rem;
+                    padding: 0.4rem 0.5rem;
                     border-radius: 0.5rem;
                     cursor: pointer;
                     transition: background 0.15s ease;
@@ -368,19 +365,19 @@ class CategoryChart extends HTMLElement {
                     background: var(--surface-container-high);
                 }
                 .legend-item.active {
-                    border-left: 2px solid var(--primary-container);
+                    border-left: 3px solid var(--primary-container);
+                    padding-left: calc(0.5rem - 3px);
                 }
                 .legend-left {
                     display: flex;
                     align-items: center;
-                    gap: 0.375rem;
-                    min-width: 0;
+                    gap: 0.5rem;
                     flex: 1;
-                    overflow: hidden;
+                    min-width: 0;
                 }
                 .legend-icon-dot {
-                    width: 22px;
-                    height: 22px;
+                    width: 24px;
+                    height: 24px;
                     border-radius: 50%;
                     display: flex;
                     align-items: center;
@@ -388,29 +385,32 @@ class CategoryChart extends HTMLElement {
                     flex-shrink: 0;
                 }
                 .legend-label {
-                    font-size: 0.75rem;
+                    font-size: 0.8125rem;
                     color: var(--on-surface);
                     font-weight: 500;
                     white-space: nowrap;
                     overflow: hidden;
                     text-overflow: ellipsis;
+                    min-width: 0;
+                    flex: 1;
                 }
                 .legend-right {
                     display: flex;
                     align-items: center;
-                    gap: 0.375rem;
+                    gap: 0.5rem;
                     flex-shrink: 0;
                 }
                 .legend-amount {
                     font-family: 'Manrope', sans-serif;
                     font-weight: 700;
-                    font-size: 0.75rem;
+                    font-size: 0.8125rem;
                     color: var(--on-surface);
+                    white-space: nowrap;
                 }
                 .legend-pct {
-                    font-size: 0.625rem;
+                    font-size: 0.6875rem;
                     color: var(--outline);
-                    min-width: 24px;
+                    min-width: 28px;
                     text-align: right;
                 }
 
