@@ -1,6 +1,6 @@
 {
-    "name": "Personal Finances",
-    "short_name": "Expenses",
+    "name": "Vault",
+    "short_name": "Vault",
     "description": "Track your personal expenses easily",
     "icons": [
         {
@@ -16,8 +16,8 @@
             "purpose": "any maskable"
         }
     ],
-    "theme_color": "#007AFF",
-    "background_color": "#F2F2F7",
+    "theme_color": "#0E0E0E",
+    "background_color": "#0E0E0E",
     "display": "standalone",
     "start_url": "/",
     "orientation": "portrait",

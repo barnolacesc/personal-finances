@@ -102,12 +102,44 @@ def test_home_page(client):
     """Test home page route"""
     response = client.get("/")
     assert response.status_code == 200
-    assert b"Personal Finance Tracker" in response.data
+    assert b"Vault" in response.data
 
 
 def test_expenses_endpoint(client):
     """Test expenses page route"""
     response = client.get("/expenses")
+    assert response.status_code == 200
+
+
+def test_add_expense_page(client):
+    """Test /add serves the add-expense form page"""
+    response = client.get("/add")
+    assert response.status_code == 200
+    assert b"Vault" in response.data
+
+
+def test_trends_page(client):
+    """Test /trends serves the trends page"""
+    response = client.get("/trends")
+    assert response.status_code == 200
+    assert b"Vault" in response.data
+
+
+def test_recurring_page(client):
+    """Test /recurring page route"""
+    response = client.get("/recurring")
+    assert response.status_code == 200
+
+
+def test_bank_page(client):
+    """Test /bank page route (currently disabled)"""
+    response = client.get("/bank")
+    assert response.status_code == 404
+
+
+def test_unclassified_page(client):
+    """Test /unclassified page route"""
+    response = client.get("/unclassified")
     assert response.status_code == 200
 
 

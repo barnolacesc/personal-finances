@@ -6,52 +6,58 @@ class ToastContainer extends HTMLElement {
             <style>
                 .toast-container {
                     position: fixed;
-                    bottom: 1rem;
-                    right: 1rem;
-                    z-index: 1050;
+                    bottom: 6rem;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    z-index: 2000;
                     pointer-events: none;
+                    width: 90%;
+                    max-width: 400px;
                 }
                 .toast {
-                    background: white;
-                    border-radius: 4px;
-                    padding: 1rem 1.5rem;
+                    background: #1F1F1F;
+                    border-radius: 0.75rem;
+                    padding: 1rem 1.25rem;
                     margin-bottom: 0.5rem;
-                    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.1);
-                    animation: slideIn 0.3s ease-out;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+                    animation: slideUp 0.3s ease-out;
                     pointer-events: auto;
                     display: flex;
                     align-items: center;
                     min-width: 250px;
+                    color: #E2E2E2;
+                    font-family: 'Inter', sans-serif;
+                    font-size: 0.875rem;
                 }
                 .toast.success {
-                    border-left: 4px solid #10b981;
-                    color: #065f46;
+                    border-left: 4px solid #FF8C00;
                 }
                 .toast.error {
-                    border-left: 4px solid #ef4444;
-                    color: #991b1b;
+                    border-left: 4px solid #FFB4AB;
                 }
-                .toast i {
+                .toast .icon {
+                    font-family: 'Material Symbols Outlined';
                     font-size: 1.25rem;
                     margin-right: 0.75rem;
+                    font-variation-settings: 'FILL' 0, 'wght' 400;
                 }
-                @keyframes slideIn {
+                @keyframes slideUp {
                     from {
-                        transform: translateX(100%);
+                        transform: translateY(100%);
                         opacity: 0;
                     }
                     to {
-                        transform: translateX(0);
+                        transform: translateY(0);
                         opacity: 1;
                     }
                 }
                 @keyframes fadeOut {
                     from {
-                        transform: translateX(0);
+                        transform: translateY(0);
                         opacity: 1;
                     }
                     to {
-                        transform: translateX(100%);
+                        transform: translateY(100%);
                         opacity: 0;
                     }
                 }
@@ -65,8 +71,9 @@ class ToastContainer extends HTMLElement {
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
 
-        const icon = document.createElement('i');
-        icon.className = `bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'}`;
+        const icon = document.createElement('span');
+        icon.className = 'icon';
+        icon.textContent = type === 'success' ? 'check_circle' : 'error';
 
         const text = document.createElement('span');
         text.textContent = message;

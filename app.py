@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory, redirect, send_file
+from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timezone
 import os
@@ -383,7 +383,7 @@ def serve_index():
 
 @app.route("/add")
 def serve_add():
-    return redirect("/expenses#add")
+    return send_from_directory("static", "add-expense.html")
 
 
 @app.route("/expenses")
@@ -398,12 +398,18 @@ def serve_recurring():
 
 @app.route("/bank")
 def serve_bank():
-    return send_from_directory("static", "bank.html")
+    # return send_from_directory("static", "bank.html")
+    return "Bank Sync is currently disabled", 404
 
 
 @app.route("/unclassified")
 def serve_unclassified():
     return send_from_directory("static", "unclassified.html")
+
+
+@app.route("/trends")
+def serve_trends():
+    return send_from_directory("static", "trends.html")
 
 
 @app.route("/styles.css")
