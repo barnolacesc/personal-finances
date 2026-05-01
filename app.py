@@ -398,7 +398,8 @@ def serve_recurring():
 
 @app.route("/bank")
 def serve_bank():
-    return send_from_directory("static", "bank.html")
+    # return send_from_directory("static", "bank.html")
+    return "Bank Sync is currently disabled", 404
 
 
 @app.route("/unclassified")
