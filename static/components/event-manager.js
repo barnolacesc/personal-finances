@@ -49,7 +49,7 @@ export class EventManager {
 }
 
 // Base component class with common functionality
-export class BaseComponent extends BaseComponent {
+export class BaseComponent extends HTMLElement {
     constructor() {
         super();
         this.eventListeners = [];
