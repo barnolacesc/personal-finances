@@ -1,5 +1,6 @@
 import { BaseComponent, EventManager } from './event-manager.js';
 import { CONFIG, CategoryHelper, CurrencyHelper } from './config.js';
+import { ApiService } from './api-service.js';
 
 class SpendingTrends extends BaseComponent {
     constructor() {
@@ -42,26 +43,18 @@ class SpendingTrends extends BaseComponent {
 
     async loadData() {
         try {
-            // Fetch last 4 months of data
-            const now = new Date();
-            const allExpenses = [];
-
-            for (let i = 0; i < 4; i++) {
-                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-                const month = d.getMonth() + 1;
-                const year = d.getFullYear();
-                const res = await fetch(`/api/expenses?month=${month}&year=${year}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    allExpenses.push(...(data.expenses || []));
-                }
+            // Display loading state initially
+            const chartContainer = this.querySelector('.trends-chart');
+            if (chartContainer) {
+                chartContainer.innerHTML = '<div class="text-center py-5"><div class="spinner-border" role="status"></div></div>';
             }
-
-            this.expenses = allExpenses;
+            
+            // Fetch aggregated data directly from backend instead of calculating on client
+            this.serverData = await ApiService.getTrends();
             this.computeTrends();
         } catch (error) {
             console.error('Error loading trends data:', error);
-            window.showToast('Failed to load trends data', 'error');
+            if (window.showToast) window.showToast('Failed to load trends data', 'error');
         }
     }
 
@@ -74,56 +67,29 @@ class SpendingTrends extends BaseComponent {
     }
 
     computeWeekly() {
-        const now = new Date();
-        const periods = [];
-
-        for (let i = 3; i >= 0; i--) {
-            const weekEnd = new Date(now);
-            weekEnd.setDate(weekEnd.getDate() - (i * 7));
-            const weekStart = new Date(weekEnd);
-            weekStart.setDate(weekStart.getDate() - 6);
-
-            const weekExpenses = this.expenses.filter(exp => {
-                const d = new Date(exp.date);
-                return d >= weekStart && d <= weekEnd;
-            });
-
-            const total = weekExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
-            const weekNum = this.getWeekNumber(weekStart);
-
-            periods.push({
-                label: i === 0 ? 'CURRENT' : `W${weekNum}`,
-                total,
-                isCurrent: i === 0,
-                expenses: weekExpenses
-            });
-        }
-
+        if (!this.serverData || !this.serverData.weekly) return;
+        
+        const periods = this.serverData.weekly.map((week, index) => ({
+            label: index === 3 ? 'CURRENT' : week.label,
+            total: week.total,
+            isCurrent: index === 3,
+            expenses: []
+        }));
+        
         this.periods = periods;
         this.renderTrends();
     }
 
     computeMonthly() {
-        const now = new Date();
-        const periods = [];
-
-        for (let i = 3; i >= 0; i--) {
-            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            const monthExpenses = this.expenses.filter(exp => {
-                const ed = new Date(exp.date);
-                return ed.getMonth() === d.getMonth() && ed.getFullYear() === d.getFullYear();
-            });
-
-            const total = monthExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
-
-            periods.push({
-                label: i === 0 ? 'CURRENT' : d.toLocaleDateString('default', { month: 'short' }),
-                total,
-                isCurrent: i === 0,
-                expenses: monthExpenses
-            });
-        }
-
+        if (!this.serverData || !this.serverData.monthly) return;
+        
+        const periods = this.serverData.monthly.map((month, index) => ({
+            label: index === 3 ? 'CURRENT' : month.label,
+            total: month.total,
+            isCurrent: index === 3,
+            expenses: []
+        }));
+        
         this.periods = periods;
         this.renderTrends();
     }

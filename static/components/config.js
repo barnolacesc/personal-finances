@@ -6,6 +6,7 @@ export const CONFIG = {
         ENDPOINTS: {
             EXPENSES: '/api/expenses',
             MONTHS: '/api/months',
+            TRENDS: '/api/trends',
             RECURRING: '/api/recurring',
             RECURRING_APPLY: '/api/recurring/apply',
             RECURRING_PENDING: '/api/recurring/pending'
