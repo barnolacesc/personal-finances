@@ -60,6 +60,10 @@ export class ApiService {
         });
     }
 
+    static async getTrends() {
+        return await this.request(CONFIG.API.ENDPOINTS.TRENDS);
+    }
+    
     // Month-related API calls
     static async getMonths() {
         return await this.request(CONFIG.API.ENDPOINTS.MONTHS);
