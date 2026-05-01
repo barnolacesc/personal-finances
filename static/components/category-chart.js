@@ -1,7 +1,7 @@
-import { CONFIG, CategoryHelper, CurrencyHelper } from './config.js';
-import { EventManager } from './event-manager.js';
+import { CONFIG, CategoryHelper, CurrencyHelper , Utils} from './config.js';
+import { EventManager , BaseComponent} from './event-manager.js';
 
-class CategoryChart extends HTMLElement {
+class CategoryChart extends BaseComponent {
     constructor() {
         super();
         this.isInitialized = false;
@@ -13,12 +13,14 @@ class CategoryChart extends HTMLElement {
         this.activeCategory = null;
     }
 
-    async connectedCallback() {
+    connectedCallback() {
+        setTimeout(async () => {
         this.render();
         await new Promise(resolve => setTimeout(resolve, 50));
         this.setupEventListeners();
         this.isInitialized = true;
         await this.updateChart();
+        }, 0);
     }
 
     setupEventListeners() {

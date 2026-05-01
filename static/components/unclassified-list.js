@@ -1,5 +1,5 @@
 import { BaseComponent } from './event-manager.js';
-import { CONFIG, CurrencyHelper, CategoryHelper } from './config.js';
+import { CONFIG, CurrencyHelper, CategoryHelper , Utils} from './config.js';
 
 class UnclassifiedList extends BaseComponent {
     connectedCallback() {
@@ -275,6 +275,9 @@ class UnclassifiedList extends BaseComponent {
     }
 
     async _saveExpense(card) {
+        if (this.isSubmitting) return;
+        this.isSubmitting = true;
+        try {
         const expenseId = card.dataset.expenseId;
         const category = card.querySelector('.category-select').value;
         const description = card.querySelector('.description-input').value.trim();

@@ -1,4 +1,5 @@
-class ToastContainer extends HTMLElement {
+import { BaseComponent, EventManager } from './event-manager.js';
+class ToastContainer extends BaseComponent {
     constructor() {
         super();
         this.attachShadow({ mode: 'open' });

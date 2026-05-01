@@ -1,6 +1,7 @@
+import { BaseComponent, EventManager } from './event-manager.js';
 import { CONFIG, CategoryHelper, CurrencyHelper } from './config.js';
 
-class SpendingTrends extends HTMLElement {
+class SpendingTrends extends BaseComponent {
     constructor() {
         super();
         this.mode = 'weekly'; // 'weekly' or 'monthly'

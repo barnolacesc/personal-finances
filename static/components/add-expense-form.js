@@ -1,4 +1,4 @@
-import { CONFIG, CategoryHelper, CurrencyHelper } from './config.js';
+import { CONFIG, CategoryHelper, CurrencyHelper , Utils} from './config.js';
 import { ApiService, ErrorHandler } from './api-service.js';
 import { BaseComponent, EventManager } from './event-manager.js';
 
@@ -245,7 +245,7 @@ class AddExpenseForm extends BaseComponent {
                 </div>
                 <div class="d-flex justify-content-between mb-2">
                     <span class="text-muted">Description</span>
-                    <span>${expense.description}</span>
+                    <span>${Utils.escapeHTML(expense.description)}</span>
                 </div>
                 <div class="d-flex justify-content-between">
                     <span class="text-muted">Date</span>

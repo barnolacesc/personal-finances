@@ -1,4 +1,5 @@
-class DateNavigation extends HTMLElement {
+import { BaseComponent, EventManager } from './event-manager.js';
+class DateNavigation extends BaseComponent {
     constructor() {
         super();
         this.currentDate = new Date();
