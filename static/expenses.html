@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html class="dark" lang="en">
 <head>
+    <script>
+        window.onerror = function(msg, url, line, col, error) {
+            console.error("Global error:", msg, url, line);
+            // alert("JS Error: " + msg + " at " + line);
+        };
+        </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Expenses - Vault</title>
@@ -52,8 +58,8 @@
 
     <!-- Custom Components -->
     <script src="/static/components/navbar.js"></script>
-    <script src="/static/components/toast.js"></script>
-    <script src="/static/components/date-navigation.js"></script>
+    <script type="module" src="/static/components/toast.js"></script>
+    <script type="module" src="/static/components/date-navigation.js"></script>
     <script type="module" src="/static/components/category-chart.js"></script>
     <script type="module" src="/static/components/latest-expenses.js"></script>
 

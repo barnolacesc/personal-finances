@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html class="dark" lang="en">
 <head>
+    <script>
+        window.onerror = function(msg, url, line, col, error) {
+            console.error("Global error:", msg, url, line);
+            // alert("JS Error: " + msg + " at " + line);
+        };
+        </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Recurring Expenses - Vault</title>
@@ -100,7 +106,7 @@
 
     <!-- Custom Components -->
     <script src="/static/components/navbar.js"></script>
-    <script src="/static/components/toast.js"></script>
+    <script type="module" src="/static/components/toast.js"></script>
     <script type="module" src="/static/components/recurring-list.js"></script>
 
     <script>
