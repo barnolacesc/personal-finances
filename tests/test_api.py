@@ -132,9 +132,9 @@ def test_recurring_page(client):
 
 
 def test_bank_page(client):
-    """Test /bank page route"""
+    """Test /bank page route (currently disabled)"""
     response = client.get("/bank")
-    assert response.status_code == 200
+    assert response.status_code == 404
 
 
 def test_unclassified_page(client):
