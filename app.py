@@ -520,6 +520,29 @@ def get_unclassified_expenses():
         return jsonify({"error": "Server error"}), 500
 
 
+# Application Configuration
+CATEGORIES = {
+    "super": {"label": "Super", "color": "#3b82f6", "icon": "shopping_cart"},
+    "xofa": {"label": "Xofa", "color": "#8b5cf6", "icon": "home"},
+    "food_drink": {"label": "Food & Drink", "color": "#10b981", "icon": "restaurant"},
+    "save_inv": {"label": "Save & Invest", "color": "#06b6d4", "icon": "savings"},
+    "recurrent": {"label": "Recurrent", "color": "#f59e0b", "icon": "repeat"},
+    "clothing": {"label": "Clothing", "color": "#ec4899", "icon": "checkroom"},
+    "personal": {"label": "Personal", "color": "#a855f7", "icon": "person"},
+    "taxes": {"label": "Taxes", "color": "#ef4444", "icon": "receipt_long"},
+    "transport": {"label": "Transport", "color": "#6366f1", "icon": "directions_car"},
+    "car": {"label": "Car", "color": "#64748b", "icon": "directions_car"},
+    "health": {"label": "Health", "color": "#14b8a6", "icon": "favorite"},
+    "cobeetrans": {"label": "Cobee Trans", "color": "#7c3aed", "icon": "directions_bus"},
+    "cobeefood": {"label": "Cobee Food", "color": "#f97316", "icon": "local_cafe"},
+    "other": {"label": "Other", "color": "#94a3b8", "icon": "more_horiz"},
+}
+
+@app.route("/api/categories", methods=["GET"])
+def get_categories():
+    """Return all available expense categories and their metadata."""
+    return jsonify(CATEGORIES)
+
 @app.route("/api/months", methods=["GET"])
 def get_months():
     try:
