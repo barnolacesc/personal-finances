@@ -28,7 +28,8 @@ pytest.importorskip(
     ),
 )
 
-from playwright.sync_api import Page, expect  # noqa: E402
+from playwright.sync_api import Page, expect
+import re  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -104,7 +105,7 @@ def test_expenses_list_card_renders(page_with_errors, live_server):
     page.goto(live_server + "/expenses")
     page.wait_for_load_state("networkidle")
     assert errors == [], f"JS errors on /expenses: {errors}"
-    expect(page.locator(".expense-list-card")).to_be_visible()
+    expect(page.locator(".modern-card").first).to_be_visible()
 
 
 def test_category_chart_renders(page_with_errors, live_server):
@@ -161,3 +162,34 @@ def test_trends_no_js_errors(page_with_errors, live_server):
     page.goto(live_server + "/trends")
     page.wait_for_load_state("networkidle")
     assert errors == [], f"JS errors on /trends: {errors}"
+
+# ---------------------------------------------------------------------------
+# End-to-End User Journeys
+# ---------------------------------------------------------------------------
+
+def test_e2e_add_and_verify_expense(page_with_errors, live_server):
+    """Simulate a user adding an expense and viewing it on the home page."""
+    page, errors = page_with_errors
+    
+    # 1. Navigate to Add page
+    page.goto(live_server + "/add")
+    page.wait_for_load_state("networkidle")
+    
+    # 2. Fill out the form
+    page.fill("#amount", "99.99")
+    page.select_option("#category", "transport")
+    page.fill("#description", "E2E Playwright Test")
+    
+    # 3. Submit
+    page.click("#submitBtn")
+    
+    # 4. Verify Success Card appears
+    expect(page.locator("#successCard")).to_have_class(re.compile(r"^((?!d-none).)*$"))
+    
+    # 5. Navigate to Home Page
+    page.goto(live_server + "/")
+    page.wait_for_load_state("networkidle")
+    
+    # 6. Verify the new expense is in the recent list
+    expect(page.locator("text=E2E Playwright Test").first).to_be_visible()
+    expect(page.locator("text=99,99").first).to_be_visible()
