@@ -75,7 +75,7 @@ class AddExpenseForm extends BaseComponent {
                 </div>
 
                 <div class="d-grid">
-                    <button type="submit" class="btn btn-gradient" id="submitBtn" style="height: 56px; font-size: 1rem; font-weight: 700;">
+                    <button type="button" class="btn btn-gradient" id="submitBtn" style="height: 56px; font-size: 1rem; font-weight: 700;">
                         <span class="btn-text d-flex align-items-center justify-content-center gap-2">
                             <span class="material-symbols-outlined">${this.editMode ? 'check' : 'add_circle'}</span>
                             ${this.editMode ? 'Update Expense' : 'Add Expense'}
@@ -99,16 +99,20 @@ class AddExpenseForm extends BaseComponent {
 
     setupEventListeners() {
         const form = this.querySelector('#addExpenseForm');
-        this.addEventListenerWithCleanup(form, 'submit', this.handleSubmit.bind(this));
+        this.addEventListenerWithCleanup(form, 'submit', (e) => {
+            e.preventDefault();
+            this.handleSubmit(e);
+        });
         
         const submitBtn = this.querySelector('#submitBtn');
         this.addEventListenerWithCleanup(submitBtn, 'click', (e) => {
-            console.log('Button clicked!', e);
-            if (!form.checkValidity()) {
-                console.log('Form is invalid natively');
-            } else {
-                console.log('Form valid natively, firing submit');
-            }
+            e.preventDefault();
+            // Create a fake event object to pass to handleSubmit since we bypassed the form
+            const fakeEvent = {
+                preventDefault: () => {},
+                target: form
+            };
+            this.handleSubmit(fakeEvent);
         });
 
         const amountInput = this.querySelector('#amount');
