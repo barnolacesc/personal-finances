@@ -174,7 +174,11 @@ class AddExpenseForm extends BaseComponent {
                 this.showSuccess(result);
             }
 
-            EventManager.emitExpenseAdded(result);
+            try {
+                EventManager.emitExpenseAdded(result);
+            } catch (e) {
+                console.warn('Could not emit expense added event:', e);
+            }
 
         } catch (error) {
             console.error('Add/Edit expense error:', error);
@@ -225,10 +229,19 @@ class AddExpenseForm extends BaseComponent {
     }
 
     showSuccess(expense) {
-        document.querySelector('.modern-card.chart-container-modern').classList.add('d-none');
+        const chartContainer = document.querySelector('.modern-card.chart-container-modern');
+        if (chartContainer) {
+            chartContainer.classList.add('d-none');
+        }
 
         const successCard = document.getElementById('successCard');
         const expenseDetails = document.getElementById('expenseDetails');
+
+        if (!successCard || !expenseDetails) {
+            console.error('Success card elements not found');
+            window.location.href = '/expenses';
+            return;
+        }
 
         expenseDetails.innerHTML = `
             <div class="card-vault" style="text-align: left;">
@@ -261,7 +274,10 @@ class AddExpenseForm extends BaseComponent {
     }
 
     resetForm() {
-        document.querySelector('.modern-card.chart-container-modern').classList.remove('d-none');
+        const chartContainer = document.querySelector('.modern-card.chart-container-modern');
+        if (chartContainer) {
+            chartContainer.classList.remove('d-none');
+        }
 
         const form = this.querySelector('#addExpenseForm');
         form.reset();
