@@ -48,7 +48,6 @@ class AddExpenseForm extends BaseComponent {
                                class="form-control"
                                id="amount"
                                name="amount"
-                               
                                inputmode="decimal"
                                placeholder="0.00"
                                style="font-family: 'Manrope', sans-serif; font-size: 2rem; font-weight: 800;"
@@ -101,6 +100,16 @@ class AddExpenseForm extends BaseComponent {
     setupEventListeners() {
         const form = this.querySelector('#addExpenseForm');
         this.addEventListenerWithCleanup(form, 'submit', this.handleSubmit.bind(this));
+        
+        const submitBtn = this.querySelector('#submitBtn');
+        this.addEventListenerWithCleanup(submitBtn, 'click', (e) => {
+            console.log('Button clicked!', e);
+            if (!form.checkValidity()) {
+                console.log('Form is invalid natively');
+            } else {
+                console.log('Form valid natively, firing submit');
+            }
+        });
 
         const amountInput = this.querySelector('#amount');
         this.addEventListenerWithCleanup(amountInput, 'input', this.handleAmountInput.bind(this));
