@@ -30,6 +30,7 @@
 
     <!-- Vault Theme -->
     <link rel="stylesheet" href="/static/styles/vault-theme.css">
+<style>#submitBtn { position: relative; z-index: 9999; pointer-events: auto !important; }</style>
 </head>
 <body>
     <nav-bar></nav-bar>
@@ -82,15 +83,6 @@
     <script type="module" src="/static/components/toast.js?v=1777661576"></script>
     <script type="module" src="/static/components/add-expense-form.js?v=1777661576"></script>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const addAnotherBtn = document.getElementById('addAnotherBtn');
-            addAnotherBtn.addEventListener('click', function () {
-                document.getElementById('successCard').classList.add('d-none');
-                document.querySelector('add-expense-form').resetForm();
-                document.querySelector('.modern-card').scrollIntoView({ behavior: 'smooth' });
-            });
-        });
-    </script>
+    
 </body>
 </html>
