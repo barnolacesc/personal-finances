@@ -348,7 +348,7 @@ a:hover { color: var(--primary-fixed-dim); }
     display: flex;
     justify-content: space-around;
     align-items: center;
-    height: var(--bottom-nav-height);
+    height: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
     padding-left: 0.5rem;
     padding-right: 0.5rem;
 }
