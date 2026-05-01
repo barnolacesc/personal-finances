@@ -1,4 +1,5 @@
-class BackupButton extends HTMLElement {
+import { BaseComponent, EventManager } from './event-manager.js';
+class BackupButton extends BaseComponent {
     connectedCallback() {
         this.render();
         this.button = this.querySelector('.backup-trigger');

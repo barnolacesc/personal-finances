@@ -1,6 +1,7 @@
-import { CONFIG, CategoryHelper, CurrencyHelper } from './config.js';
+import { BaseComponent, EventManager } from './event-manager.js';
+import { CONFIG, CategoryHelper, CurrencyHelper , Utils} from './config.js';
 
-class ExpenseList extends HTMLElement {
+class ExpenseList extends BaseComponent {
     constructor() {
         super();
         this.expenses = [];
@@ -370,7 +371,7 @@ class ExpenseList extends HTMLElement {
                         <span class="material-symbols-outlined" style="color: ${color};">${icon}</span>
                     </div>
                     <div class="expense-info">
-                        <div class="expense-desc">${expense.description}</div>
+                        <div class="expense-desc">${Utils.escapeHTML(expense.description)}</div>
                         <div class="expense-meta">
                             <span>${this.formatDate(expense.date)}</span>
                             <span class="dot"></span>
@@ -432,7 +433,7 @@ class ExpenseList extends HTMLElement {
                     </div>
                     <div class="edit-field-full">
                         <label>Description</label>
-                        <input type="text" class="edit-description" value="${expense.description}" maxlength="50">
+                        <input type="text" class="edit-description" value="${Utils.escapeHTML(expense.description)}" maxlength="50">
                     </div>
                 </div>
                 <div class="edit-actions">

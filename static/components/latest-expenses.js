@@ -1,6 +1,7 @@
-import { CONFIG, CategoryHelper, CurrencyHelper, DateHelper } from './config.js';
+import { BaseComponent, EventManager } from './event-manager.js';
+import { CONFIG, CategoryHelper, CurrencyHelper, DateHelper , Utils} from './config.js';
 
-class LatestExpenses extends HTMLElement {
+class LatestExpenses extends BaseComponent {
     constructor() {
         super();
         this.currentPage = 1;
@@ -434,7 +435,7 @@ class LatestExpenses extends HTMLElement {
                                 <span class="material-symbols-outlined" style="color: ${categoryColor}; font-size: 1.25rem;">${categoryIcon}</span>
                             </div>
                             <div style="min-width: 0; flex: 1;">
-                                <div class="expense-description text-truncate">${expense.description}</div>
+                                <div class="expense-description text-truncate">${Utils.escapeHTML(expense.description)}</div>
                                 <div class="expense-date text-muted" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px;">
                                     <span>${this.formatExpenseDate(expense.date)}</span>
                                     ${sourceBadge}
@@ -556,7 +557,7 @@ class LatestExpenses extends HTMLElement {
     }
 
     async confirmDelete(expense, container) {
-        const confirmed = confirm(`Delete "${expense.description}" (${CurrencyHelper.format(expense.amount)})?`);
+        const confirmed = confirm(`Delete "${Utils.escapeHTML(expense.description)}" (${CurrencyHelper.format(expense.amount)})?`);
         if (confirmed) {
             try {
                 const response = await fetch(`/api/expenses/${expense.id}`, { method: 'DELETE' });
