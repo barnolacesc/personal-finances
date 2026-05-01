@@ -39,7 +39,7 @@ class AddExpenseForm extends BaseComponent {
             .join('');
 
         this.innerHTML = `
-            <form id="addExpenseForm">
+            <form id="addExpenseForm" novalidate>
                 <div class="mb-3">
                     <label for="amount" class="form-label">Amount *</label>
                     <div class="input-group input-group-lg">
@@ -48,7 +48,7 @@ class AddExpenseForm extends BaseComponent {
                                class="form-control"
                                id="amount"
                                name="amount"
-                               pattern="${CONFIG.VALIDATION.AMOUNT_PATTERN}"
+                               
                                inputmode="decimal"
                                placeholder="0.00"
                                style="font-family: 'Manrope', sans-serif; font-size: 2rem; font-weight: 800;"
@@ -134,17 +134,35 @@ class AddExpenseForm extends BaseComponent {
 
     async handleSubmit(e) {
         e.preventDefault();
+        console.log('handleSubmit fired!');
 
         if (this.isSubmitting) return;
+
+        const formData = new FormData(e.target);
+        const amountStr = formData.get('amount');
+        const category = formData.get('category');
+        const description = formData.get('description');
+
+        if (!amountStr) {
+            window.showToast('Please enter an amount', 'error');
+            return;
+        }
+        if (!category) {
+            window.showToast('Please select a category', 'error');
+            return;
+        }
+        if (!description) {
+            window.showToast('Please enter a description', 'error');
+            return;
+        }
 
         this.isSubmitting = true;
         this.setSubmittingState(true);
 
-        const formData = new FormData(e.target);
         const data = {
-            amount: CurrencyHelper.parseAmount(formData.get('amount')),
-            category: formData.get('category'),
-            description: formData.get('description')
+            amount: CurrencyHelper.parseAmount(amountStr),
+            category: category,
+            description: description
         };
 
         try {
