@@ -543,6 +543,71 @@ def get_categories():
     """Return all available expense categories and their metadata."""
     return jsonify(CATEGORIES)
 
+@app.route("/api/trends", methods=["GET"])
+def get_trends():
+    try:
+        from datetime import datetime, timedelta
+        from sqlalchemy import func
+        
+        now = datetime.now()
+        
+        # Calculate monthly totals for the last 4 months
+        monthly_data = []
+        for i in range(4):
+            # Calculate the month and year for i months ago
+            target_month = now.month - i
+            target_year = now.year
+            if target_month <= 0:
+                target_month += 12
+                target_year -= 1
+                
+            total = db.session.query(func.sum(Expense.amount)).filter(
+                extract("month", Expense.date) == target_month,
+                extract("year", Expense.date) == target_year
+            ).scalar() or 0.0
+            
+            monthly_data.insert(0, {
+                "label": f"{target_month:02d}/{str(target_year)[-2:]}",
+                "total": float(total)
+            })
+            
+        # Calculate weekly totals for the last 4 weeks (rolling 7-day windows)
+        weekly_data = []
+        for i in range(4):
+            end_date = now - timedelta(days=i*7)
+            start_date = end_date - timedelta(days=6)
+            
+            # Format label
+            if i == 0:
+                label = "This Week"
+            elif i == 1:
+                label = "Last Week"
+            else:
+                label = f"{i} Weeks Ago"
+                
+            # SQLite datetime comparison
+            # Need to format dates to match SQLite storage string format (YYYY-MM-DD)
+            start_str = start_date.strftime("%Y-%m-%d 00:00:00")
+            end_str = end_date.strftime("%Y-%m-%d 23:59:59")
+            
+            total = db.session.query(func.sum(Expense.amount)).filter(
+                Expense.date >= start_str,
+                Expense.date <= end_str
+            ).scalar() or 0.0
+            
+            weekly_data.insert(0, {
+                "label": label,
+                "total": float(total)
+            })
+            
+        return jsonify({
+            "weekly": weekly_data,
+            "monthly": monthly_data
+        })
+    except Exception as e:
+        logger.error(f"Error fetching trends: {e}")
+        return jsonify({"error": "Server error fetching trends"}), 500
+
 @app.route("/api/months", methods=["GET"])
 def get_months():
     try:
