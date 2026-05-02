@@ -561,9 +561,10 @@ def get_trends():
                 target_month += 12
                 target_year -= 1
                 
+            target_month_str = f"{target_year}-{target_month:02d}"
+            
             total = db.session.query(func.sum(Expense.amount)).filter(
-                extract("month", Expense.date) == target_month,
-                extract("year", Expense.date) == target_year
+                func.strftime('%Y-%m', Expense.date) == target_month_str
             ).scalar() or 0.0
             
             monthly_data.insert(0, {
