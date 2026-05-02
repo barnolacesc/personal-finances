@@ -706,28 +706,37 @@ def backup_database():
 @app.route("/api/backup/download", methods=["GET"])
 def download_backup():
     try:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        script_path = os.path.join(current_dir, "scripts", "database", "export_csv.py")
+        
         run(
-            ["python3", "scripts/database/export_csv.py"],
+            ["python3", script_path],
+            cwd=current_dir,
             capture_output=True,
             text=True,
             check=True,
         )
     except CalledProcessError as e:
         return jsonify({"success": False, "error": e.stderr.strip() or str(e)}), 500
-    export_dir = Path("scripts/database/exports")
+        
+    export_dir = os.path.join(current_dir, "scripts", "database", "exports")
     files = sorted(
-        glob.glob(str(export_dir / "expenses_*.csv")),
-        key=lambda x: Path(x).stat().st_mtime,
+        glob.glob(os.path.join(export_dir, "expenses_*.csv")),
+        key=lambda x: os.path.getmtime(x),
         reverse=True,
     )
+    
     if not files:
         return jsonify({"success": False, "error": "No backup file found."}), 500
+        
     latest_file = files[0]
+    filename = os.path.basename(latest_file)
+    
     return send_file(
         latest_file,
         as_attachment=True,
-        download_name=Path(latest_file).name,
-        mimetype="text/csv",
+        download_name=filename,
+        mimetype="text/csv"
     )
 
 
