@@ -8,7 +8,6 @@ import functools
 from werkzeug.serving import run_simple
 from sqlalchemy import extract
 from subprocess import run, CalledProcessError
-from pathlib import Path
 import glob
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -533,24 +532,30 @@ CATEGORIES = {
     "transport": {"label": "Transport", "color": "#6366f1", "icon": "directions_car"},
     "car": {"label": "Car", "color": "#64748b", "icon": "directions_car"},
     "health": {"label": "Health", "color": "#14b8a6", "icon": "favorite"},
-    "cobeetrans": {"label": "Cobee Trans", "color": "#7c3aed", "icon": "directions_bus"},
+    "cobeetrans": {
+        "label": "Cobee Trans",
+        "color": "#7c3aed",
+        "icon": "directions_bus",
+    },
     "cobeefood": {"label": "Cobee Food", "color": "#f97316", "icon": "local_cafe"},
     "other": {"label": "Other", "color": "#94a3b8", "icon": "more_horiz"},
 }
+
 
 @app.route("/api/categories", methods=["GET"])
 def get_categories():
     """Return all available expense categories and their metadata."""
     return jsonify(CATEGORIES)
 
+
 @app.route("/api/trends", methods=["GET"])
 def get_trends():
     try:
         from datetime import datetime, timedelta
         from sqlalchemy import func
-        
+
         now = datetime.now()
-        
+
         # Calculate monthly totals for the last 4 months
         monthly_data = []
         for i in range(4):
@@ -560,24 +565,30 @@ def get_trends():
             if target_month <= 0:
                 target_month += 12
                 target_year -= 1
-                
+
             target_month_str = f"{target_year}-{target_month:02d}"
-            
-            total = db.session.query(func.sum(Expense.amount)).filter(
-                func.strftime('%Y-%m', Expense.date) == target_month_str
-            ).scalar() or 0.0
-            
-            monthly_data.insert(0, {
-                "label": f"{target_month:02d}/{str(target_year)[-2:]}",
-                "total": float(total)
-            })
-            
+
+            total = (
+                db.session.query(func.sum(Expense.amount))
+                .filter(func.strftime("%Y-%m", Expense.date) == target_month_str)
+                .scalar()
+                or 0.0
+            )
+
+            monthly_data.insert(
+                0,
+                {
+                    "label": f"{target_month:02d}/{str(target_year)[-2:]}",
+                    "total": float(total),
+                },
+            )
+
         # Calculate weekly totals for the last 4 weeks (rolling 7-day windows)
         weekly_data = []
         for i in range(4):
-            end_date = now - timedelta(days=i*7)
+            end_date = now - timedelta(days=i * 7)
             start_date = end_date - timedelta(days=6)
-            
+
             # Format label
             if i == 0:
                 label = "This Week"
@@ -585,29 +596,26 @@ def get_trends():
                 label = "Last Week"
             else:
                 label = f"{i} Weeks Ago"
-                
+
             # SQLite datetime comparison
             # Need to format dates to match SQLite storage string format (YYYY-MM-DD)
             start_str = start_date.strftime("%Y-%m-%d 00:00:00")
             end_str = end_date.strftime("%Y-%m-%d 23:59:59")
-            
-            total = db.session.query(func.sum(Expense.amount)).filter(
-                Expense.date >= start_str,
-                Expense.date <= end_str
-            ).scalar() or 0.0
-            
-            weekly_data.insert(0, {
-                "label": label,
-                "total": float(total)
-            })
-            
-        return jsonify({
-            "weekly": weekly_data,
-            "monthly": monthly_data
-        })
+
+            total = (
+                db.session.query(func.sum(Expense.amount))
+                .filter(Expense.date >= start_str, Expense.date <= end_str)
+                .scalar()
+                or 0.0
+            )
+
+            weekly_data.insert(0, {"label": label, "total": float(total)})
+
+        return jsonify({"weekly": weekly_data, "monthly": monthly_data})
     except Exception as e:
         logger.error(f"Error fetching trends: {e}")
         return jsonify({"error": "Server error fetching trends"}), 500
+
 
 @app.route("/api/months", methods=["GET"])
 def get_months():
@@ -708,7 +716,7 @@ def download_backup():
     try:
         current_dir = os.path.dirname(os.path.abspath(__file__))
         script_path = os.path.join(current_dir, "scripts", "database", "export_csv.py")
-        
+
         run(
             ["python3", script_path],
             cwd=current_dir,
@@ -718,25 +726,22 @@ def download_backup():
         )
     except CalledProcessError as e:
         return jsonify({"success": False, "error": e.stderr.strip() or str(e)}), 500
-        
+
     export_dir = os.path.join(current_dir, "scripts", "database", "exports")
     files = sorted(
         glob.glob(os.path.join(export_dir, "expenses_*.csv")),
         key=lambda x: os.path.getmtime(x),
         reverse=True,
     )
-    
+
     if not files:
         return jsonify({"success": False, "error": "No backup file found."}), 500
-        
+
     latest_file = files[0]
     filename = os.path.basename(latest_file)
-    
+
     return send_file(
-        latest_file,
-        as_attachment=True,
-        download_name=filename,
-        mimetype="text/csv"
+        latest_file, as_attachment=True, download_name=filename, mimetype="text/csv"
     )
 
 
