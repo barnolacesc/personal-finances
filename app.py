@@ -70,6 +70,32 @@ class Expense(db.Model):
         }
 
 
+def parse_expense_date(value):
+    """Parse optional API date input.
+
+    Accepts YYYY-MM-DD or ISO datetime strings. Returns None when no date was
+    provided so existing default timestamp behaviour stays unchanged.
+    """
+    if not value:
+        return None
+    if isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            return None
+        if raw.endswith("Z"):
+            raw = raw[:-1] + "+00:00"
+        try:
+            if len(raw) == 10:
+                return datetime.strptime(raw, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            parsed = datetime.fromisoformat(raw)
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            return parsed
+        except ValueError as exc:
+            raise ValueError("Invalid date value; expected YYYY-MM-DD or ISO datetime") from exc
+    raise ValueError("Invalid date value; expected string")
+
+
 class MerchantMapping(db.Model):
     __tablename__ = "merchant_mapping"
 
@@ -456,7 +482,14 @@ def handle_expenses():
                     400,
                 )
 
+            try:
+                expense_date = parse_expense_date(data.get("date"))
+            except ValueError as exc:
+                return jsonify({"error": str(exc)}), 400
+
             expense = Expense(amount=amount, category=category, description=description)
+            if expense_date is not None:
+                expense.date = expense_date
             db.session.add(expense)
             db.session.commit()
             logger.info(f"Added new expense: ${amount:.2f} ({category})")
@@ -673,6 +706,13 @@ def update_expense(expense_id):
         expense.amount = amount
         expense.category = category
         expense.description = description
+        if "date" in data:
+            try:
+                expense_date = parse_expense_date(data.get("date"))
+            except ValueError as exc:
+                return jsonify({"error": str(exc)}), 400
+            if expense_date is not None:
+                expense.date = expense_date
 
         db.session.commit()
         logger.info(f"Updated expense {expense_id}: ${amount:.2f} ({category})")
