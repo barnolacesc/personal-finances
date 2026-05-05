@@ -91,7 +91,9 @@ def parse_expense_date(value):
                 parsed = parsed.replace(tzinfo=timezone.utc)
             return parsed
         except ValueError as exc:
-            raise ValueError("Invalid date value; expected YYYY-MM-DD or ISO datetime") from exc
+            raise ValueError(
+                "Invalid date value; expected YYYY-MM-DD or ISO datetime"
+            ) from exc
     raise ValueError("Invalid date value; expected string")
 
 
