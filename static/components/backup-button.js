@@ -10,7 +10,8 @@ class BackupButton extends BaseComponent {
         this.innerHTML = `
             <style>
                 .backup-trigger {
-                    padding: 0.375rem 0.75rem;
+                    padding: 0.5rem 1rem;
+                    min-height: 40px;
                     border-radius: 0.5rem;
                     background: var(--surface-container-highest);
                     border: none;
