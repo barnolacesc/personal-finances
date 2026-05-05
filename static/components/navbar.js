@@ -93,9 +93,9 @@ class NavBar extends HTMLElement {
                     <a class="vault-brand d-flex align-items-center" href="/" style="text-decoration: none;">
                         <span class="font-headline" style="font-size: 1.25rem; font-weight: 800; color: var(--primary-container); letter-spacing: -0.03em; text-transform: uppercase;">Vault</span>
                     </a>
-                    // <div class="d-flex align-items-center gap-2" id="syncStatus" style="color: var(--on-surface-variant); font-size: 0.625rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.15em; opacity: 0.5;">
-                    //     <span class="material-symbols-outlined" style="font-size: 1rem; font-variation-settings: 'wght' 700; color: var(--primary-container);">sync</span>
-                    // </div>
+                    <a href="/recurring" class="d-flex align-items-center gap-1" style="color: var(--on-surface-variant); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; text-decoration: none; padding: 0.5rem; border-radius: 0.5rem; background: var(--surface-container-high);">
+                        <span class="material-symbols-outlined" style="font-size: 1.125rem;">event_repeat</span>
+                    </a>
                 </div>
             </nav>
             <nav class="bottom-nav">
