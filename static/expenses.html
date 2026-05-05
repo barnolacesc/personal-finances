@@ -36,10 +36,8 @@
     <toast-container></toast-container>
 
     <div class="container py-2">
-        <div class="d-flex align-items-center justify-content-end mb-1">
-            <button class="btn btn-link" id="exportBtn" aria-label="Export" style="color: var(--on-surface-variant);">
-                <span class="material-symbols-outlined">download</span>
-            </button>
+        <div class="d-flex align-items-center justify-content-end mb-3 mt-2">
+            <backup-button></backup-button>
         </div>
 
         <date-navigation></date-navigation>
@@ -52,39 +50,18 @@
     </div>
 
     <!-- Core Modules -->
-    <script type="module" src="/static/components/config.js"></script>
-    <script type="module" src="/static/components/api-service.js"></script>
-    <script type="module" src="/static/components/event-manager.js"></script>
+    <script type="module" src="/static/components/config.js?v=1778016442"></script>
+    <script type="module" src="/static/components/api-service.js?v=1778016442"></script>
+    <script type="module" src="/static/components/event-manager.js?v=1778016442"></script>
 
     <!-- Custom Components -->
-    <script src="/static/components/navbar.js"></script>
-    <script type="module" src="/static/components/toast.js"></script>
-    <script type="module" src="/static/components/date-navigation.js"></script>
-    <script type="module" src="/static/components/category-chart.js"></script>
-    <script type="module" src="/static/components/latest-expenses.js"></script>
+    <script src="/static/components/navbar.js?v=1778016442"></script>
+    <script type="module" src="/static/components/toast.js?v=1778016442"></script>
+    <script type="module" src="/static/components/date-navigation.js?v=1778016442"></script>
+    <script type="module" src="/static/components/category-chart.js?v=1778016442"></script>
+    <script type="module" src="/static/components/backup-button.js?v=1778016442"></script>
+    <script type="module" src="/static/components/latest-expenses.js?v=1778016442"></script>
 
-    <script>
-        // Export button
-        document.addEventListener('DOMContentLoaded', function () {
-            document.getElementById('exportBtn').addEventListener('click', async function () {
-                try {
-                    const res = await fetch('/api/backup/download');
-                    if (!res.ok) throw new Error('Failed');
-                    const blob = await res.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'expenses_backup.csv';
-                    document.body.appendChild(a);
-                    a.click();
-                    a.remove();
-                    window.URL.revokeObjectURL(url);
-                    window.showToast('Download started', 'success');
-                } catch (e) {
-                    window.showToast('Download failed', 'error');
-                }
-            });
-        });
-    </script>
+
 </body>
 </html>

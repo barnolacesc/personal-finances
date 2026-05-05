@@ -175,6 +175,7 @@ class LatestExpenses extends BaseComponent {
                     touch-action: pan-y;
                     -webkit-user-select: none;
                     user-select: none;
+                    cursor: pointer;
                 }
                 .expense-item.swiping { transition: none; }
                 .expense-item.swiped { transform: translateX(-135px); }
@@ -525,11 +526,15 @@ class LatestExpenses extends BaseComponent {
             });
 
             expenseItem.addEventListener('click', (e) => {
-                if (e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) return;
+                // If it's currently swiped open, clicking it just closes the swipe menu
                 if (expenseItem.classList.contains('swiped')) {
                     expenseItem.classList.remove('swiped');
                     this.activeSwipeItem = null;
+                    return;
                 }
+                
+                // Otherwise, clicking the item directly opens the Edit page
+                this.editExpense(expense);
             });
 
             const editBtn = swipeContainer.querySelector('[data-action="edit"]');
@@ -629,7 +634,7 @@ class LatestExpenses extends BaseComponent {
     }
 
     editExpense(expense) {
-        const editUrl = `/add?edit=${expense.id}&amount=${expense.amount}&category=${expense.category}&description=${encodeURIComponent(expense.description)}`;
+        const editUrl = `/add?edit=${expense.id}&amount=${expense.amount}&category=${expense.category}&description=${encodeURIComponent(expense.description)}&date=${expense.date}`;
         window.location.href = editUrl;
     }
 }

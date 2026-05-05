@@ -99,6 +99,20 @@ class RecurringList extends BaseComponent {
     }
 
     render() {
+        // Calculate monthly commitment
+        let totalMonthly = 0;
+        const activeCount = this.recurringExpenses.filter(r => r.is_active).length;
+        
+        this.recurringExpenses.forEach(r => {
+            if (!r.is_active) return;
+            const amt = parseFloat(r.amount);
+            if (r.frequency === 'monthly') totalMonthly += amt;
+            else if (r.frequency === 'weekly') totalMonthly += (amt * 52) / 12;
+            else if (r.frequency === 'yearly') totalMonthly += amt / 12;
+        });
+        
+        const formattedTotal = CurrencyHelper.format(totalMonthly);
+
         this.innerHTML = `
             <style>
                 .recurring-header-card {

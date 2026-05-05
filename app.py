@@ -8,7 +8,6 @@ import functools
 from werkzeug.serving import run_simple
 from sqlalchemy import extract
 from subprocess import run, CalledProcessError
-from pathlib import Path
 import glob
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -68,6 +67,34 @@ class Expense(db.Model):
             "external_id": self.external_id,
             "merchant": self.merchant,
         }
+
+
+def parse_expense_date(value):
+    """Parse optional API date input.
+
+    Accepts YYYY-MM-DD or ISO datetime strings. Returns None when no date was
+    provided so existing default timestamp behaviour stays unchanged.
+    """
+    if not value:
+        return None
+    if isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            return None
+        if raw.endswith("Z"):
+            raw = raw[:-1] + "+00:00"
+        try:
+            if len(raw) == 10:
+                return datetime.strptime(raw, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            parsed = datetime.fromisoformat(raw)
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            return parsed
+        except ValueError as exc:
+            raise ValueError(
+                "Invalid date value; expected YYYY-MM-DD or ISO datetime"
+            ) from exc
+    raise ValueError("Invalid date value; expected string")
 
 
 class MerchantMapping(db.Model):
@@ -402,11 +429,6 @@ def serve_bank():
     return "Bank Sync is currently disabled", 404
 
 
-@app.route("/unclassified")
-def serve_unclassified():
-    return send_from_directory("static", "unclassified.html")
-
-
 @app.route("/trends")
 def serve_trends():
     return send_from_directory("static", "trends.html")
@@ -456,7 +478,14 @@ def handle_expenses():
                     400,
                 )
 
+            try:
+                expense_date = parse_expense_date(data.get("date"))
+            except ValueError as exc:
+                return jsonify({"error": str(exc)}), 400
+
             expense = Expense(amount=amount, category=category, description=description)
+            if expense_date is not None:
+                expense.date = expense_date
             db.session.add(expense)
             db.session.commit()
             logger.info(f"Added new expense: ${amount:.2f} ({category})")
@@ -533,24 +562,30 @@ CATEGORIES = {
     "transport": {"label": "Transport", "color": "#6366f1", "icon": "directions_car"},
     "car": {"label": "Car", "color": "#64748b", "icon": "directions_car"},
     "health": {"label": "Health", "color": "#14b8a6", "icon": "favorite"},
-    "cobeetrans": {"label": "Cobee Trans", "color": "#7c3aed", "icon": "directions_bus"},
+    "cobeetrans": {
+        "label": "Cobee Trans",
+        "color": "#7c3aed",
+        "icon": "directions_bus",
+    },
     "cobeefood": {"label": "Cobee Food", "color": "#f97316", "icon": "local_cafe"},
     "other": {"label": "Other", "color": "#94a3b8", "icon": "more_horiz"},
 }
+
 
 @app.route("/api/categories", methods=["GET"])
 def get_categories():
     """Return all available expense categories and their metadata."""
     return jsonify(CATEGORIES)
 
+
 @app.route("/api/trends", methods=["GET"])
 def get_trends():
     try:
         from datetime import datetime, timedelta
         from sqlalchemy import func
-        
+
         now = datetime.now()
-        
+
         # Calculate monthly totals for the last 4 months
         monthly_data = []
         for i in range(4):
@@ -560,24 +595,30 @@ def get_trends():
             if target_month <= 0:
                 target_month += 12
                 target_year -= 1
-                
+
             target_month_str = f"{target_year}-{target_month:02d}"
-            
-            total = db.session.query(func.sum(Expense.amount)).filter(
-                func.strftime('%Y-%m', Expense.date) == target_month_str
-            ).scalar() or 0.0
-            
-            monthly_data.insert(0, {
-                "label": f"{target_month:02d}/{str(target_year)[-2:]}",
-                "total": float(total)
-            })
-            
+
+            total = (
+                db.session.query(func.sum(Expense.amount))
+                .filter(func.strftime("%Y-%m", Expense.date) == target_month_str)
+                .scalar()
+                or 0.0
+            )
+
+            monthly_data.insert(
+                0,
+                {
+                    "label": f"{target_month:02d}/{str(target_year)[-2:]}",
+                    "total": float(total),
+                },
+            )
+
         # Calculate weekly totals for the last 4 weeks (rolling 7-day windows)
         weekly_data = []
         for i in range(4):
-            end_date = now - timedelta(days=i*7)
+            end_date = now - timedelta(days=i * 7)
             start_date = end_date - timedelta(days=6)
-            
+
             # Format label
             if i == 0:
                 label = "This Week"
@@ -585,29 +626,26 @@ def get_trends():
                 label = "Last Week"
             else:
                 label = f"{i} Weeks Ago"
-                
+
             # SQLite datetime comparison
             # Need to format dates to match SQLite storage string format (YYYY-MM-DD)
             start_str = start_date.strftime("%Y-%m-%d 00:00:00")
             end_str = end_date.strftime("%Y-%m-%d 23:59:59")
-            
-            total = db.session.query(func.sum(Expense.amount)).filter(
-                Expense.date >= start_str,
-                Expense.date <= end_str
-            ).scalar() or 0.0
-            
-            weekly_data.insert(0, {
-                "label": label,
-                "total": float(total)
-            })
-            
-        return jsonify({
-            "weekly": weekly_data,
-            "monthly": monthly_data
-        })
+
+            total = (
+                db.session.query(func.sum(Expense.amount))
+                .filter(Expense.date >= start_str, Expense.date <= end_str)
+                .scalar()
+                or 0.0
+            )
+
+            weekly_data.insert(0, {"label": label, "total": float(total)})
+
+        return jsonify({"weekly": weekly_data, "monthly": monthly_data})
     except Exception as e:
         logger.error(f"Error fetching trends: {e}")
         return jsonify({"error": "Server error fetching trends"}), 500
+
 
 @app.route("/api/months", methods=["GET"])
 def get_months():
@@ -673,6 +711,13 @@ def update_expense(expense_id):
         expense.amount = amount
         expense.category = category
         expense.description = description
+        if "date" in data:
+            try:
+                expense_date = parse_expense_date(data.get("date"))
+            except ValueError as exc:
+                return jsonify({"error": str(exc)}), 400
+            if expense_date is not None:
+                expense.date = expense_date
 
         db.session.commit()
         logger.info(f"Updated expense {expense_id}: ${amount:.2f} ({category})")
@@ -706,28 +751,34 @@ def backup_database():
 @app.route("/api/backup/download", methods=["GET"])
 def download_backup():
     try:
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        script_path = os.path.join(current_dir, "scripts", "database", "export_csv.py")
+
         run(
-            ["python3", "scripts/database/export_csv.py"],
+            ["python3", script_path],
+            cwd=current_dir,
             capture_output=True,
             text=True,
             check=True,
         )
     except CalledProcessError as e:
         return jsonify({"success": False, "error": e.stderr.strip() or str(e)}), 500
-    export_dir = Path("scripts/database/exports")
+
+    export_dir = os.path.join(current_dir, "scripts", "database", "exports")
     files = sorted(
-        glob.glob(str(export_dir / "expenses_*.csv")),
-        key=lambda x: Path(x).stat().st_mtime,
+        glob.glob(os.path.join(export_dir, "expenses_*.csv")),
+        key=lambda x: os.path.getmtime(x),
         reverse=True,
     )
+
     if not files:
         return jsonify({"success": False, "error": "No backup file found."}), 500
+
     latest_file = files[0]
+    filename = os.path.basename(latest_file)
+
     return send_file(
-        latest_file,
-        as_attachment=True,
-        download_name=Path(latest_file).name,
-        mimetype="text/csv",
+        latest_file, as_attachment=True, download_name=filename, mimetype="text/csv"
     )
 
 

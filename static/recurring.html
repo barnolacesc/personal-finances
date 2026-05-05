@@ -46,204 +46,32 @@
         <recurring-list></recurring-list>
     </div>
 
-    <!-- Modal for adding/editing recurring expenses -->
-    <div class="modal" id="recurring-modal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title font-headline" id="recurring-modal-title">Add Recurring Expense</h5>
-                    <button type="button" class="btn-close" id="modal-close-btn"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="recurring-form">
-                        <div class="mb-3">
-                            <label for="recurring-amount" class="form-label">Amount</label>
-                            <input type="number" class="form-control" id="recurring-amount" step="0.01" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="recurring-category" class="form-label">Category</label>
-                            <select class="form-select" id="recurring-category" required></select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="recurring-description" class="form-label">Description</label>
-                            <input type="text" class="form-control" id="recurring-description" maxlength="50" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="recurring-frequency" class="form-label">Frequency</label>
-                            <select class="form-select" id="recurring-frequency" required>
-                                <option value="monthly">Monthly</option>
-                                <option value="weekly">Weekly</option>
-                                <option value="yearly">Yearly</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="recurring-day" class="form-label">Day of Month (1-31)</label>
-                            <input type="number" class="form-control" id="recurring-day" min="1" max="31" placeholder="e.g., 1 for 1st of month">
-                        </div>
-                        <div class="mb-3">
-                            <label for="recurring-start-date" class="form-label">Start Date</label>
-                            <input type="date" class="form-control" id="recurring-start-date" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="recurring-end-date" class="form-label">End Date (Optional)</label>
-                            <input type="date" class="form-control" id="recurring-end-date">
-                            <div class="form-text">Leave empty for no end date</div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" id="modal-cancel-btn">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="recurring-submit-btn">Save</button>
-                </div>
-            </div>
-        </div>
-    </div>
+
 
     <!-- Core Modules -->
-    <script type="module" src="/static/components/config.js"></script>
-    <script type="module" src="/static/components/api-service.js"></script>
-    <script type="module" src="/static/components/event-manager.js"></script>
+    <script type="module" src="/static/components/config.js?v=1778016442"></script>
+    <script type="module" src="/static/components/api-service.js?v=1778016442"></script>
+    <script type="module" src="/static/components/event-manager.js?v=1778016442"></script>
 
     <!-- Custom Components -->
-    <script src="/static/components/navbar.js"></script>
-    <script type="module" src="/static/components/toast.js"></script>
-    <script type="module" src="/static/components/recurring-list.js"></script>
+    <script src="/static/components/navbar.js?v=1778016442"></script>
+    <script type="module" src="/static/components/toast.js?v=1778016442"></script>
+    <script type="module" src="/static/components/recurring-list.js?v=1778016442"></script>
+    <script type="module" src="/static/components/recurring-form.js?v=1778016442"></script>
+    <recurring-form></recurring-form>
+
 
     <script>
-        // Custom modal management (no Bootstrap)
-        let currentMode = 'create';
-        let currentRecurringId = null;
-
-        function showModal() {
-            document.getElementById('recurring-modal').classList.add('show');
-        }
-
-        function hideModal() {
-            document.getElementById('recurring-modal').classList.remove('show');
-        }
-
-        document.addEventListener('DOMContentLoaded', async () => {
-            // Close buttons
-            document.getElementById('modal-close-btn').addEventListener('click', hideModal);
-            document.getElementById('modal-cancel-btn').addEventListener('click', hideModal);
-
-            // Close on backdrop click
-            document.getElementById('recurring-modal').addEventListener('click', (e) => {
-                if (e.target === e.currentTarget) hideModal();
-            });
-
-            // Populate categories
-            const { CategoryHelper } = await import('/static/components/config.js');
-            const categorySelect = document.getElementById('recurring-category');
-            CategoryHelper.getAllCategories().forEach(key => {
-                const cat = CategoryHelper.getCategoryData(key);
-                const option = document.createElement('option');
-                option.value = key;
-                option.textContent = cat.label;
-                categorySelect.appendChild(option);
-            });
-
-            // Handle add button
-            document.getElementById('add-recurring-btn').addEventListener('click', () => {
-                currentMode = 'create';
-                currentRecurringId = null;
-                document.getElementById('recurring-modal-title').textContent = 'Add Recurring Expense';
-                document.getElementById('recurring-form').reset();
-                document.getElementById('recurring-start-date').value = new Date().toISOString().split('T')[0];
-                showModal();
-            });
-
-            // Handle form submission
-            document.getElementById('recurring-submit-btn').addEventListener('click', async (e) => {
-                e.preventDefault();
-
-                const frequency = document.getElementById('recurring-frequency').value;
-                const dayValue = parseInt(document.getElementById('recurring-day').value) || null;
-
-                if (dayValue !== null) {
-                    if (frequency === 'weekly' && (dayValue < 1 || dayValue > 7)) {
-                        window.showToast('Day of week must be between 1 (Monday) and 7 (Sunday)', 'error');
-                        return;
-                    }
-                    if ((frequency === 'monthly' || frequency === 'yearly') && (dayValue < 1 || dayValue > 31)) {
-                        window.showToast('Day of month must be between 1 and 31', 'error');
-                        return;
-                    }
-                }
-
-                const formData = {
-                    amount: parseFloat(document.getElementById('recurring-amount').value),
-                    category: document.getElementById('recurring-category').value,
-                    description: document.getElementById('recurring-description').value,
-                    frequency: frequency,
-                    day_of_month: dayValue,
-                    start_date: document.getElementById('recurring-start-date').value,
-                    end_date: document.getElementById('recurring-end-date').value || null
-                };
-
-                try {
-                    const url = currentMode === 'create'
-                        ? '/api/recurring'
-                        : `/api/recurring/${currentRecurringId}`;
-                    const method = currentMode === 'create' ? 'POST' : 'PUT';
-
-                    const response = await fetch(url, {
-                        method,
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(formData)
+        document.addEventListener('DOMContentLoaded', () => {
+            const addBtn = document.getElementById('add-recurring-btn');
+            if (addBtn) {
+                addBtn.addEventListener('click', () => {
+                    const event = new CustomEvent('show-recurring-form', {
+                        detail: { mode: 'create' }
                     });
-
-                    if (!response.ok) throw new Error('Failed to save');
-
-                    window.showToast(currentMode === 'create' ? 'Recurring expense added!' : 'Recurring expense updated!', 'success');
-                    hideModal();
-
-                    const event = new CustomEvent(currentMode === 'create' ? 'recurringadded' : 'recurringupdated');
                     document.dispatchEvent(event);
-                } catch (error) {
-                    window.showToast('Error saving recurring expense', 'error');
-                }
-            });
-
-            // Update day field label based on frequency
-            document.getElementById('recurring-frequency').addEventListener('change', (e) => {
-                const dayField = document.getElementById('recurring-day');
-                const dayLabel = document.querySelector('label[for="recurring-day"]');
-                if (e.target.value === 'weekly') {
-                    dayLabel.textContent = 'Day of Week (1=Mon, 7=Sun)';
-                    dayField.max = '7';
-                    dayField.placeholder = 'e.g., 1 for Monday';
-                } else {
-                    dayLabel.textContent = 'Day of Month (1-31)';
-                    dayField.max = '31';
-                    dayField.placeholder = 'e.g., 1 for 1st of month';
-                }
-            });
-
-            // Listen for edit events from the list
-            document.addEventListener('show-recurring-form', (e) => {
-                if (e.detail.mode === 'edit' && e.detail.recurring) {
-                    currentMode = 'edit';
-                    const data = e.detail.recurring;
-                    currentRecurringId = data.id;
-
-                    document.getElementById('recurring-modal-title').textContent = 'Edit Recurring Expense';
-                    document.getElementById('recurring-amount').value = data.amount;
-                    document.getElementById('recurring-category').value = data.category;
-                    document.getElementById('recurring-description').value = data.description;
-                    document.getElementById('recurring-frequency').value = data.frequency;
-                    document.getElementById('recurring-day').value = data.day_of_month || '';
-
-                    if (data.start_date) {
-                        document.getElementById('recurring-start-date').value = new Date(data.start_date).toISOString().split('T')[0];
-                    }
-                    if (data.end_date) {
-                        document.getElementById('recurring-end-date').value = new Date(data.end_date).toISOString().split('T')[0];
-                    }
-
-                    showModal();
-                }
-            });
+                });
+            }
         });
     </script>
 </body>

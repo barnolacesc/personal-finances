@@ -17,6 +17,10 @@ class AddExpenseForm extends BaseComponent {
         this.setupEventListeners();
         if (this.editMode) {
             this.prefillForm();
+        } else {
+            // Set today's date by default for new expenses
+            const today = new Date().toISOString().split('T')[0];
+            this.querySelector('#date').value = today;
         }
     }
 
@@ -28,7 +32,8 @@ class AddExpenseForm extends BaseComponent {
             this.editData = {
                 amount: urlParams.get('amount'),
                 category: urlParams.get('category'),
-                description: urlParams.get('description')
+                description: urlParams.get('description'),
+                date: urlParams.get('date')
             };
         }
     }
@@ -61,6 +66,15 @@ class AddExpenseForm extends BaseComponent {
                         <option value="">Choose a category...</option>
                         ${categoryOptions}
                     </select>
+                </div>
+
+                                <div class="mb-3">
+                    <label for="date" class="form-label">Date *</label>
+                    <input type="date"
+                           class="form-control"
+                           id="date"
+                           name="date"
+                           required>
                 </div>
 
                 <div class="mb-4">
@@ -131,6 +145,14 @@ class AddExpenseForm extends BaseComponent {
             this.querySelector('#amount').value = this.editData.amount;
             this.querySelector('#category').value = this.editData.category;
             this.querySelector('#description').value = decodeURIComponent(this.editData.description);
+            
+            if (this.editData.date && this.editData.date !== 'undefined' && this.editData.date !== 'null') {
+                // Parse the date to YYYY-MM-DD for the date input
+                const d = new Date(this.editData.date);
+                if (!isNaN(d)) {
+                    this.querySelector('#date').value = d.toISOString().split('T')[0];
+                }
+            }
 
             const titleEl = document.getElementById('formTitle');
             const subtitleEl = document.getElementById('formSubtitle');
@@ -155,6 +177,7 @@ class AddExpenseForm extends BaseComponent {
         const amountStr = formData.get('amount');
         const category = formData.get('category');
         const description = formData.get('description');
+        const dateVal = formData.get('date');
 
         if (!amountStr) {
             window.showToast('Please enter an amount', 'error');
@@ -175,7 +198,8 @@ class AddExpenseForm extends BaseComponent {
         const data = {
             amount: CurrencyHelper.parseAmount(amountStr),
             category: category,
-            description: description
+            description: description,
+            date: dateVal
         };
 
         try {

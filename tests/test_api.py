@@ -21,6 +21,15 @@ def test_add_expense(client, sample_expense):
     assert "date" in data
 
 
+def test_add_expense_with_date(client, sample_expense):
+    """Test adding a new expense with an explicit date."""
+    payload = {**sample_expense, "date": "2026-04-30"}
+    response = client.post("/api/expenses", json=payload)
+    assert response.status_code == 201
+    data = response.get_json()
+    assert data["date"].startswith("2026-04-30")
+
+
 def test_add_expense_validation(client):
     """Test expense validation"""
     # Test missing required fields
@@ -81,6 +90,21 @@ def test_update_expense(client, test_expenses, clean_db):
     assert data["description"] == update_data["description"]
 
 
+def test_update_expense_with_date(client, test_expenses, clean_db):
+    """Test updating an expense date."""
+    expense = test_expenses[0]
+    update_data = {
+        "amount": 75.0,
+        "category": "Updated Category",
+        "description": "Updated Description",
+        "date": "2026-04-30",
+    }
+    response = client.put(f"/api/expenses/{expense.id}", json=update_data)
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["date"].startswith("2026-04-30")
+
+
 def test_delete_expense(client, test_expenses, clean_db):
     """Test deleting an expense"""
     expense = test_expenses[0]
@@ -135,12 +159,6 @@ def test_bank_page(client):
     """Test /bank page route (currently disabled)"""
     response = client.get("/bank")
     assert response.status_code == 404
-
-
-def test_unclassified_page(client):
-    """Test /unclassified page route"""
-    response = client.get("/unclassified")
-    assert response.status_code == 200
 
 
 def test_expenses_pagination(client, test_expenses, clean_db):

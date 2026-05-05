@@ -291,7 +291,7 @@ class CategoryChart extends BaseComponent {
     }
 
     editExpense(expense) {
-        const editUrl = `/add?edit=${expense.id}&amount=${expense.amount}&category=${expense.category}&description=${encodeURIComponent(expense.description)}`;
+        const editUrl = `/add?edit=${expense.id}&amount=${expense.amount}&category=${expense.category}&description=${encodeURIComponent(expense.description)}&date=${expense.date}`;
         window.location.href = editUrl;
     }
 
