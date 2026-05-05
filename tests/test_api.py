@@ -161,12 +161,6 @@ def test_bank_page(client):
     assert response.status_code == 404
 
 
-def test_unclassified_page(client):
-    """Test /unclassified page route"""
-    response = client.get("/unclassified")
-    assert response.status_code == 200
-
-
 def test_expenses_pagination(client, test_expenses, clean_db):
     """Test expense pagination"""
     response = client.get("/api/expenses?page=1&per_page=2")

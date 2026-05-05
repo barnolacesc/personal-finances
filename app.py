@@ -429,11 +429,6 @@ def serve_bank():
     return "Bank Sync is currently disabled", 404
 
 
-@app.route("/unclassified")
-def serve_unclassified():
-    return send_from_directory("static", "unclassified.html")
-
-
 @app.route("/trends")
 def serve_trends():
     return send_from_directory("static", "trends.html")

@@ -93,10 +93,7 @@ class NavBar extends HTMLElement {
                     <a class="vault-brand d-flex align-items-center" href="/" style="text-decoration: none;">
                         <span class="font-headline" style="font-size: 1.25rem; font-weight: 800; color: var(--primary-container); letter-spacing: -0.03em; text-transform: uppercase;">Vault</span>
                     </a>
-                    <a href="/unclassified" class="d-flex align-items-center gap-1" title="Unclassified Bank Transactions" style="color: var(--on-surface-variant); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; text-decoration: none; padding: 0.5rem; border-radius: 0.5rem; background: var(--surface-container-high);">
-                        <span class="material-symbols-outlined" style="font-size: 1.125rem;">category</span>
-                    </a>
-                </div>
+                    </div>
             </nav>
             <nav class="bottom-nav">
                 ${tabsHtml}
