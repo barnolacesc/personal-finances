@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+import calendar
 import os
 import json
 import logging
@@ -578,10 +579,118 @@ def get_categories():
     return jsonify(CATEGORIES)
 
 
+def _current_month_projection(now):
+    """Return a cheap month-end spending projection for the trends page."""
+    from sqlalchemy import func
+
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    month_days = calendar.monthrange(now.year, now.month)[1]
+    month_end = month_start.replace(day=month_days, hour=23, minute=59, second=59)
+    days_elapsed = max(now.day, 1)
+    days_remaining = max(month_days - now.day, 0)
+    current_month = f"{now.year}-{now.month:02d}"
+
+    current_total = (
+        db.session.query(func.sum(Expense.amount))
+        .filter(func.strftime("%Y-%m", Expense.date) == current_month)
+        .scalar()
+        or 0.0
+    )
+
+    previous_totals = []
+    for i in range(1, 4):
+        target_month = now.month - i
+        target_year = now.year
+        while target_month <= 0:
+            target_month += 12
+            target_year -= 1
+        target_month_str = f"{target_year}-{target_month:02d}"
+        total = (
+            db.session.query(func.sum(Expense.amount))
+            .filter(func.strftime("%Y-%m", Expense.date) == target_month_str)
+            .scalar()
+            or 0.0
+        )
+        previous_totals.append(float(total))
+
+    daily_average = float(current_total) / days_elapsed
+    pace_projection = daily_average * month_days
+
+    # Add only known monthly recurring payments that are still due this month.
+    remaining_recurring = 0.0
+    upcoming_recurring = []
+    recurring_expenses = RecurringExpense.query.filter(
+        RecurringExpense.is_active.is_(True),
+        RecurringExpense.frequency == "monthly",
+        RecurringExpense.day_of_month.isnot(None),
+        RecurringExpense.start_date <= month_end,
+    ).filter(
+        (RecurringExpense.end_date.is_(None))
+        | (RecurringExpense.end_date >= month_start)
+    ).all()
+
+    for recurring in recurring_expenses:
+        due_day = min(recurring.day_of_month, month_days)
+        due_date = month_start.replace(day=due_day)
+        if due_date.date() <= now.date():
+            continue
+        existing = Expense.query.filter(
+            Expense.amount == recurring.amount,
+            Expense.category == recurring.category,
+            Expense.description == recurring.description,
+            extract("year", Expense.date) == now.year,
+            extract("month", Expense.date) == now.month,
+            extract("day", Expense.date) == due_day,
+        ).first()
+        if existing:
+            continue
+        remaining_recurring += float(recurring.amount)
+        upcoming_recurring.append(
+            {
+                "description": recurring.description,
+                "amount": float(recurring.amount),
+                "day": due_day,
+            }
+        )
+
+    projected_total = pace_projection + remaining_recurring
+    previous_average = (
+        sum(previous_totals) / len(previous_totals) if previous_totals else 0.0
+    )
+    delta_vs_average = (
+        ((projected_total - previous_average) / previous_average) * 100
+        if previous_average > 0
+        else None
+    )
+
+    if days_elapsed < 7:
+        confidence = "low"
+    elif days_elapsed < 15:
+        confidence = "medium"
+    else:
+        confidence = "high"
+
+    return {
+        "current_total": float(current_total),
+        "daily_average": float(daily_average),
+        "pace_projection": float(pace_projection),
+        "remaining_recurring": float(remaining_recurring),
+        "projected_total": float(projected_total),
+        "previous_month_total": previous_totals[0] if previous_totals else 0.0,
+        "previous_3_month_average": float(previous_average),
+        "delta_vs_average": delta_vs_average,
+        "days_elapsed": days_elapsed,
+        "days_remaining": days_remaining,
+        "month_days": month_days,
+        "confidence": confidence,
+        "upcoming_recurring": upcoming_recurring[:5],
+        "generated_at": now.isoformat(),
+    }
+
+
 @app.route("/api/trends", methods=["GET"])
 def get_trends():
     try:
-        from datetime import datetime, timedelta
         from sqlalchemy import func
 
         now = datetime.now()
@@ -641,7 +750,11 @@ def get_trends():
 
             weekly_data.insert(0, {"label": label, "total": float(total)})
 
-        return jsonify({"weekly": weekly_data, "monthly": monthly_data})
+        projection = _current_month_projection(now)
+
+        return jsonify(
+            {"weekly": weekly_data, "monthly": monthly_data, "projection": projection}
+        )
     except Exception as e:
         logger.error(f"Error fetching trends: {e}")
         return jsonify({"error": "Server error fetching trends"}), 500

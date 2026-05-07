@@ -149,6 +149,26 @@ def test_trends_page(client):
     assert b"Vault" in response.data
 
 
+def test_trends_api_includes_month_projection(client):
+    """Trends API should include a lightweight month-end projection."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    response = client.post(
+        "/api/expenses",
+        json={"amount": 25.0, "category": "personal", "description": "Test", "date": today},
+    )
+    assert response.status_code == 201
+
+    response = client.get("/api/trends")
+    assert response.status_code == 200
+    data = response.get_json()
+    projection = data["projection"]
+
+    assert projection["current_total"] >= 25.0
+    assert projection["projected_total"] >= projection["current_total"]
+    assert projection["confidence"] in {"low", "medium", "high"}
+    assert "previous_3_month_average" in projection
+
+
 def test_recurring_page(client):
     """Test /recurring page route"""
     response = client.get("/recurring")

@@ -147,6 +147,8 @@ class SpendingTrends extends BaseComponent {
         this.querySelector('#dailyAvg').textContent = CurrencyHelper.format(dailyAvg);
         this.querySelector('#projected').textContent = CurrencyHelper.format(projected);
 
+        this.renderMonthProjection();
+
         // Category velocity cards
         const velocityEl = this.querySelector('#categoryVelocity');
         if (categoryVelocity.length === 0) {
@@ -177,6 +179,61 @@ class SpendingTrends extends BaseComponent {
 
         // Smart alert
         this.renderSmartAlert();
+    }
+
+    renderMonthProjection() {
+        const projection = this.serverData?.projection;
+        const projectionEl = this.querySelector('#monthProjection');
+        if (!projection || !projectionEl) return;
+
+        const delta = projection.delta_vs_average;
+        const deltaText = delta === null || delta === undefined
+            ? 'No previous baseline yet'
+            : `${delta > 0 ? '+' : ''}${delta.toFixed(0)}% vs 3-month avg`;
+        const deltaClass = delta > 0 ? 'delta-up' : 'delta-down';
+        const recurringText = projection.remaining_recurring > 0
+            ? `${CurrencyHelper.format(projection.remaining_recurring)} fixed still due`
+            : 'No fixed charges pending';
+        const upcoming = projection.upcoming_recurring || [];
+
+        projectionEl.innerHTML = `
+            <div class="projection-header">
+                <div>
+                    <div class="projection-kicker">Month-end prediction</div>
+                    <div class="projection-total">
+                        ${CurrencyHelper.format(projection.projected_total)}
+                    </div>
+                </div>
+                <span class="projection-confidence confidence-${projection.confidence}">
+                    ${projection.confidence}
+                </span>
+            </div>
+            <div class="projection-grid">
+                <div>
+                    <span class="projection-label">Spent so far</span>
+                    <strong>${CurrencyHelper.format(projection.current_total)}</strong>
+                </div>
+                <div>
+                    <span class="projection-label">Daily pace</span>
+                    <strong>${CurrencyHelper.format(projection.daily_average)}</strong>
+                </div>
+                <div>
+                    <span class="projection-label">Remaining fixed</span>
+                    <strong>${recurringText}</strong>
+                </div>
+                <div>
+                    <span class="projection-label">Baseline</span>
+                    <strong class="${deltaClass}">${deltaText}</strong>
+                </div>
+            </div>
+            ${upcoming.length ? `
+                <div class="projection-upcoming">
+                    ${upcoming.map(item => `
+                        <span>${item.day} · ${item.description} · ${CurrencyHelper.format(item.amount)}</span>
+                    `).join('')}
+                </div>
+            ` : ''}
+        `;
     }
 
     computeCategoryVelocity() {
@@ -414,6 +471,80 @@ class SpendingTrends extends BaseComponent {
                     color: var(--on-surface);
                 }
 
+                /* Month projection */
+                .projection-card {
+                    background: linear-gradient(135deg, var(--surface-container), var(--surface-container-low));
+                    border: 1px solid rgba(255, 140, 0, 0.18);
+                    border-radius: 1rem;
+                    padding: 1.25rem;
+                    margin-bottom: 1rem;
+                }
+                .projection-header {
+                    display: flex;
+                    align-items: flex-start;
+                    justify-content: space-between;
+                    gap: 1rem;
+                    margin-bottom: 1rem;
+                }
+                .projection-kicker {
+                    font-size: 0.625rem;
+                    font-weight: 800;
+                    text-transform: uppercase;
+                    letter-spacing: 0.14em;
+                    color: var(--on-surface-variant);
+                    margin-bottom: 0.25rem;
+                }
+                .projection-total {
+                    font-family: 'Manrope', sans-serif;
+                    font-size: 1.875rem;
+                    font-weight: 900;
+                    color: var(--primary);
+                }
+                .projection-confidence {
+                    font-size: 0.5625rem;
+                    font-weight: 900;
+                    text-transform: uppercase;
+                    letter-spacing: 0.12em;
+                    border-radius: 999px;
+                    padding: 0.35rem 0.6rem;
+                    background: var(--surface-container-highest);
+                    color: var(--on-surface-variant);
+                }
+                .confidence-high { color: var(--tertiary); }
+                .confidence-medium { color: var(--primary); }
+                .confidence-low { color: var(--error); }
+                .projection-grid {
+                    display: grid;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    gap: 0.75rem;
+                }
+                .projection-grid > div {
+                    background: var(--surface-container-low);
+                    border-radius: 0.75rem;
+                    padding: 0.8rem;
+                }
+                .projection-label {
+                    display: block;
+                    font-size: 0.5625rem;
+                    font-weight: 800;
+                    text-transform: uppercase;
+                    letter-spacing: 0.08em;
+                    color: var(--outline);
+                    margin-bottom: 0.25rem;
+                }
+                .projection-grid strong {
+                    font-size: 0.8125rem;
+                    color: var(--on-surface);
+                }
+                .projection-upcoming {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.25rem;
+                    margin-top: 0.85rem;
+                    color: var(--on-surface-variant);
+                    font-size: 0.75rem;
+                }
+
                 /* Category velocity */
                 .velocity-section-title {
                     font-size: 0.625rem;
@@ -551,6 +682,9 @@ class SpendingTrends extends BaseComponent {
                     <div class="stat-value" id="projected">${CurrencyHelper.format(0)}</div>
                 </div>
             </div>
+
+            <!-- Month Projection -->
+            <div class="projection-card" id="monthProjection"></div>
 
             <!-- Category Velocity -->
             <div class="velocity-section-title">Category Velocity</div>
