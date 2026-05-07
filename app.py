@@ -6,7 +6,8 @@ import json
 import logging
 import functools
 from werkzeug.serving import run_simple
-from sqlalchemy import extract
+from sqlalchemy import extract, or_
+from sqlalchemy.exc import IntegrityError
 from subprocess import run, CalledProcessError
 import glob
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -203,8 +204,18 @@ except Exception as e:
 
 
 # Recurring expense application logic
+def recurring_expense_external_id(recurring, applied_date):
+    """Build the stable idempotency key for one recurring expense occurrence."""
+    return f"recurring:{recurring.id}:{applied_date.date().isoformat()}"
+
+
 def apply_due_recurring_expenses():
-    """Apply recurring expenses that are due today."""
+    """Apply recurring expenses that are due today.
+
+    The scheduler can be started by more than one app process. Use a deterministic
+    external_id per recurring occurrence so concurrent runs cannot insert the same
+    generated expense twice.
+    """
     with app.app_context():
         try:
             today = datetime.now(timezone.utc).replace(
@@ -227,36 +238,53 @@ def apply_due_recurring_expenses():
 
             applied_count = 0
             for recurring in recurring_expenses:
-                if is_due_today(recurring, today):
-                    # Check for duplicate
-                    existing = Expense.query.filter(
-                        Expense.amount == recurring.amount,
-                        Expense.category == recurring.category,
-                        Expense.description == recurring.description,
-                        extract("year", Expense.date) == today.year,
-                        extract("month", Expense.date) == today.month,
-                        extract("day", Expense.date) == today.day,
-                    ).first()
+                if not is_due_today(recurring, today):
+                    continue
 
-                    if not existing:
-                        # Create new expense
-                        expense = Expense(
-                            amount=recurring.amount,
-                            category=recurring.category,
-                            description=recurring.description,
-                            date=today,
-                        )
-                        db.session.add(expense)
-                        recurring.last_applied_date = today
-                        applied_count += 1
-                        logger.info(f"Applied recurring: {recurring.description}")
-                    else:
-                        logger.info(f"Skipping duplicate: {recurring.description}")
+                external_id = recurring_expense_external_id(recurring, today)
+
+                # Check for duplicate. external_id handles generated expenses going
+                # forward; the amount/category/description/date clause protects
+                # older rows created before recurring expenses had idempotency keys.
+                existing = Expense.query.filter(
+                    or_(
+                        Expense.external_id == external_id,
+                        (Expense.amount == recurring.amount)
+                        & (Expense.category == recurring.category)
+                        & (Expense.description == recurring.description)
+                        & (extract("year", Expense.date) == today.year)
+                        & (extract("month", Expense.date) == today.month)
+                        & (extract("day", Expense.date) == today.day),
+                    )
+                ).first()
+
+                if existing:
+                    recurring.last_applied_date = today
+                    logger.info(f"Skipping duplicate: {recurring.description}")
+                    continue
+
+                # Create new expense
+                expense = Expense(
+                    amount=recurring.amount,
+                    category=recurring.category,
+                    description=recurring.description,
+                    date=today,
+                    source="recurring",
+                    external_id=external_id,
+                )
+                db.session.add(expense)
+                recurring.last_applied_date = today
+                applied_count += 1
+                logger.info(f"Applied recurring: {recurring.description}")
 
             db.session.commit()
             logger.info(f"Applied {applied_count} recurring expenses")
             return applied_count
 
+        except IntegrityError as e:
+            logger.warning(f"Recurring expense already applied concurrently: {e}")
+            db.session.rollback()
+            return 0
         except Exception as e:
             logger.error(f"Error applying recurring expenses: {e}")
             db.session.rollback()

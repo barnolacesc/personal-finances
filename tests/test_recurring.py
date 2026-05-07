@@ -7,6 +7,7 @@ from app import (
     Expense,
     apply_due_recurring_expenses,
     is_due_today,
+    recurring_expense_external_id,
 )
 
 
@@ -274,6 +275,73 @@ def test_no_duplicate_expenses(client):
         # Verify only one expense exists
         expenses = Expense.query.filter_by(description="Monthly Rent").all()
         assert len(expenses) == 1
+
+
+def test_recurring_expense_gets_stable_external_id(client):
+    """Generated recurring expenses get an idempotency key."""
+    with app.app_context():
+        today = datetime.now(timezone.utc).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+
+        recurring = RecurringExpense(
+            amount=0.99,
+            category="software",
+            description="iCloud Plus",
+            frequency="monthly",
+            day_of_month=today.day,
+            start_date=today - timedelta(days=30),
+            is_active=True,
+            last_applied_date=None,
+        )
+        db.session.add(recurring)
+        db.session.commit()
+
+        count = apply_due_recurring_expenses()
+        assert count == 1
+
+        expense = Expense.query.filter_by(description="iCloud Plus").one()
+        assert expense.source == "recurring"
+        assert expense.external_id == recurring_expense_external_id(recurring, today)
+
+
+def test_existing_duplicate_marks_recurring_as_applied(client):
+    """Legacy duplicate detection should advance last_applied_date.
+
+    Without this, a pre-existing row for today's recurring expense stayed pending
+    forever and manual/scheduler re-runs kept trying to apply it.
+    """
+    with app.app_context():
+        today = datetime.now(timezone.utc).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+
+        recurring = RecurringExpense(
+            amount=0.99,
+            category="software",
+            description="iCloud Plus",
+            frequency="monthly",
+            day_of_month=today.day,
+            start_date=today - timedelta(days=30),
+            is_active=True,
+            last_applied_date=None,
+        )
+        existing_expense = Expense(
+            amount=0.99,
+            category="software",
+            description="iCloud Plus",
+            date=today,
+        )
+        db.session.add_all([recurring, existing_expense])
+        db.session.commit()
+
+        count = apply_due_recurring_expenses()
+        assert count == 0
+
+        expenses = Expense.query.filter_by(description="iCloud Plus").all()
+        assert len(expenses) == 1
+        assert recurring.last_applied_date == today
+        assert is_due_today(recurring, today) is False
 
 
 def test_inactive_recurring_not_applied(client):
