@@ -213,9 +213,7 @@ def test_is_due_today_weekly():
 def test_apply_due_recurring_expenses(client):
     """Test applying due recurring expenses."""
     with app.app_context():
-        today = datetime.now(timezone.utc).replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
         # Create a due recurring expense
         recurring = RecurringExpense(
@@ -245,9 +243,7 @@ def test_apply_due_recurring_expenses(client):
 def test_no_duplicate_expenses(client):
     """Test that duplicate expenses are not created."""
     with app.app_context():
-        today = datetime.now(timezone.utc).replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
         # Create a recurring expense
         recurring = RecurringExpense(
@@ -309,9 +305,7 @@ def test_inactive_recurring_not_applied(client):
 def test_manual_apply_endpoint(client):
     """Test the manual apply endpoint."""
     with app.app_context():
-        today = datetime.now(timezone.utc).replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
         # Create a due recurring expense
         recurring = RecurringExpense(
