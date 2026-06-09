@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+
 import os
 import json
 import logging
@@ -207,9 +208,7 @@ def apply_due_recurring_expenses():
     """Apply recurring expenses that are due today."""
     with app.app_context():
         try:
-            today = datetime.now(timezone.utc).replace(
-                hour=0, minute=0, second=0, microsecond=0
-            )
+            today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
             logger.info(f"Checking for due recurring expenses on {today.date()}")
 
             # Query active recurring expenses
@@ -228,14 +227,14 @@ def apply_due_recurring_expenses():
             applied_count = 0
             for recurring in recurring_expenses:
                 if is_due_today(recurring, today):
-                    # Check for duplicate
+                    # Date-range dedup: reliable with SQLite naive datetime strings
+                    next_day = today + timedelta(days=1)
                     existing = Expense.query.filter(
                         Expense.amount == recurring.amount,
                         Expense.category == recurring.category,
                         Expense.description == recurring.description,
-                        extract("year", Expense.date) == today.year,
-                        extract("month", Expense.date) == today.month,
-                        extract("day", Expense.date) == today.day,
+                        Expense.date >= today,
+                        Expense.date < next_day,
                     ).first()
 
                     if not existing:
@@ -264,14 +263,18 @@ def apply_due_recurring_expenses():
 
 
 def is_due_today(recurring, today):
-    """Check if a recurring expense is due today."""
-    # If never applied, check if start_date is today or earlier
-    if recurring.last_applied_date is None:
-        return True
+    """Check if a recurring expense is due today.
 
-    last_applied = recurring.last_applied_date.replace(
-        hour=0, minute=0, second=0, microsecond=0
-    )
+    `today` must be a naive datetime with time zeroed to midnight.
+    """
+    if recurring.last_applied_date is None:
+        # Far-past sentinel: let the frequency checks decide based on due day,
+        # instead of firing unconditionally on first boot.
+        last_applied = today.replace(year=2000, month=1, day=1)
+    else:
+        last_applied = recurring.last_applied_date.replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
 
     if recurring.frequency == "monthly":
         # Due if it's the specified day of month and not applied this month
