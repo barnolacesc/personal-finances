@@ -213,9 +213,7 @@ def test_is_due_today_weekly():
 def test_apply_due_recurring_expenses(client):
     """Test applying due recurring expenses."""
     with app.app_context():
-        today = datetime.now(timezone.utc).replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
         # Create a due recurring expense
         recurring = RecurringExpense(
@@ -245,9 +243,7 @@ def test_apply_due_recurring_expenses(client):
 def test_no_duplicate_expenses(client):
     """Test that duplicate expenses are not created."""
     with app.app_context():
-        today = datetime.now(timezone.utc).replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
         # Create a recurring expense
         recurring = RecurringExpense(
@@ -309,9 +305,7 @@ def test_inactive_recurring_not_applied(client):
 def test_manual_apply_endpoint(client):
     """Test the manual apply endpoint."""
     with app.app_context():
-        today = datetime.now(timezone.utc).replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
         # Create a due recurring expense
         recurring = RecurringExpense(
@@ -333,6 +327,32 @@ def test_manual_apply_endpoint(client):
     json_data = response.get_json()
     assert json_data["success"] is True
     assert json_data["applied"] == 1
+
+
+def test_never_applied_recurring_only_fires_on_correct_day(client):
+    """A never-applied monthly recurring should NOT fire on the wrong day of month."""
+    with app.app_context():
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        wrong_day = (today.day % 28) + 1  # guaranteed different from today
+
+        recurring = RecurringExpense(
+            amount=99.0,
+            category="housing",
+            description="Rent wrong day",
+            frequency="monthly",
+            day_of_month=wrong_day,
+            start_date=today - timedelta(days=60),
+            is_active=True,
+            last_applied_date=None,
+        )
+        db.session.add(recurring)
+        db.session.commit()
+
+        count = apply_due_recurring_expenses()
+        assert count == 0, "Should not fire on wrong day even when never applied"
+
+        expenses = Expense.query.filter_by(description="Rent wrong day").all()
+        assert len(expenses) == 0
 
 
 def test_pending_recurring_endpoint(client):

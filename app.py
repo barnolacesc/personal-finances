@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+
 import os
 import json
 import logging
@@ -207,9 +208,7 @@ def apply_due_recurring_expenses():
     """Apply recurring expenses that are due today."""
     with app.app_context():
         try:
-            today = datetime.now(timezone.utc).replace(
-                hour=0, minute=0, second=0, microsecond=0
-            )
+            today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
             logger.info(f"Checking for due recurring expenses on {today.date()}")
 
             # Query active recurring expenses
@@ -228,14 +227,14 @@ def apply_due_recurring_expenses():
             applied_count = 0
             for recurring in recurring_expenses:
                 if is_due_today(recurring, today):
-                    # Check for duplicate
+                    # Date-range dedup: reliable with SQLite naive datetime strings
+                    next_day = today + timedelta(days=1)
                     existing = Expense.query.filter(
                         Expense.amount == recurring.amount,
                         Expense.category == recurring.category,
                         Expense.description == recurring.description,
-                        extract("year", Expense.date) == today.year,
-                        extract("month", Expense.date) == today.month,
-                        extract("day", Expense.date) == today.day,
+                        Expense.date >= today,
+                        Expense.date < next_day,
                     ).first()
 
                     if not existing:
@@ -264,14 +263,18 @@ def apply_due_recurring_expenses():
 
 
 def is_due_today(recurring, today):
-    """Check if a recurring expense is due today."""
-    # If never applied, check if start_date is today or earlier
-    if recurring.last_applied_date is None:
-        return True
+    """Check if a recurring expense is due today.
 
-    last_applied = recurring.last_applied_date.replace(
-        hour=0, minute=0, second=0, microsecond=0
-    )
+    `today` must be a naive datetime with time zeroed to midnight.
+    """
+    if recurring.last_applied_date is None:
+        # Far-past sentinel: let the frequency checks decide based on due day,
+        # instead of firing unconditionally on first boot.
+        last_applied = today.replace(year=2000, month=1, day=1)
+    else:
+        last_applied = recurring.last_applied_date.replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
 
     if recurring.frequency == "monthly":
         # Due if it's the specified day of month and not applied this month
@@ -581,65 +584,63 @@ def get_categories():
 @app.route("/api/trends", methods=["GET"])
 def get_trends():
     try:
-        from datetime import datetime, timedelta
+        import calendar
         from sqlalchemy import func
 
         now = datetime.now()
 
-        # Calculate monthly totals for the last 4 months
+        def period_data(start, end, include_top=False):
+            cat_rows = (
+                db.session.query(Expense.category, func.sum(Expense.amount))
+                .filter(Expense.date >= start, Expense.date <= end)
+                .group_by(Expense.category)
+                .all()
+            )
+            categories = {cat: float(total) for cat, total in cat_rows}
+            total = sum(categories.values())
+            result = {"total": total, "categories": categories}
+            if include_top:
+                top = (
+                    db.session.query(Expense)
+                    .filter(Expense.date >= start, Expense.date <= end)
+                    .order_by(Expense.amount.desc())
+                    .limit(5)
+                    .all()
+                )
+                result["top_expenses"] = [
+                    {
+                        "amount": float(e.amount),
+                        "category": e.category,
+                        "description": e.description,
+                        "date": e.date.strftime("%Y-%m-%d"),
+                    }
+                    for e in top
+                ]
+            return result
+
         monthly_data = []
         for i in range(4):
-            # Calculate the month and year for i months ago
             target_month = now.month - i
             target_year = now.year
             if target_month <= 0:
                 target_month += 12
                 target_year -= 1
+            label = f"{target_month:02d}/{str(target_year)[-2:]}"
+            last_day = calendar.monthrange(target_year, target_month)[1]
+            start_str = f"{target_year}-{target_month:02d}-01 00:00:00"
+            end_str = f"{target_year}-{target_month:02d}-{last_day:02d} 23:59:59"
+            data = period_data(start_str, end_str, include_top=(i == 0))
+            monthly_data.insert(0, {"label": label, **data})
 
-            target_month_str = f"{target_year}-{target_month:02d}"
-
-            total = (
-                db.session.query(func.sum(Expense.amount))
-                .filter(func.strftime("%Y-%m", Expense.date) == target_month_str)
-                .scalar()
-                or 0.0
-            )
-
-            monthly_data.insert(
-                0,
-                {
-                    "label": f"{target_month:02d}/{str(target_year)[-2:]}",
-                    "total": float(total),
-                },
-            )
-
-        # Calculate weekly totals for the last 4 weeks (rolling 7-day windows)
         weekly_data = []
+        labels = ["This Week", "Last Week", "2 Weeks Ago", "3 Weeks Ago"]
         for i in range(4):
             end_date = now - timedelta(days=i * 7)
             start_date = end_date - timedelta(days=6)
-
-            # Format label
-            if i == 0:
-                label = "This Week"
-            elif i == 1:
-                label = "Last Week"
-            else:
-                label = f"{i} Weeks Ago"
-
-            # SQLite datetime comparison
-            # Need to format dates to match SQLite storage string format (YYYY-MM-DD)
             start_str = start_date.strftime("%Y-%m-%d 00:00:00")
             end_str = end_date.strftime("%Y-%m-%d 23:59:59")
-
-            total = (
-                db.session.query(func.sum(Expense.amount))
-                .filter(Expense.date >= start_str, Expense.date <= end_str)
-                .scalar()
-                or 0.0
-            )
-
-            weekly_data.insert(0, {"label": label, "total": float(total)})
+            data = period_data(start_str, end_str, include_top=(i == 0))
+            weekly_data.insert(0, {"label": labels[i], **data})
 
         return jsonify({"weekly": weekly_data, "monthly": monthly_data})
     except Exception as e:

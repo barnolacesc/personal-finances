@@ -48,7 +48,7 @@ class SpendingTrends extends BaseComponent {
             if (chartContainer) {
                 chartContainer.innerHTML = '<div class="text-center py-5"><div class="spinner-border" role="status"></div></div>';
             }
-            
+
             // Fetch aggregated data directly from backend instead of calculating on client
             this.serverData = await ApiService.getTrends();
             this.computeTrends();
@@ -68,29 +68,29 @@ class SpendingTrends extends BaseComponent {
 
     computeWeekly() {
         if (!this.serverData || !this.serverData.weekly) return;
-        
-        const periods = this.serverData.weekly.map((week, index) => ({
+
+        this.periods = this.serverData.weekly.map((week, index) => ({
             label: index === 3 ? 'CURRENT' : week.label,
             total: week.total,
             isCurrent: index === 3,
-            expenses: []
+            categories: week.categories || {},
+            top_expenses: week.top_expenses || [],
         }));
-        
-        this.periods = periods;
+
         this.renderTrends();
     }
 
     computeMonthly() {
         if (!this.serverData || !this.serverData.monthly) return;
-        
-        const periods = this.serverData.monthly.map((month, index) => ({
+
+        this.periods = this.serverData.monthly.map((month, index) => ({
             label: index === 3 ? 'CURRENT' : month.label,
             total: month.total,
             isCurrent: index === 3,
-            expenses: []
+            categories: month.categories || {},
+            top_expenses: month.top_expenses || [],
         }));
-        
-        this.periods = periods;
+
         this.renderTrends();
     }
 
@@ -110,10 +110,10 @@ class SpendingTrends extends BaseComponent {
 
         // Compute daily avg and projected
         const currentPeriod = this.periods.find(p => p.isCurrent);
-        const daysInPeriod = this.mode === 'weekly' ? 7 : new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
-        const daysSoFar = this.mode === 'weekly'
-            ? Math.min(new Date().getDay() || 7, 7)
-            : new Date().getDate();
+        const daysInPeriod = this.mode === 'weekly'
+            ? 7
+            : new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+        const daysSoFar = this.mode === 'weekly' ? 7 : new Date().getDate();
         const dailyAvg = daysSoFar > 0 ? currentTotal / daysSoFar : 0;
         const projected = dailyAvg * daysInPeriod;
 
@@ -177,6 +177,9 @@ class SpendingTrends extends BaseComponent {
 
         // Smart alert
         this.renderSmartAlert();
+
+        // Top spends
+        this.renderTopSpends();
     }
 
     computeCategoryVelocity() {
@@ -185,26 +188,21 @@ class SpendingTrends extends BaseComponent {
         const current = this.periods[this.periods.length - 1];
         const prev = this.periods[this.periods.length - 2];
 
-        const currentByCategory = {};
-        const prevByCategory = {};
+        const currentByCategory = current.categories || {};
+        const prevByCategory = prev.categories || {};
 
-        current.expenses.forEach(exp => {
-            currentByCategory[exp.category] = (currentByCategory[exp.category] || 0) + parseFloat(exp.amount);
-        });
-        prev.expenses.forEach(exp => {
-            prevByCategory[exp.category] = (prevByCategory[exp.category] || 0) + parseFloat(exp.amount);
-        });
+        const allCats = new Set([
+            ...Object.keys(currentByCategory),
+            ...Object.keys(prevByCategory),
+        ]);
 
-        const allCats = new Set([...Object.keys(currentByCategory), ...Object.keys(prevByCategory)]);
         const results = [];
-
         allCats.forEach(cat => {
             const cur = currentByCategory[cat] || 0;
             const pre = prevByCategory[cat] || 0;
             if (cur === 0 && pre === 0) return;
 
             const delta = pre > 0 ? ((cur - pre) / pre) * 100 : (cur > 0 ? 100 : 0);
-
             results.push({
                 category: cat,
                 label: CategoryHelper.getCategoryLabel(cat),
@@ -212,16 +210,18 @@ class SpendingTrends extends BaseComponent {
                 color: CategoryHelper.getCategoryColor(cat),
                 current: cur,
                 previous: pre,
-                delta
+                delta,
             });
         });
 
-        return results.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).slice(0, 5);
+        return results
+            .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+            .slice(0, 5);
     }
 
     renderSmartAlert() {
         const alertEl = this.querySelector('#smartAlert');
-        if (this.periods.length < 2 || this.expenses.length < 5) {
+        if (this.periods.length < 2 || this.periods[this.periods.length - 1].total === 0) {
             alertEl.style.display = 'none';
             return;
         }
@@ -246,6 +246,52 @@ class SpendingTrends extends BaseComponent {
 
         alertEl.style.display = 'block';
         this.querySelector('#smartAlertText').textContent = message;
+    }
+
+    renderTopSpends() {
+        const el = this.querySelector('#topSpends');
+        if (!el) return;
+
+        const currentPeriod = this.periods.find(p => p.isCurrent);
+        const top = (currentPeriod && currentPeriod.top_expenses) || [];
+
+        if (top.length === 0) {
+            el.innerHTML = `
+                <div style="text-align: center; padding: 1.5rem; color: var(--outline); font-size: 0.8125rem;">
+                    Not enough data to show top spends
+                </div>
+            `;
+            return;
+        }
+
+        el.innerHTML = top.map(exp => {
+            const icon = CategoryHelper.getCategoryIcon(exp.category);
+            const color = CategoryHelper.getCategoryColor(exp.category);
+            const desc = exp.description.length > 28
+                ? exp.description.slice(0, 28) + '…'
+                : exp.description;
+            const date = new Date(exp.date + 'T00:00:00');
+            const dateStr = date.toLocaleDateString('default', { month: 'short', day: 'numeric' });
+
+            return `
+                <div class="velocity-card">
+                    <div class="velocity-left">
+                        <div class="velocity-icon" style="color: ${color};">
+                            <span class="material-symbols-outlined">${icon}</span>
+                        </div>
+                        <div>
+                            <div class="velocity-name">${desc}</div>
+                            <div class="velocity-sub">${dateStr}</div>
+                        </div>
+                    </div>
+                    <div class="velocity-right">
+                        <div class="velocity-delta" style="color: var(--on-surface);">
+                            ${CurrencyHelper.format(exp.amount)}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 
     render() {
@@ -555,6 +601,10 @@ class SpendingTrends extends BaseComponent {
             <!-- Category Velocity -->
             <div class="velocity-section-title">Category Velocity</div>
             <div id="categoryVelocity"></div>
+
+            <!-- Top Spends -->
+            <div class="velocity-section-title" style="margin-top: 1.25rem;">Top Spends</div>
+            <div id="topSpends"></div>
 
             <!-- Smart Alert -->
             <div class="smart-alert" id="smartAlert">

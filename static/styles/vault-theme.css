@@ -336,10 +336,9 @@ a:hover { color: var(--primary-fixed-dim); }
 /* Bottom nav */
 .bottom-nav {
     position: fixed;
-    bottom: 0;
+    bottom: env(safe-area-inset-bottom, 0px);
     left: 0;
     right: 0;
-    padding-bottom: env(safe-area-inset-bottom);
     background: rgba(14, 14, 14, 0.8);
     backdrop-filter: blur(var(--glass-blur));
     -webkit-backdrop-filter: blur(var(--glass-blur));
@@ -348,9 +347,25 @@ a:hover { color: var(--primary-fixed-dim); }
     display: flex;
     justify-content: space-around;
     align-items: center;
-    height: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+    height: var(--bottom-nav-height);
     padding-left: 0.5rem;
     padding-right: 0.5rem;
+    padding-bottom: 0;
+}
+
+/* Fills the safe-area gap below the nav with a matching background */
+.bottom-nav::after {
+    content: '';
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-bottom, 0px);
+    background: rgba(14, 14, 14, 0.8);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    z-index: 1029;
+    pointer-events: none;
 }
 
 .bottom-nav-item {
