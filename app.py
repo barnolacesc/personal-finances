@@ -584,65 +584,63 @@ def get_categories():
 @app.route("/api/trends", methods=["GET"])
 def get_trends():
     try:
-        from datetime import datetime, timedelta
+        import calendar
         from sqlalchemy import func
 
         now = datetime.now()
 
-        # Calculate monthly totals for the last 4 months
+        def period_data(start, end, include_top=False):
+            cat_rows = (
+                db.session.query(Expense.category, func.sum(Expense.amount))
+                .filter(Expense.date >= start, Expense.date <= end)
+                .group_by(Expense.category)
+                .all()
+            )
+            categories = {cat: float(total) for cat, total in cat_rows}
+            total = sum(categories.values())
+            result = {"total": total, "categories": categories}
+            if include_top:
+                top = (
+                    db.session.query(Expense)
+                    .filter(Expense.date >= start, Expense.date <= end)
+                    .order_by(Expense.amount.desc())
+                    .limit(5)
+                    .all()
+                )
+                result["top_expenses"] = [
+                    {
+                        "amount": float(e.amount),
+                        "category": e.category,
+                        "description": e.description,
+                        "date": e.date.strftime("%Y-%m-%d"),
+                    }
+                    for e in top
+                ]
+            return result
+
         monthly_data = []
         for i in range(4):
-            # Calculate the month and year for i months ago
             target_month = now.month - i
             target_year = now.year
             if target_month <= 0:
                 target_month += 12
                 target_year -= 1
+            label = f"{target_month:02d}/{str(target_year)[-2:]}"
+            last_day = calendar.monthrange(target_year, target_month)[1]
+            start_str = f"{target_year}-{target_month:02d}-01 00:00:00"
+            end_str = f"{target_year}-{target_month:02d}-{last_day:02d} 23:59:59"
+            data = period_data(start_str, end_str, include_top=(i == 0))
+            monthly_data.insert(0, {"label": label, **data})
 
-            target_month_str = f"{target_year}-{target_month:02d}"
-
-            total = (
-                db.session.query(func.sum(Expense.amount))
-                .filter(func.strftime("%Y-%m", Expense.date) == target_month_str)
-                .scalar()
-                or 0.0
-            )
-
-            monthly_data.insert(
-                0,
-                {
-                    "label": f"{target_month:02d}/{str(target_year)[-2:]}",
-                    "total": float(total),
-                },
-            )
-
-        # Calculate weekly totals for the last 4 weeks (rolling 7-day windows)
         weekly_data = []
+        labels = ["This Week", "Last Week", "2 Weeks Ago", "3 Weeks Ago"]
         for i in range(4):
             end_date = now - timedelta(days=i * 7)
             start_date = end_date - timedelta(days=6)
-
-            # Format label
-            if i == 0:
-                label = "This Week"
-            elif i == 1:
-                label = "Last Week"
-            else:
-                label = f"{i} Weeks Ago"
-
-            # SQLite datetime comparison
-            # Need to format dates to match SQLite storage string format (YYYY-MM-DD)
             start_str = start_date.strftime("%Y-%m-%d 00:00:00")
             end_str = end_date.strftime("%Y-%m-%d 23:59:59")
-
-            total = (
-                db.session.query(func.sum(Expense.amount))
-                .filter(Expense.date >= start_str, Expense.date <= end_str)
-                .scalar()
-                or 0.0
-            )
-
-            weekly_data.insert(0, {"label": label, "total": float(total)})
+            data = period_data(start_str, end_str, include_top=(i == 0))
+            weekly_data.insert(0, {"label": labels[i], **data})
 
         return jsonify({"weekly": weekly_data, "monthly": monthly_data})
     except Exception as e:

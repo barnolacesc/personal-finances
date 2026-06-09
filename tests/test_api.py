@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime
-from app import Expense
+from app import Expense, db
 
 
 @pytest.fixture(autouse=True)
@@ -193,3 +193,57 @@ def test_expense_validation(client):
     }
     response = client.post("/api/expenses", json=invalid_expense)
     assert response.status_code == 400
+
+
+def test_trends_includes_categories(client):
+    """GET /api/trends includes per-category totals for each period."""
+    with client.application.app_context():
+        today = datetime.now().replace(hour=12, minute=0, second=0, microsecond=0)
+        db.session.add(
+            Expense(
+                amount=50.0,
+                category="food_drink",
+                description="test",
+                date=today,
+            )
+        )
+        db.session.commit()
+
+    resp = client.get("/api/trends")
+    assert resp.status_code == 200
+    data = resp.get_json()
+
+    for period in data["weekly"]:
+        assert "categories" in period
+        assert isinstance(period["categories"], dict)
+    for period in data["monthly"]:
+        assert "categories" in period
+
+    assert "top_expenses" in data["weekly"][3]
+    assert isinstance(data["weekly"][3]["top_expenses"], list)
+    assert "top_expenses" in data["monthly"][3]
+
+
+def test_trends_top_expenses_sorted_by_amount(client):
+    """Current period top_expenses are ordered by amount descending, max 5."""
+    with client.application.app_context():
+        today = datetime.now().replace(hour=12, minute=0, second=0, microsecond=0)
+        for amount in [10.0, 50.0, 30.0, 80.0, 20.0, 60.0]:
+            db.session.add(
+                Expense(
+                    amount=amount,
+                    category="food_drink",
+                    description=f"expense {amount}",
+                    date=today,
+                )
+            )
+        db.session.commit()
+
+    resp = client.get("/api/trends")
+    data = resp.get_json()
+    top = data["weekly"][3]["top_expenses"]
+
+    assert len(top) <= 5
+    amounts = [e["amount"] for e in top]
+    assert amounts == sorted(amounts, reverse=True)
+    assert top[0]["amount"] == 80.0
