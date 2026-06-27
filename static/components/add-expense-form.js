@@ -55,7 +55,7 @@ class AddExpenseForm extends BaseComponent {
                                name="amount"
                                inputmode="decimal"
                                placeholder="0.00"
-                               style="font-family: 'Manrope', sans-serif; font-size: 2rem; font-weight: 800;"
+                               style="font-family: 'Manrope', sans-serif; font-size: 2rem; font-weight: 800; font-variant-numeric: tabular-nums;"
                                required>
                     </div>
                 </div>
@@ -117,7 +117,7 @@ class AddExpenseForm extends BaseComponent {
             e.preventDefault();
             this.handleSubmit(e);
         });
-        
+
         const submitBtn = this.querySelector('#submitBtn');
         this.addEventListenerWithCleanup(submitBtn, 'click', (e) => {
             e.preventDefault();
@@ -145,7 +145,7 @@ class AddExpenseForm extends BaseComponent {
             this.querySelector('#amount').value = this.editData.amount;
             this.querySelector('#category').value = this.editData.category;
             this.querySelector('#description').value = decodeURIComponent(this.editData.description);
-            
+
             if (this.editData.date && this.editData.date !== 'undefined' && this.editData.date !== 'null') {
                 // Parse the date to YYYY-MM-DD for the date input
                 const d = new Date(this.editData.date);
@@ -302,7 +302,7 @@ class AddExpenseForm extends BaseComponent {
             <div class="card-vault" style="text-align: left;">
                 <div class="d-flex justify-content-between mb-2">
                     <span class="text-muted">Amount</span>
-                    <span class="fw-bold" style="color: var(--primary);">${CurrencyHelper.format(expense.amount)}</span>
+                    <span class="fw-bold tabular-nums" style="color: var(--primary);">${CurrencyHelper.format(expense.amount)}</span>
                 </div>
                 <div class="d-flex justify-content-between mb-2">
                     <span class="text-muted">Category</span>

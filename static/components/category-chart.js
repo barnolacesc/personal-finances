@@ -408,6 +408,7 @@ class CategoryChart extends BaseComponent {
                     font-size: 0.8125rem;
                     color: var(--on-surface);
                     white-space: nowrap;
+                    font-variant-numeric: tabular-nums;
                 }
                 .legend-pct {
                     font-size: 0.6875rem;
@@ -537,6 +538,7 @@ class CategoryChart extends BaseComponent {
                     color: var(--on-surface);
                     margin-left: 1rem;
                     flex-shrink: 0;
+                    font-variant-numeric: tabular-nums;
                 }
             </style>
 

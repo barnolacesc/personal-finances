@@ -66,7 +66,7 @@ class DateNavigation extends BaseComponent {
                     background: rgba(255, 255, 255, 0.06);
                     color: var(--on-surface-variant);
                     cursor: pointer;
-                    transition: all 0.15s ease;
+                    transition: background-color 0.15s ease, color 0.15s ease;
                     border: none;
                     font-family: 'Inter', sans-serif;
                 }
