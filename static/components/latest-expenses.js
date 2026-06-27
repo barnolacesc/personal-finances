@@ -107,7 +107,7 @@ class LatestExpenses extends BaseComponent {
                     font-weight: 600;
                     font-family: 'Inter', sans-serif;
                     cursor: pointer;
-                    transition: all 0.15s ease;
+                    transition: background-color 0.15s ease, color 0.15s ease;
                     min-width: 50px;
                 }
 
@@ -164,7 +164,7 @@ class LatestExpenses extends BaseComponent {
                 }
                 .swipe-action-edit { background: var(--primary-container); color: var(--on-primary); }
                 .swipe-action-delete { background: var(--error-container); color: var(--on-error-container); }
-                .swipe-action:active { opacity: 0.8; transform: scale(0.95); }
+                .swipe-action:active { opacity: 0.8; transform: scale(0.96); }
 
                 .expense-item {
                     position: relative;
@@ -200,6 +200,7 @@ class LatestExpenses extends BaseComponent {
                     font-family: 'Manrope', sans-serif;
                     font-size: 1rem;
                     font-weight: 700;
+                    font-variant-numeric: tabular-nums;
                 }
 
                 .expense-description {
@@ -532,7 +533,7 @@ class LatestExpenses extends BaseComponent {
                     this.activeSwipeItem = null;
                     return;
                 }
-                
+
                 // Otherwise, clicking the item directly opens the Edit page
                 this.editExpense(expense);
             });

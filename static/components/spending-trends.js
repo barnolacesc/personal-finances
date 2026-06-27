@@ -320,7 +320,7 @@ class SpendingTrends extends BaseComponent {
                     text-transform: uppercase;
                     letter-spacing: 0.1em;
                     cursor: pointer;
-                    transition: all 0.2s;
+                    transition: color 0.2s, background-color 0.2s;
                     background: transparent;
                     color: var(--on-surface-variant);
                 }
@@ -359,6 +359,7 @@ class SpendingTrends extends BaseComponent {
                     font-size: 1.75rem;
                     font-weight: 800;
                     color: var(--on-surface);
+                    font-variant-numeric: tabular-nums;
                 }
                 .delta-text {
                     font-size: 0.8125rem;
@@ -426,6 +427,7 @@ class SpendingTrends extends BaseComponent {
                     font-size: 0.5625rem;
                     color: var(--outline);
                     font-weight: 600;
+                    font-variant-numeric: tabular-nums;
                 }
 
                 /* Stats grid */
@@ -458,6 +460,7 @@ class SpendingTrends extends BaseComponent {
                     font-size: 1.375rem;
                     font-weight: 800;
                     color: var(--on-surface);
+                    font-variant-numeric: tabular-nums;
                 }
 
                 /* Category velocity */
@@ -517,6 +520,7 @@ class SpendingTrends extends BaseComponent {
                     font-weight: 800;
                     font-size: 1rem;
                     color: var(--on-surface);
+                    font-variant-numeric: tabular-nums;
                 }
                 .velocity-delta.delta-up { color: var(--error); }
                 .velocity-delta.delta-down { color: var(--tertiary); }
