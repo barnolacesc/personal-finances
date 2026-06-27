@@ -115,7 +115,7 @@ class BackupButton extends BaseComponent {
                     background: var(--surface-container-low);
                     color: var(--on-surface);
                     cursor: pointer;
-                    transition: all 0.15s;
+                    transition: background-color 0.15s;
                     text-align: left;
                     width: 100%;
                 }

@@ -102,7 +102,7 @@ class RecurringList extends BaseComponent {
         // Calculate monthly commitment
         let totalMonthly = 0;
         const activeCount = this.recurringExpenses.filter(r => r.is_active).length;
-        
+
         this.recurringExpenses.forEach(r => {
             if (!r.is_active) return;
             const amt = parseFloat(r.amount);
@@ -110,7 +110,7 @@ class RecurringList extends BaseComponent {
             else if (r.frequency === 'weekly') totalMonthly += (amt * 52) / 12;
             else if (r.frequency === 'yearly') totalMonthly += amt / 12;
         });
-        
+
         const formattedTotal = CurrencyHelper.format(totalMonthly);
 
         this.innerHTML = `
@@ -258,7 +258,7 @@ class RecurringList extends BaseComponent {
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    transition: all 0.15s;
+                    transition: background-color 0.15s, color 0.15s;
                 }
                 .recurring-action-btn:hover {
                     background: rgba(255, 140, 0, 0.2);
@@ -300,7 +300,7 @@ class RecurringList extends BaseComponent {
                     bottom: 3px;
                     background: var(--outline);
                     border-radius: 50%;
-                    transition: all 0.2s;
+                    transition: transform 0.2s, background-color 0.2s;
                 }
                 .toggle-switch input:checked + .toggle-slider {
                     background: var(--primary-container);
@@ -355,7 +355,7 @@ class RecurringList extends BaseComponent {
                         <div class="recurring-meta">
                             <span class="recurring-meta-item">
                                 <span class="material-symbols-outlined">payments</span>
-                                <strong>${CurrencyHelper.format(recurring.amount)}</strong>
+                                <strong class="tabular-nums">${CurrencyHelper.format(recurring.amount)}</strong>
                             </span>
                             <span class="recurring-meta-item">
                                 <span class="material-symbols-outlined">repeat</span>

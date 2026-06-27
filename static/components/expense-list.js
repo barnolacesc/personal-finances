@@ -112,6 +112,7 @@ class ExpenseList extends BaseComponent {
                     font-size: 0.9375rem;
                     color: var(--on-surface);
                     flex-shrink: 0;
+                    font-variant-numeric: tabular-nums;
                 }
                 .empty-state {
                     text-align: center;
