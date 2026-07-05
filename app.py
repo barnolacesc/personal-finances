@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timezone, timedelta
 
 import os
+import sys
 import json
 import logging
 import functools
@@ -11,6 +12,18 @@ from sqlalchemy import extract
 from subprocess import run, CalledProcessError
 import glob
 from apscheduler.schedulers.background import BackgroundScheduler
+
+# When launched directly (`python app.py`), this module is registered in
+# sys.modules only under the name "__main__". Deferred imports elsewhere
+# (e.g. services/bank_sync.py does `from app import ...` inside a function,
+# to dodge a circular import at load time) then find no "app" entry in
+# sys.modules and re-execute this entire file under a second module
+# identity — creating a second Flask app, DB engine, and BackgroundScheduler
+# that independently fires the same cron jobs, racing the first instance's
+# duplicate-expense checks and producing duplicate recurring expenses.
+# Aliasing "app" to whichever module object is already running here makes
+# later `from app import ...` calls reuse this instance instead.
+sys.modules.setdefault("app", sys.modules[__name__])
 
 # Configure logging
 logging.basicConfig(
