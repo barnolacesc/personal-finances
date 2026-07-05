@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timezone, timedelta
 
 import os
+import sys
 import json
 import logging
 import functools
@@ -11,6 +12,18 @@ from sqlalchemy import extract
 from subprocess import run, CalledProcessError
 import glob
 from apscheduler.schedulers.background import BackgroundScheduler
+
+# When launched directly (`python app.py`), this module is registered in
+# sys.modules only under the name "__main__". Deferred imports elsewhere
+# (e.g. services/bank_sync.py does `from app import ...` inside a function,
+# to dodge a circular import at load time) then find no "app" entry in
+# sys.modules and re-execute this entire file under a second module
+# identity — creating a second Flask app, DB engine, and BackgroundScheduler
+# that independently fires the same cron jobs, racing the first instance's
+# duplicate-expense checks and producing duplicate recurring expenses.
+# Aliasing "app" to whichever module object is already running here makes
+# later `from app import ...` calls reuse this instance instead.
+sys.modules.setdefault("app", sys.modules[__name__])
 
 # Configure logging
 logging.basicConfig(
@@ -337,13 +350,36 @@ def _run_bank_sync():
         logger.error(f"Scheduler bank_sync error: {e}", exc_info=True)
 
 
+def _should_start_scheduler():
+    """Decide whether this process should run the background scheduler.
+
+    In non-production mode, run_dev_server() enables Werkzeug's reloader,
+    which re-executes this entire module in a child "worker" process while
+    the original process becomes a file-watching monitor. Both processes run
+    this module-level code, so without this guard each gets its own
+    BackgroundScheduler with the same midnight cron job — two schedulers
+    racing to apply the same due recurring expense past the (non-atomic)
+    duplicate check in apply_due_recurring_expenses(), producing duplicate
+    Expense rows. Werkzeug sets WERKZEUG_RUN_MAIN=true only in the worker
+    process, so only that process (or a reloader-free production run) starts
+    the scheduler.
+    """
+    return (
+        os.environ.get("FLASK_ENV") == "production"
+        or os.environ.get("WERKZEUG_RUN_MAIN") == "true"
+    )
+
+
 scheduler = BackgroundScheduler()
 scheduler.add_job(
     apply_due_recurring_expenses, "cron", hour=0, minute=0, id="apply_recurring"
 )
 scheduler.add_job(_run_bank_sync, "interval", hours=6, id="bank_sync")
-scheduler.start()
-logger.info("Scheduler started (recurring @ midnight, bank_sync every 6h)")
+if _should_start_scheduler():
+    scheduler.start()
+    logger.info("Scheduler started (recurring @ midnight, bank_sync every 6h)")
+else:
+    logger.info("Skipping scheduler start in reloader monitor process")
 
 
 # ---------------------------------------------------------------------------
