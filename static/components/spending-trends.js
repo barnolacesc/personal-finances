@@ -115,7 +115,10 @@ class SpendingTrends extends BaseComponent {
             : new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
         const daysSoFar = this.mode === 'weekly' ? 7 : new Date().getDate();
         const dailyAvg = daysSoFar > 0 ? currentTotal / daysSoFar : 0;
-        const projected = dailyAvg * daysInPeriod;
+        const projection = this.serverData?.projection;
+        const projected = (this.mode === 'monthly' && projection)
+            ? projection.projected_total
+            : dailyAvg * daysInPeriod;
 
         // Category velocity
         const categoryVelocity = this.computeCategoryVelocity();
@@ -146,6 +149,23 @@ class SpendingTrends extends BaseComponent {
         // Stats
         this.querySelector('#dailyAvg').textContent = CurrencyHelper.format(dailyAvg);
         this.querySelector('#projected').textContent = CurrencyHelper.format(projected);
+
+        // Projection annotation (monthly mode only)
+        const annotationEl = this.querySelector('#projectedAnnotation');
+        if (this.mode === 'monthly' && projection) {
+            const delta = projection.delta_vs_average;
+            if (delta === null || delta === undefined) {
+                annotationEl.textContent = 'No 3-month baseline yet';
+                annotationEl.className = 'stat-annotation';
+            } else {
+                const sign = delta > 0 ? '+' : '';
+                annotationEl.textContent = `${sign}${delta.toFixed(0)}% vs 3-mo avg · ${projection.confidence} confidence`;
+                annotationEl.className = `stat-annotation ${delta > 0 ? 'delta-up' : 'delta-down'}`;
+            }
+        } else {
+            annotationEl.textContent = '';
+            annotationEl.className = 'stat-annotation';
+        }
 
         // Category velocity cards
         const velocityEl = this.querySelector('#categoryVelocity');
@@ -462,6 +482,12 @@ class SpendingTrends extends BaseComponent {
                     color: var(--on-surface);
                     font-variant-numeric: tabular-nums;
                 }
+                .stat-annotation {
+                    font-size: 0.6875rem;
+                    font-weight: 700;
+                    margin-top: 0.375rem;
+                    color: var(--on-surface-variant);
+                }
 
                 /* Category velocity */
                 .velocity-section-title {
@@ -599,6 +625,7 @@ class SpendingTrends extends BaseComponent {
                 <div class="stat-card">
                     <div class="stat-label">Projected</div>
                     <div class="stat-value" id="projected">${CurrencyHelper.format(0)}</div>
+                    <div class="stat-annotation" id="projectedAnnotation"></div>
                 </div>
             </div>
 
