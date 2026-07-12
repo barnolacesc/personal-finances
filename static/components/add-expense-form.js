@@ -137,6 +137,17 @@ class AddExpenseForm extends BaseComponent {
             this.addEventListenerWithCleanup(deleteBtn, 'click', this.handleDelete.bind(this));
         }
 
+        // Lives in the success card, a sibling of this component in
+        // add-expense.html, not inside it.
+        const addAnotherBtn = document.getElementById('addAnotherBtn');
+        if (addAnotherBtn) {
+            this.addEventListenerWithCleanup(addAnotherBtn, 'click', () => {
+                document.getElementById('successCard').classList.add('d-none');
+                this.resetForm();
+                this.scrollIntoView({ behavior: 'smooth' });
+            });
+        }
+
         amountInput.focus();
     }
 
@@ -190,6 +201,14 @@ class AddExpenseForm extends BaseComponent {
         if (!description) {
             window.showToast('Please enter a description', 'error');
             return;
+        }
+
+        // Dismiss the mobile keyboard now, not after the request resolves.
+        // Left focused, some mobile browsers keep the on-screen keyboard up
+        // through the success-card transition, which can shift/hide the
+        // fixed bottom nav underneath it and eat the next tap.
+        if (document.activeElement && document.activeElement.blur) {
+            document.activeElement.blur();
         }
 
         this.isSubmitting = true;
@@ -336,6 +355,12 @@ class AddExpenseForm extends BaseComponent {
 
         const form = this.querySelector('#addExpenseForm');
         form.reset();
+
+        // The date input's default is set via JS in connectedCallback(), not
+        // an HTML value attribute, so form.reset() clears it instead of
+        // restoring today's date.
+        const today = new Date().toISOString().split('T')[0];
+        this.querySelector('#date').value = today;
 
         this.setSubmittingState(false);
         this.isSubmitting = false;

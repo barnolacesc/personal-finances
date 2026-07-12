@@ -7,6 +7,7 @@ from app import (
     Expense,
     apply_due_recurring_expenses,
     is_due_today,
+    _should_start_scheduler,
 )
 
 
@@ -353,6 +354,30 @@ def test_never_applied_recurring_only_fires_on_correct_day(client):
 
         expenses = Expense.query.filter_by(description="Rent wrong day").all()
         assert len(expenses) == 0
+
+
+def test_scheduler_starts_in_production(monkeypatch):
+    """Production (no reloader, single process) should always start the scheduler."""
+    monkeypatch.setenv("FLASK_ENV", "production")
+    monkeypatch.delenv("WERKZEUG_RUN_MAIN", raising=False)
+    assert _should_start_scheduler() is True
+
+
+def test_scheduler_skipped_in_reloader_monitor_process(monkeypatch):
+    """Dev mode spawns a reloader monitor process (WERKZEUG_RUN_MAIN unset)
+    that must not start its own scheduler, or the midnight cron job fires
+    twice (once per process) and races past the duplicate-expense check."""
+    monkeypatch.delenv("FLASK_ENV", raising=False)
+    monkeypatch.delenv("WERKZEUG_RUN_MAIN", raising=False)
+    assert _should_start_scheduler() is False
+
+
+def test_scheduler_starts_in_reloader_worker_process(monkeypatch):
+    """The reloader's actual worker process (WERKZEUG_RUN_MAIN=true) is the
+    single process that should serve requests and run the scheduler."""
+    monkeypatch.delenv("FLASK_ENV", raising=False)
+    monkeypatch.setenv("WERKZEUG_RUN_MAIN", "true")
+    assert _should_start_scheduler() is True
 
 
 def test_pending_recurring_endpoint(client):

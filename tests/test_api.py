@@ -247,3 +247,28 @@ def test_trends_top_expenses_sorted_by_amount(client):
     amounts = [e["amount"] for e in top]
     assert amounts == sorted(amounts, reverse=True)
     assert top[0]["amount"] == 80.0
+
+
+def test_trends_api_includes_month_projection(client):
+    """GET /api/trends includes a recurring-aware month-end spending projection."""
+    with client.application.app_context():
+        today = datetime.now().replace(hour=12, minute=0, second=0, microsecond=0)
+        db.session.add(
+            Expense(
+                amount=25.0,
+                category="personal",
+                description="Test",
+                date=today,
+            )
+        )
+        db.session.commit()
+
+    resp = client.get("/api/trends")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    projection = data["projection"]
+
+    assert projection["current_total"] >= 25.0
+    assert projection["projected_total"] >= projection["current_total"]
+    assert projection["confidence"] in {"low", "medium", "high"}
+    assert "previous_3_month_average" in projection

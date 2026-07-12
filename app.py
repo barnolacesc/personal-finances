@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timezone, timedelta
 
 import os
+import sys
 import json
 import logging
 import functools
@@ -11,6 +12,18 @@ from sqlalchemy import extract
 from subprocess import run, CalledProcessError
 import glob
 from apscheduler.schedulers.background import BackgroundScheduler
+
+# When launched directly (`python app.py`), this module is registered in
+# sys.modules only under the name "__main__". Deferred imports elsewhere
+# (e.g. services/bank_sync.py does `from app import ...` inside a function,
+# to dodge a circular import at load time) then find no "app" entry in
+# sys.modules and re-execute this entire file under a second module
+# identity — creating a second Flask app, DB engine, and BackgroundScheduler
+# that independently fires the same cron jobs, racing the first instance's
+# duplicate-expense checks and producing duplicate recurring expenses.
+# Aliasing "app" to whichever module object is already running here makes
+# later `from app import ...` calls reuse this instance instead.
+sys.modules.setdefault("app", sys.modules[__name__])
 
 # Configure logging
 logging.basicConfig(
@@ -337,13 +350,36 @@ def _run_bank_sync():
         logger.error(f"Scheduler bank_sync error: {e}", exc_info=True)
 
 
+def _should_start_scheduler():
+    """Decide whether this process should run the background scheduler.
+
+    In non-production mode, run_dev_server() enables Werkzeug's reloader,
+    which re-executes this entire module in a child "worker" process while
+    the original process becomes a file-watching monitor. Both processes run
+    this module-level code, so without this guard each gets its own
+    BackgroundScheduler with the same midnight cron job — two schedulers
+    racing to apply the same due recurring expense past the (non-atomic)
+    duplicate check in apply_due_recurring_expenses(), producing duplicate
+    Expense rows. Werkzeug sets WERKZEUG_RUN_MAIN=true only in the worker
+    process, so only that process (or a reloader-free production run) starts
+    the scheduler.
+    """
+    return (
+        os.environ.get("FLASK_ENV") == "production"
+        or os.environ.get("WERKZEUG_RUN_MAIN") == "true"
+    )
+
+
 scheduler = BackgroundScheduler()
 scheduler.add_job(
     apply_due_recurring_expenses, "cron", hour=0, minute=0, id="apply_recurring"
 )
 scheduler.add_job(_run_bank_sync, "interval", hours=6, id="bank_sync")
-scheduler.start()
-logger.info("Scheduler started (recurring @ midnight, bank_sync every 6h)")
+if _should_start_scheduler():
+    scheduler.start()
+    logger.info("Scheduler started (recurring @ midnight, bank_sync every 6h)")
+else:
+    logger.info("Skipping scheduler start in reloader monitor process")
 
 
 # ---------------------------------------------------------------------------
@@ -581,6 +617,119 @@ def get_categories():
     return jsonify(CATEGORIES)
 
 
+def _current_month_projection(now):
+    """Cheap month-end spending projection for the trends page."""
+    import calendar
+    from sqlalchemy import func
+
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    month_days = calendar.monthrange(now.year, now.month)[1]
+    month_end = month_start.replace(day=month_days, hour=23, minute=59, second=59)
+    days_elapsed = max(now.day, 1)
+    days_remaining = max(month_days - now.day, 0)
+    current_month = f"{now.year}-{now.month:02d}"
+
+    current_total = (
+        db.session.query(func.sum(Expense.amount))
+        .filter(func.strftime("%Y-%m", Expense.date) == current_month)
+        .scalar()
+        or 0.0
+    )
+
+    previous_totals = []
+    for i in range(1, 4):
+        target_month = now.month - i
+        target_year = now.year
+        while target_month <= 0:
+            target_month += 12
+            target_year -= 1
+        target_month_str = f"{target_year}-{target_month:02d}"
+        total = (
+            db.session.query(func.sum(Expense.amount))
+            .filter(func.strftime("%Y-%m", Expense.date) == target_month_str)
+            .scalar()
+            or 0.0
+        )
+        previous_totals.append(float(total))
+
+    daily_average = float(current_total) / days_elapsed
+    pace_projection = daily_average * month_days
+
+    remaining_recurring = 0.0
+    upcoming_recurring = []
+    recurring_expenses = (
+        RecurringExpense.query.filter(
+            RecurringExpense.is_active.is_(True),
+            RecurringExpense.frequency == "monthly",
+            RecurringExpense.day_of_month.isnot(None),
+            RecurringExpense.start_date <= month_end,
+        )
+        .filter(
+            (RecurringExpense.end_date.is_(None))
+            | (RecurringExpense.end_date >= month_start)
+        )
+        .all()
+    )
+
+    for recurring in recurring_expenses:
+        due_day = min(recurring.day_of_month, month_days)
+        due_date = month_start.replace(day=due_day)
+        if due_date.date() <= now.date():
+            continue
+        existing = Expense.query.filter(
+            Expense.amount == recurring.amount,
+            Expense.category == recurring.category,
+            Expense.description == recurring.description,
+            extract("year", Expense.date) == now.year,
+            extract("month", Expense.date) == now.month,
+            extract("day", Expense.date) == due_day,
+        ).first()
+        if existing:
+            continue
+        remaining_recurring += float(recurring.amount)
+        upcoming_recurring.append(
+            {
+                "description": recurring.description,
+                "amount": float(recurring.amount),
+                "day": due_day,
+            }
+        )
+
+    projected_total = pace_projection + remaining_recurring
+    previous_average = (
+        sum(previous_totals) / len(previous_totals) if previous_totals else 0.0
+    )
+    delta_vs_average = (
+        ((projected_total - previous_average) / previous_average) * 100
+        if previous_average > 0
+        else None
+    )
+
+    if days_elapsed < 7:
+        confidence = "low"
+    elif days_elapsed < 15:
+        confidence = "medium"
+    else:
+        confidence = "high"
+
+    return {
+        "current_total": float(current_total),
+        "daily_average": float(daily_average),
+        "pace_projection": float(pace_projection),
+        "remaining_recurring": float(remaining_recurring),
+        "projected_total": float(projected_total),
+        "previous_month_total": previous_totals[0] if previous_totals else 0.0,
+        "previous_3_month_average": float(previous_average),
+        "delta_vs_average": delta_vs_average,
+        "days_elapsed": days_elapsed,
+        "days_remaining": days_remaining,
+        "month_days": month_days,
+        "confidence": confidence,
+        "upcoming_recurring": upcoming_recurring[:5],
+        "generated_at": now.isoformat(),
+    }
+
+
 @app.route("/api/trends", methods=["GET"])
 def get_trends():
     try:
@@ -642,7 +791,11 @@ def get_trends():
             data = period_data(start_str, end_str, include_top=(i == 0))
             weekly_data.insert(0, {"label": labels[i], **data})
 
-        return jsonify({"weekly": weekly_data, "monthly": monthly_data})
+        projection = _current_month_projection(now)
+
+        return jsonify(
+            {"weekly": weekly_data, "monthly": monthly_data, "projection": projection}
+        )
     except Exception as e:
         logger.error(f"Error fetching trends: {e}")
         return jsonify({"error": "Server error fetching trends"}), 500
