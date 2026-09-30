@@ -315,7 +315,7 @@ class LatestExpenses extends BaseComponent {
             });
 
             const expensesArrays = await Promise.all(allExpensesPromises);
-            this.allExpenses = expensesArrays.flat().sort((a, b) => new Date(b.date) - new Date(a.date));
+            this.allExpenses = expensesArrays.flat().sort((a, b) => (new Date(b.date) - new Date(a.date)) || ((b.id || 0) - (a.id || 0)));
             this.totalExpenses = this.allExpenses.length;
             this.filterAndDisplayExpenses();
         } catch (error) {
@@ -419,6 +419,19 @@ class LatestExpenses extends BaseComponent {
                 ? `<span class="source-badge manual"><span class="material-symbols-outlined" style="font-size: 0.625rem;">edit</span>Manual</span>`
                 : '';
 
+            const txnType = expense.type || 'expense';
+            const typeBadge = txnType === 'reimbursement'
+                ? `<span class="type-badge reimbursement"><span class="material-symbols-outlined" style="font-size: 0.625rem;">assignment_return</span>Reimbursement</span>`
+                : txnType === 'income'
+                ? `<span class="type-badge income"><span class="material-symbols-outlined" style="font-size: 0.625rem;">savings</span>Income</span>`
+                : '';
+
+            const amountDisplay = txnType === 'reimbursement'
+                ? `<span class="amount-reimbursement">-${CurrencyHelper.format(expense.amount)}</span>`
+                : txnType === 'income'
+                ? `<span class="amount-income">+${CurrencyHelper.format(expense.amount)}</span>`
+                : CurrencyHelper.format(expense.amount);
+
             return `
                 <div class="swipe-container" data-expense-id="${expense.id}">
                     <div class="swipe-actions">
@@ -441,11 +454,12 @@ class LatestExpenses extends BaseComponent {
                                 <div class="expense-date text-muted" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px;">
                                     <span>${this.formatExpenseDate(expense.date)}</span>
                                     ${sourceBadge}
+                                    ${typeBadge}
                                 </div>
                             </div>
                         </div>
                         <div class="expense-amount" style="flex-shrink: 0; white-space: nowrap;">
-                            ${CurrencyHelper.format(expense.amount)}
+                            ${amountDisplay}
                         </div>
                     </div>
                 </div>
@@ -635,7 +649,7 @@ class LatestExpenses extends BaseComponent {
     }
 
     editExpense(expense) {
-        const editUrl = `/add?edit=${expense.id}&amount=${expense.amount}&category=${expense.category}&description=${encodeURIComponent(expense.description)}&date=${expense.date}`;
+        const editUrl = `/add?edit=${expense.id}&amount=${expense.amount}&category=${expense.category}&description=${encodeURIComponent(expense.description)}&date=${expense.date}&type=${expense.type || 'expense'}`;
         window.location.href = editUrl;
     }
 }

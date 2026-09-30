@@ -195,3 +195,69 @@ def test_e2e_add_and_verify_expense(page_with_errors, live_server):
     # 6. Verify the new expense is in the recent list
     expect(page.locator("text=E2E Playwright Test").first).to_be_visible()
     expect(page.locator("text=99,99").first).to_be_visible()
+
+
+def test_e2e_add_and_verify_reimbursement(page_with_errors, live_server):
+    """Simulate a user selecting reimbursement type, adding it,
+    and verifying signed display on home."""
+    page, errors = page_with_errors
+
+    # 1. Navigate to Add page
+    page.goto(live_server + "/add")
+    page.wait_for_load_state("networkidle")
+
+    # 2. Select Reimbursement type
+    page.click('.type-btn[data-type="reimbursement"]')
+
+    # 3. Fill out the form
+    page.fill("#amount", "35.00")
+    page.select_option("#category", "transport")
+    page.fill("#description", "Train Refund")
+
+    # 4. Submit
+    page.click("#submitBtn")
+
+    # 5. Verify Success Card appears
+    expect(page.locator("#successCard")).to_have_class(re.compile(r"^((?!d-none).)*$"))
+
+    # 6. Navigate to Home Page
+    page.goto(live_server + "/")
+    page.wait_for_load_state("networkidle")
+
+    # 7. Verify reimbursement badge and -35,00 display
+    expect(page.locator("text=Train Refund").first).to_be_visible()
+    expect(page.locator(".amount-reimbursement").first).to_be_visible()
+    expect(page.locator(".type-badge.reimbursement").first).to_be_visible()
+
+
+def test_e2e_add_and_verify_income(page_with_errors, live_server):
+    """Simulate a user selecting income type, adding it,
+    and verifying signed display on home."""
+    page, errors = page_with_errors
+
+    # 1. Navigate to Add page
+    page.goto(live_server + "/add")
+    page.wait_for_load_state("networkidle")
+
+    # 2. Select Income type
+    page.click('.type-btn[data-type="income"]')
+
+    # 3. Fill out the form
+    page.fill("#amount", "500.00")
+    page.select_option("#category", "other")
+    page.fill("#description", "Freelance Gig")
+
+    # 4. Submit
+    page.click("#submitBtn")
+
+    # 5. Verify Success Card appears
+    expect(page.locator("#successCard")).to_have_class(re.compile(r"^((?!d-none).)*$"))
+
+    # 6. Navigate to Home Page
+    page.goto(live_server + "/")
+    page.wait_for_load_state("networkidle")
+
+    # 7. Verify income badge and +500,00 display
+    expect(page.locator("text=Freelance Gig").first).to_be_visible()
+    expect(page.locator(".amount-income").first).to_be_visible()
+    expect(page.locator(".type-badge.income").first).to_be_visible()

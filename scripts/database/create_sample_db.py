@@ -56,7 +56,8 @@ def create_sample_db():
             amount REAL NOT NULL,
             category TEXT NOT NULL,
             description TEXT NOT NULL,
-            date DATETIME DEFAULT CURRENT_TIMESTAMP
+            date DATETIME DEFAULT CURRENT_TIMESTAMP,
+            type TEXT NOT NULL DEFAULT 'expense'
         )
     """
     )
@@ -77,10 +78,30 @@ def create_sample_db():
 
             cursor.execute(
                 """
-                INSERT INTO expense (amount, category, description, date)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO expense (amount, category, description, date, type)
+                VALUES (?, ?, ?, ?, 'expense')
             """,
                 (amount, category, description, current_date),
+            )
+
+        # Monthly income on 1st of month
+        if current_date.day == 1:
+            cursor.execute(
+                """
+                INSERT INTO expense (amount, category, description, date, type)
+                VALUES (?, ?, ?, ?, 'income')
+            """,
+                (2500.0, "other", "Monthly Salary", current_date),
+            )
+
+        # Occasional reimbursement
+        if current_date.day == 15:
+            cursor.execute(
+                """
+                INSERT INTO expense (amount, category, description, date, type)
+                VALUES (?, ?, ?, ?, 'reimbursement')
+            """,
+                (45.0, "Dining Out", "Shared dinner reimbursement", current_date),
             )
 
         current_date += timedelta(days=1)

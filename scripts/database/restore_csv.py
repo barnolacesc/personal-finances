@@ -22,12 +22,13 @@ def list_backups():
     return sorted(backups, reverse=True)  # Most recent first
 
 
-def restore_from_csv(csv_path):
+def restore_from_csv(csv_path, target_db_path=None):
     """Restore database from CSV file"""
     # Create a backup of current database first
     db_dir = os.path.join(os.path.dirname(__file__), "instance")
-    db_path = os.path.join(db_dir, "expenses.db")
-    if os.path.exists(db_path):
+    db_path = target_db_path or os.path.join(db_dir, "expenses.db")
+    backup_path = None
+    if target_db_path is None and os.path.exists(db_path):
         backup_name = f"expenses_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
         backup_path = os.path.join(db_dir, backup_name)
         os.rename(db_path, backup_path)
@@ -45,7 +46,8 @@ def restore_from_csv(csv_path):
             date DATETIME NOT NULL,
             amount FLOAT NOT NULL,
             category VARCHAR(50) NOT NULL,
-            description VARCHAR(50) NOT NULL
+            description VARCHAR(50) NOT NULL,
+            type VARCHAR(20) DEFAULT 'expense'
         )
     """
     )
@@ -54,12 +56,35 @@ def restore_from_csv(csv_path):
     try:
         with open(csv_path, "r", newline="") as csv_file:
             csv_reader = csv.reader(csv_file)
-            next(csv_reader)  # Skip header row
+            header = next(csv_reader, None)  # Skip header row
+            has_type = (
+                header and len(header) >= 5 and header[4].strip().lower() == "type"
+            )
+
+            rows_to_insert = []
+            for row in csv_reader:
+                if not row:
+                    continue
+                d, amt, cat, desc = row[0], row[1], row[2], row[3]
+                t = (
+                    row[4].strip().lower()
+                    if (has_type and len(row) >= 5 and row[4].strip())
+                    else "expense"
+                )
+                try:
+                    num_amt = float(amt)
+                    if num_amt < 0:
+                        if not (has_type and len(row) >= 5 and row[4].strip()):
+                            t = "reimbursement"
+                        amt = str(abs(num_amt))
+                except (ValueError, TypeError):
+                    pass
+                rows_to_insert.append((d, amt, cat, desc, t))
 
             # Insert all rows
-            sql = "INSERT INTO expense (date, amount, category, description) "
-            sql += "VALUES (?, ?, ?, ?)"
-            cursor.executemany(sql, csv_reader)
+            sql = "INSERT INTO expense (date, amount, category, description, type) "
+            sql += "VALUES (?, ?, ?, ?, ?)"
+            cursor.executemany(sql, rows_to_insert)
 
             conn.commit()
             rows = cursor.rowcount

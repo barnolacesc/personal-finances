@@ -272,3 +272,334 @@ def test_trends_api_includes_month_projection(client):
     assert projection["projected_total"] >= projection["current_total"]
     assert projection["confidence"] in {"low", "medium", "high"}
     assert "previous_3_month_average" in projection
+
+
+def test_add_transaction_types(client):
+    """Test adding expense, income, reimbursement, and defaulting missing type."""
+    # 1. Explicit expense
+    res = client.post(
+        "/api/expenses",
+        json={
+            "amount": 45.0,
+            "category": "food",
+            "description": "Lunch",
+            "type": "expense",
+        },
+    )
+    assert res.status_code == 201
+    assert res.get_json()["type"] == "expense"
+
+    # 2. Explicit income
+    res = client.post(
+        "/api/expenses",
+        json={
+            "amount": 2500.0,
+            "category": "salary",
+            "description": "Paycheck",
+            "type": "income",
+        },
+    )
+    assert res.status_code == 201
+    assert res.get_json()["type"] == "income"
+
+    # 3. Explicit reimbursement
+    res = client.post(
+        "/api/expenses",
+        json={
+            "amount": 15.0,
+            "category": "food",
+            "description": "Lunch split refund",
+            "type": "reimbursement",
+        },
+    )
+    assert res.status_code == 201
+    assert res.get_json()["type"] == "reimbursement"
+
+    # 4. Default missing type to expense (backwards compatibility)
+    res = client.post(
+        "/api/expenses",
+        json={"amount": 10.0, "category": "other", "description": "Coffee"},
+    )
+    assert res.status_code == 201
+    assert res.get_json()["type"] == "expense"
+
+
+def test_transaction_type_and_amount_validations(client):
+    """Test validation errors for invalid type or non-positive amount."""
+    # Invalid type
+    res = client.post(
+        "/api/expenses",
+        json={
+            "amount": 50.0,
+            "category": "food",
+            "description": "Meal",
+            "type": "invalid_type",
+        },
+    )
+    assert res.status_code == 400
+    assert "Invalid transaction type" in res.get_json()["error"]
+
+    # Negative amount
+    res = client.post(
+        "/api/expenses",
+        json={
+            "amount": -20.0,
+            "category": "food",
+            "description": "Meal",
+            "type": "expense",
+        },
+    )
+    assert res.status_code == 400
+    assert "greater than zero" in res.get_json()["error"]
+
+    # Zero amount
+    res = client.post(
+        "/api/expenses",
+        json={
+            "amount": 0.0,
+            "category": "food",
+            "description": "Meal",
+            "type": "reimbursement",
+        },
+    )
+    assert res.status_code == 400
+    assert "greater than zero" in res.get_json()["error"]
+
+
+def test_update_transaction_type_and_validations(client):
+    """Test updating transaction type and validation on PUT."""
+    res = client.post(
+        "/api/expenses",
+        json={
+            "amount": 40.0,
+            "category": "personal",
+            "description": "Item",
+            "type": "expense",
+        },
+    )
+    assert res.status_code == 201
+    item_id = res.get_json()["id"]
+
+    # Update to reimbursement
+    put_res = client.put(
+        f"/api/expenses/{item_id}",
+        json={
+            "amount": 40.0,
+            "category": "personal",
+            "description": "Item",
+            "type": "reimbursement",
+        },
+    )
+    assert put_res.status_code == 200
+    assert put_res.get_json()["type"] == "reimbursement"
+
+    # Update with invalid type
+    put_inv = client.put(
+        f"/api/expenses/{item_id}",
+        json={
+            "amount": 40.0,
+            "category": "personal",
+            "description": "Item",
+            "type": "bad_type",
+        },
+    )
+    assert put_inv.status_code == 400
+    assert "Invalid transaction type" in put_inv.get_json()["error"]
+
+    # Update with non-positive amount
+    put_zero = client.put(
+        f"/api/expenses/{item_id}",
+        json={
+            "amount": 0,
+            "category": "personal",
+            "description": "Item",
+            "type": "reimbursement",
+        },
+    )
+    assert put_zero.status_code == 400
+    assert "greater than zero" in put_zero.get_json()["error"]
+
+
+def test_expenses_summary_and_type_filtering(client):
+    """Test GET /api/expenses returns summary with gross, reimb, net, income
+    and supports ?type= filter."""
+    now = datetime.now()
+    date_str = now.strftime("%Y-%m-%d")
+
+    # Add 2 expenses (100 + 50 = 150 gross)
+    client.post(
+        "/api/expenses",
+        json={
+            "amount": 100.0,
+            "category": "groceries",
+            "description": "Store A",
+            "type": "expense",
+            "date": date_str,
+        },
+    )
+    client.post(
+        "/api/expenses",
+        json={
+            "amount": 50.0,
+            "category": "transport",
+            "description": "Gas",
+            "type": "expense",
+            "date": date_str,
+        },
+    )
+    # Add 1 reimbursement (30)
+    client.post(
+        "/api/expenses",
+        json={
+            "amount": 30.0,
+            "category": "groceries",
+            "description": "Return",
+            "type": "reimbursement",
+            "date": date_str,
+        },
+    )
+    # Add 1 income (2000)
+    client.post(
+        "/api/expenses",
+        json={
+            "amount": 2000.0,
+            "category": "salary",
+            "description": "Paycheck",
+            "type": "income",
+            "date": date_str,
+        },
+    )
+
+    # Fetch all for the month
+    res = client.get(f"/api/expenses?month={now.month}&year={now.year}")
+    assert res.status_code == 200
+    data = res.get_json()
+
+    assert data["total"] == 4
+    assert data["summary"]["gross_expenses"] == 150.0
+    assert data["summary"]["reimbursements"] == 30.0
+    assert data["summary"]["net_expenses"] == 120.0
+    assert data["summary"]["income"] == 2000.0
+
+    # Top-level backward-compatible keys
+    assert data["gross_expenses"] == 150.0
+    assert data["reimbursements"] == 30.0
+    assert data["net_expenses"] == 120.0
+    assert data["income"] == 2000.0
+
+    # Filter by ?type=reimbursement
+    res_reimb = client.get(
+        f"/api/expenses?type=reimbursement&month={now.month}&year={now.year}"
+    )
+    assert res_reimb.status_code == 200
+    reimb_data = res_reimb.get_json()
+    assert len(reimb_data["expenses"]) == 1
+    assert reimb_data["expenses"][0]["type"] == "reimbursement"
+
+    # Filter by ?type=income
+    res_inc = client.get(f"/api/expenses?type=income&month={now.month}&year={now.year}")
+    assert res_inc.status_code == 200
+    inc_data = res_inc.get_json()
+    assert len(inc_data["expenses"]) == 1
+    assert inc_data["expenses"][0]["type"] == "income"
+
+
+def test_dedicated_summary_endpoints(client):
+    """Test GET /api/summary and GET /api/expenses/summary."""
+    now = datetime.now()
+    date_str = now.strftime("%Y-%m-%d")
+
+    client.post(
+        "/api/expenses",
+        json={
+            "amount": 200.0,
+            "category": "rent",
+            "description": "Rent",
+            "type": "expense",
+            "date": date_str,
+        },
+    )
+    client.post(
+        "/api/expenses",
+        json={
+            "amount": 50.0,
+            "category": "rent",
+            "description": "Discount refund",
+            "type": "reimbursement",
+            "date": date_str,
+        },
+    )
+    client.post(
+        "/api/expenses",
+        json={
+            "amount": 1000.0,
+            "category": "salary",
+            "description": "Stipend",
+            "type": "income",
+            "date": date_str,
+        },
+    )
+
+    for endpoint in ["/api/summary", "/api/expenses/summary"]:
+        res = client.get(f"{endpoint}?month={now.month}&year={now.year}")
+        assert res.status_code == 200
+        data = res.get_json()
+        assert data["month"] == now.month
+        assert data["year"] == now.year
+        assert data["gross_expenses"] == 200.0
+        assert data["reimbursements"] == 50.0
+        assert data["net_expenses"] == 150.0
+        assert data["income"] == 1000.0
+
+
+def test_trends_net_spending_and_projections(client):
+    """Test trends API uses net spending and labels metric properly."""
+    today = datetime.now().replace(hour=12, minute=0, second=0, microsecond=0)
+    with client.application.app_context():
+        # Expense: 100
+        db.session.add(
+            Expense(
+                amount=100.0,
+                category="food_drink",
+                description="Meal",
+                type="expense",
+                date=today,
+            )
+        )
+        # Reimbursement: 30
+        db.session.add(
+            Expense(
+                amount=30.0,
+                category="food_drink",
+                description="Split refund",
+                type="reimbursement",
+                date=today,
+            )
+        )
+        # Income: 500 (must NOT reduce spending)
+        db.session.add(
+            Expense(
+                amount=500.0,
+                category="income_cat",
+                description="Bonus",
+                type="income",
+                date=today,
+            )
+        )
+        db.session.commit()
+
+    resp = client.get("/api/trends")
+    assert resp.status_code == 200
+    data = resp.get_json()
+
+    current_month_trend = data["monthly"][3]
+    # Net spending = 100 - 30 = 70.0
+    assert current_month_trend["total"] == 70.0
+    assert current_month_trend["categories"]["food_drink"] == 70.0
+    assert "income_cat" not in current_month_trend["categories"]
+
+    # Month projection
+    projection = data["projection"]
+    assert projection["metric"] == "net_spending"
+    assert projection["metric_label"] == "Net Spending"
+    assert projection["current_total"] == 70.0

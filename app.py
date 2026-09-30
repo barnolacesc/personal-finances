@@ -57,6 +57,9 @@ db = SQLAlchemy(app)
 # ---------------------------------------------------------------------------
 
 
+VALID_TRANSACTION_TYPES = {"expense", "income", "reimbursement"}
+
+
 class Expense(db.Model):
     __tablename__ = "expense"
 
@@ -65,10 +68,32 @@ class Expense(db.Model):
     category = db.Column(db.String(50), nullable=False)
     description = db.Column(db.String(200), nullable=False)
     date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    type = db.Column(
+        db.String(20), nullable=False, default="expense", server_default="expense"
+    )
     # Bank sync fields (added via migration script on existing DBs)
     source = db.Column(db.String(20), default="manual")
     external_id = db.Column(db.String(100), nullable=True, unique=True)
     merchant = db.Column(db.String(200), nullable=True)
+
+    def __init__(self, **kwargs):
+        if "type" not in kwargs or kwargs["type"] is None:
+            kwargs["type"] = "expense"
+        super().__init__(**kwargs)
+
+    @property
+    def net_spending_contribution(self):
+        """Return the signed contribution to net expenses:
+        expense -> +amount
+        reimbursement -> -amount
+        income -> 0.0 (income is tracked separately, never reduces spending)
+        """
+        txn_type = self.type or "expense"
+        if txn_type == "reimbursement":
+            return -self.amount
+        elif txn_type == "expense":
+            return self.amount
+        return 0.0
 
     def to_dict(self):
         return {
@@ -77,6 +102,7 @@ class Expense(db.Model):
             "category": self.category,
             "description": self.description,
             "date": self.date.isoformat(),
+            "type": self.type or "expense",
             "source": self.source,
             "external_id": self.external_id,
             "merchant": self.merchant,
@@ -207,10 +233,52 @@ class RecurringExpense(db.Model):
         }
 
 
+def _auto_migrate_db():
+    """Ensure columns like type exist and normalize negative expenses."""
+    try:
+        from sqlalchemy import text
+
+        with db.engine.connect() as conn:
+            table_check = conn.execute(
+                text(
+                    "SELECT name FROM sqlite_master "
+                    "WHERE type='table' AND name='expense'"
+                )
+            ).fetchone()
+            if table_check:
+                columns = [
+                    row[1]
+                    for row in conn.execute(
+                        text("PRAGMA table_info(expense)")
+                    ).fetchall()
+                ]
+                if "type" not in columns:
+                    conn.execute(
+                        text(
+                            "ALTER TABLE expense "
+                            "ADD COLUMN type VARCHAR(20) DEFAULT 'expense'"
+                        )
+                    )
+                    conn.commit()
+                conn.execute(
+                    text(
+                        "UPDATE expense SET type = 'reimbursement', "
+                        "amount = ABS(amount) WHERE amount < 0"
+                    )
+                )
+                conn.execute(
+                    text("UPDATE expense SET type = 'expense' WHERE type IS NULL")
+                )
+                conn.commit()
+    except Exception as e:
+        logger.warning(f"Auto-migration check note: {e}")
+
+
 # Initialize database
 try:
     with app.app_context():
         db.create_all()
+        _auto_migrate_db()
         logger.info("Database initialized successfully")
 except Exception as e:
     logger.error(f"Error initializing database: {e}")
@@ -257,6 +325,7 @@ def apply_due_recurring_expenses():
                             category=recurring.category,
                             description=recurring.description,
                             date=today,
+                            type="expense",
                         )
                         db.session.add(expense)
                         recurring.last_applied_date = today
@@ -508,6 +577,9 @@ def handle_expenses():
                 logger.error(f"Invalid amount value: {data.get('amount')}")
                 return jsonify({"error": "Invalid amount value"}), 400
 
+            if amount <= 0:
+                return jsonify({"error": "Amount must be greater than zero"}), 400
+
             category = data["category"].strip()
             description = data["description"].strip()
 
@@ -517,17 +589,36 @@ def handle_expenses():
                     400,
                 )
 
+            txn_type = data.get("type", "expense")
+            if not txn_type:
+                txn_type = "expense"
+            if not isinstance(txn_type, str):
+                return jsonify({"error": "Invalid transaction type"}), 400
+            txn_type = txn_type.strip().lower()
+            if txn_type not in VALID_TRANSACTION_TYPES:
+                valid_types_str = ", ".join(sorted(VALID_TRANSACTION_TYPES))
+                err_msg = (
+                    f"Invalid transaction type '{txn_type}'. "
+                    f"Must be one of: {valid_types_str}"
+                )
+                return jsonify({"error": err_msg}), 400
+
             try:
                 expense_date = parse_expense_date(data.get("date"))
             except ValueError as exc:
                 return jsonify({"error": str(exc)}), 400
 
-            expense = Expense(amount=amount, category=category, description=description)
+            expense = Expense(
+                amount=amount,
+                category=category,
+                description=description,
+                type=txn_type,
+            )
             if expense_date is not None:
                 expense.date = expense_date
             db.session.add(expense)
             db.session.commit()
-            logger.info(f"Added new expense: ${amount:.2f} ({category})")
+            logger.info(f"Added new {txn_type}: ${amount:.2f} ({category})")
             return jsonify(expense.to_dict()), 201
 
         except Exception as e:
@@ -542,12 +633,36 @@ def handle_expenses():
         year = int(request.args.get("year", now.year))
         page = request.args.get("page")
         per_page = request.args.get("per_page")
+        type_filter = request.args.get("type")
 
-        query = (
-            Expense.query.filter(extract("year", Expense.date) == year)
-            .filter(extract("month", Expense.date) == month)
-            .order_by(Expense.date.desc())
+        # Monthly summary for the entire month
+        month_filter = (extract("year", Expense.date) == year) & (
+            extract("month", Expense.date) == month
         )
+        all_month_expenses = Expense.query.filter(month_filter).all()
+
+        gross_expenses = sum(
+            e.amount for e in all_month_expenses if (e.type or "expense") == "expense"
+        )
+        reimbursements = sum(
+            e.amount for e in all_month_expenses if e.type == "reimbursement"
+        )
+        net_expenses = gross_expenses - reimbursements
+        income = sum(e.amount for e in all_month_expenses if e.type == "income")
+
+        summary_data = {
+            "gross_expenses": round(float(gross_expenses), 2),
+            "reimbursements": round(float(reimbursements), 2),
+            "net_expenses": round(float(net_expenses), 2),
+            "income": round(float(income), 2),
+        }
+
+        query = Expense.query.filter(month_filter).order_by(
+            Expense.date.desc(), Expense.id.desc()
+        )
+
+        if type_filter and type_filter in VALID_TRANSACTION_TYPES:
+            query = query.filter(Expense.type == type_filter)
 
         if page and per_page:
             page = int(page)
@@ -566,6 +681,8 @@ def handle_expenses():
                 "page": int(page) if page else None,
                 "per_page": int(per_page) if per_page else None,
                 "total": total,
+                "summary": summary_data,
+                **summary_data,
             }
         )
     except Exception as e:
@@ -618,7 +735,7 @@ def get_categories():
 
 
 def _current_month_projection(now):
-    """Cheap month-end spending projection for the trends page."""
+    """Month-end spending projection based on net spending."""
     import calendar
     from sqlalchemy import func
 
@@ -629,12 +746,25 @@ def _current_month_projection(now):
     days_remaining = max(month_days - now.day, 0)
     current_month = f"{now.year}-{now.month:02d}"
 
-    current_total = (
-        db.session.query(func.sum(Expense.amount))
-        .filter(func.strftime("%Y-%m", Expense.date) == current_month)
-        .scalar()
-        or 0.0
-    )
+    def get_month_net_spending(month_str):
+        gross = (
+            db.session.query(func.sum(Expense.amount))
+            .filter(func.strftime("%Y-%m", Expense.date) == month_str)
+            .filter((Expense.type == "expense") | (Expense.type.is_(None)))
+            .scalar()
+            or 0.0
+        )
+        reimb = (
+            db.session.query(func.sum(Expense.amount))
+            .filter(func.strftime("%Y-%m", Expense.date) == month_str)
+            .filter(Expense.type == "reimbursement")
+            .scalar()
+            or 0.0
+        )
+        return float(gross), float(reimb), float(gross - reimb)
+
+    current_gross, current_reimb, current_net = get_month_net_spending(current_month)
+    current_total = current_net
 
     previous_totals = []
     for i in range(1, 4):
@@ -644,13 +774,8 @@ def _current_month_projection(now):
             target_month += 12
             target_year -= 1
         target_month_str = f"{target_year}-{target_month:02d}"
-        total = (
-            db.session.query(func.sum(Expense.amount))
-            .filter(func.strftime("%Y-%m", Expense.date) == target_month_str)
-            .scalar()
-            or 0.0
-        )
-        previous_totals.append(float(total))
+        _, _, prev_net = get_month_net_spending(target_month_str)
+        previous_totals.append(prev_net)
 
     daily_average = float(current_total) / days_elapsed
     pace_projection = daily_average * month_days
@@ -713,7 +838,12 @@ def _current_month_projection(now):
         confidence = "high"
 
     return {
+        "metric": "net_spending",
+        "metric_label": "Net Spending",
         "current_total": float(current_total),
+        "gross_expenses": float(current_gross),
+        "reimbursements": float(current_reimb),
+        "net_expenses": float(current_net),
         "daily_average": float(daily_average),
         "pace_projection": float(pace_projection),
         "remaining_recurring": float(remaining_recurring),
@@ -739,19 +869,62 @@ def get_trends():
         now = datetime.now()
 
         def period_data(start, end, include_top=False):
-            cat_rows = (
+            # Expense by category
+            expense_rows = (
                 db.session.query(Expense.category, func.sum(Expense.amount))
                 .filter(Expense.date >= start, Expense.date <= end)
+                .filter((Expense.type == "expense") | (Expense.type.is_(None)))
                 .group_by(Expense.category)
                 .all()
             )
-            categories = {cat: float(total) for cat, total in cat_rows}
-            total = sum(categories.values())
-            result = {"total": total, "categories": categories}
+            cat_expenses = {cat: float(total) for cat, total in expense_rows}
+            gross_expenses = sum(cat_expenses.values())
+
+            # Reimbursements by category
+            reimb_rows = (
+                db.session.query(Expense.category, func.sum(Expense.amount))
+                .filter(Expense.date >= start, Expense.date <= end)
+                .filter(Expense.type == "reimbursement")
+                .group_by(Expense.category)
+                .all()
+            )
+            cat_reimbs = {cat: float(total) for cat, total in reimb_rows}
+            reimbursements = sum(cat_reimbs.values())
+
+            # Income in period (tracked separately, never reduces category spending)
+            income_total = (
+                db.session.query(func.sum(Expense.amount))
+                .filter(Expense.date >= start, Expense.date <= end)
+                .filter(Expense.type == "income")
+                .scalar()
+                or 0.0
+            )
+            income = float(income_total)
+
+            net_expenses = gross_expenses - reimbursements
+
+            # Net categories: reimbursements reduce category spending;
+            # income never reduces category spending
+            categories = {}
+            all_cats = set(cat_expenses.keys()) | set(cat_reimbs.keys())
+            for cat in all_cats:
+                net_cat = cat_expenses.get(cat, 0.0) - cat_reimbs.get(cat, 0.0)
+                if net_cat > 0:
+                    categories[cat] = round(float(net_cat), 2)
+
+            result = {
+                "total": round(float(net_expenses), 2),
+                "net_expenses": round(float(net_expenses), 2),
+                "gross_expenses": round(float(gross_expenses), 2),
+                "reimbursements": round(float(reimbursements), 2),
+                "income": round(float(income), 2),
+                "categories": categories,
+            }
             if include_top:
                 top = (
                     db.session.query(Expense)
                     .filter(Expense.date >= start, Expense.date <= end)
+                    .filter((Expense.type == "expense") | (Expense.type.is_(None)))
                     .order_by(Expense.amount.desc())
                     .limit(5)
                     .all()
@@ -762,6 +935,7 @@ def get_trends():
                         "category": e.category,
                         "description": e.description,
                         "date": e.date.strftime("%Y-%m-%d"),
+                        "type": e.type or "expense",
                     }
                     for e in top
                 ]
@@ -856,11 +1030,28 @@ def update_expense(expense_id):
         except (ValueError, TypeError):
             return jsonify({"error": "Invalid amount value"}), 400
 
+        if amount <= 0:
+            return jsonify({"error": "Amount must be greater than zero"}), 400
+
         category = data["category"].strip()
         description = data["description"].strip()
 
         if not category or not description:
             return jsonify({"error": "Category and description cannot be empty"}), 400
+
+        if "type" in data:
+            txn_type = data["type"]
+            if not isinstance(txn_type, str):
+                return jsonify({"error": "Invalid transaction type"}), 400
+            txn_type = txn_type.strip().lower()
+            if txn_type not in VALID_TRANSACTION_TYPES:
+                valid_types_str = ", ".join(sorted(VALID_TRANSACTION_TYPES))
+                err_msg = (
+                    f"Invalid transaction type '{txn_type}'. "
+                    f"Must be one of: {valid_types_str}"
+                )
+                return jsonify({"error": err_msg}), 400
+            expense.type = txn_type
 
         expense.amount = amount
         expense.category = category
@@ -874,13 +1065,53 @@ def update_expense(expense_id):
                 expense.date = expense_date
 
         db.session.commit()
-        logger.info(f"Updated expense {expense_id}: ${amount:.2f} ({category})")
+        logger.info(
+            f"Updated expense {expense_id}: ${amount:.2f} ({category}, {expense.type})"
+        )
         return jsonify(expense.to_dict())
 
     except Exception as e:
         logger.error(f"Error updating expense {expense_id}: {e}")
         db.session.rollback()
         return jsonify({"error": "Server error updating expense"}), 500
+
+
+@app.route("/api/summary", methods=["GET"])
+@app.route("/api/expenses/summary", methods=["GET"])
+def get_monthly_summary():
+    """Monthly summary exposing gross, reimbursements, net, and income."""
+    try:
+        now = datetime.now(timezone.utc)
+        month = int(request.args.get("month", now.month))
+        year = int(request.args.get("year", now.year))
+
+        month_filter = (extract("year", Expense.date) == year) & (
+            extract("month", Expense.date) == month
+        )
+        all_month_expenses = Expense.query.filter(month_filter).all()
+
+        gross_expenses = sum(
+            e.amount for e in all_month_expenses if (e.type or "expense") == "expense"
+        )
+        reimbursements = sum(
+            e.amount for e in all_month_expenses if e.type == "reimbursement"
+        )
+        net_expenses = gross_expenses - reimbursements
+        income = sum(e.amount for e in all_month_expenses if e.type == "income")
+
+        return jsonify(
+            {
+                "month": month,
+                "year": year,
+                "gross_expenses": round(float(gross_expenses), 2),
+                "reimbursements": round(float(reimbursements), 2),
+                "net_expenses": round(float(net_expenses), 2),
+                "income": round(float(income), 2),
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error fetching monthly summary: {e}")
+        return jsonify({"error": "Server error fetching summary"}), 500
 
 
 # ---------------------------------------------------------------------------

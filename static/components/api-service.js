@@ -63,10 +63,18 @@ export class ApiService {
     static async getTrends() {
         return await this.request(CONFIG.API.ENDPOINTS.TRENDS);
     }
-    
+
     // Month-related API calls
     static async getMonths() {
         return await this.request(CONFIG.API.ENDPOINTS.MONTHS);
+    }
+
+    static async getSummary(month, year) {
+        let url = '/api/summary';
+        if (month && year) {
+            url += `?month=${month}&year=${year}`;
+        }
+        return await this.request(url);
     }
 }
 
