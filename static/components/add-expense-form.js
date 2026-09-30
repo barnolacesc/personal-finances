@@ -61,6 +61,17 @@ class AddExpenseForm extends BaseComponent {
                 </div>
 
                 <div class="mb-3">
+                    <label class="form-label">Type</label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="txType" id="typeExpense" value="expense" checked autocomplete="off">
+                        <label class="btn btn-outline-primary" for="typeExpense" style="font-size: 0.875rem; font-weight: 600;">Expense</label>
+
+                        <input type="radio" class="btn-check" name="txType" id="typeReimbursement" value="reimbursement" autocomplete="off">
+                        <label class="btn btn-outline-success" for="typeReimbursement" style="font-size: 0.875rem; font-weight: 600;">Reimbursement</label>
+                    </div>
+                </div>
+
+                <div class="mb-3">
                     <label for="category" class="form-label">Category *</label>
                     <select class="form-select" id="category" name="category" required>
                         <option value="">Choose a category...</option>
@@ -214,11 +225,14 @@ class AddExpenseForm extends BaseComponent {
         this.isSubmitting = true;
         this.setSubmittingState(true);
 
+        const txType = this.querySelector('input[name="txType"]:checked')?.value || 'expense';
+
         const data = {
             amount: CurrencyHelper.parseAmount(amountStr),
             category: category,
             description: description,
-            date: dateVal
+            date: dateVal,
+            type: txType
         };
 
         try {
@@ -230,7 +244,10 @@ class AddExpenseForm extends BaseComponent {
                     body: JSON.stringify(data)
                 });
 
-                if (!response.ok) throw new Error('Failed to update expense');
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.error || 'Failed to update expense');
+                }
                 result = await response.json();
 
                 window.showToast('Expense updated successfully', 'success');
@@ -256,7 +273,7 @@ class AddExpenseForm extends BaseComponent {
 
         } catch (error) {
             console.error('Add/Edit expense error:', error);
-            ErrorHandler.handle(error, 'AddExpenseForm.handleSubmit');
+            window.showToast(error.message || 'Error processing request', 'error');
             this.setSubmittingState(false);
             this.isSubmitting = false;
         }
@@ -268,11 +285,24 @@ class AddExpenseForm extends BaseComponent {
         }
 
         try {
-            const response = await fetch(`/api/expenses/${this.editExpenseId}`, {
+            let response = await fetch(`/api/expenses/${this.editExpenseId}`, {
                 method: 'DELETE'
             });
 
-            if (!response.ok) throw new Error('Failed to delete expense');
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                if (response.status === 400 && errData.error && errData.error.includes('active reconciliation allocation')) {
+                    const forceConfirm = confirm(`${errData.error}\n\nDo you want to force delete this transaction and remove its allocations?`);
+                    if (forceConfirm) {
+                        response = await fetch(`/api/expenses/${this.editExpenseId}?force=true`, { method: 'DELETE' });
+                        if (!response.ok) throw new Error('Failed to force delete');
+                    } else {
+                        return;
+                    }
+                } else {
+                    throw new Error(errData.error || 'Failed to delete expense');
+                }
+            }
 
             window.showToast('Expense deleted successfully', 'success');
 
@@ -282,7 +312,7 @@ class AddExpenseForm extends BaseComponent {
 
         } catch (error) {
             console.error('Delete expense error:', error);
-            window.showToast('Failed to delete expense', 'error');
+            window.showToast(error.message || 'Failed to delete expense', 'error');
         }
     }
 

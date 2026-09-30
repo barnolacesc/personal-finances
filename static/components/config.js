@@ -9,7 +9,10 @@ export const CONFIG = {
             TRENDS: '/api/trends',
             RECURRING: '/api/recurring',
             RECURRING_APPLY: '/api/recurring/apply',
-            RECURRING_PENDING: '/api/recurring/pending'
+            RECURRING_PENDING: '/api/recurring/pending',
+            RECONCILIATIONS: '/api/reconciliations',
+            ALLOCATIONS: '/api/allocations',
+            RECONCILIATION_SUMMARY: '/api/reconciliations/summary'
         }
     },
 

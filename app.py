@@ -8,9 +8,10 @@ import json
 import logging
 import functools
 from werkzeug.serving import run_simple
-from sqlalchemy import extract
+from sqlalchemy import extract, or_, inspect, text
 from subprocess import run, CalledProcessError
 import glob
+from collections import defaultdict
 from apscheduler.schedulers.background import BackgroundScheduler
 
 # When launched directly (`python app.py`), this module is registered in
@@ -65,21 +66,158 @@ class Expense(db.Model):
     category = db.Column(db.String(50), nullable=False)
     description = db.Column(db.String(200), nullable=False)
     date = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    type = db.Column(db.String(20), nullable=False, default="expense")
     # Bank sync fields (added via migration script on existing DBs)
     source = db.Column(db.String(20), default="manual")
     external_id = db.Column(db.String(100), nullable=True, unique=True)
     merchant = db.Column(db.String(200), nullable=True)
 
-    def to_dict(self):
-        return {
+    @property
+    def reimbursed_amount(self):
+        """Sum of all reimbursement amounts allocated to this expense."""
+        allocs = self.allocations_to.all()
+        return round(sum(a.amount for a in allocs), 2)
+
+    @property
+    def remaining_share(self):
+        """Gross cost minus reimbursed amount (Cesc's net share)."""
+        return max(0.0, round(self.amount - self.reimbursed_amount, 2))
+
+    @property
+    def allocated_amount(self):
+        """Sum of all allocations made from this reimbursement."""
+        allocs = self.allocations_from.all()
+        return round(sum(a.amount for a in allocs), 2)
+
+    @property
+    def unallocated_amount(self):
+        """Available reimbursement capacity not yet linked to expenses."""
+        return max(0.0, round(self.amount - self.allocated_amount, 2))
+
+    def to_dict(self, include_reconciliation=True, precomputed=None):
+        tx_type = self.type or "expense"
+        result = {
             "id": self.id,
             "amount": self.amount,
             "category": self.category,
             "description": self.description,
-            "date": self.date.isoformat(),
+            "date": self.date.isoformat() if self.date else None,
+            "type": tx_type,
             "source": self.source,
             "external_id": self.external_id,
             "merchant": self.merchant,
+        }
+        if include_reconciliation:
+            if precomputed:
+                reimbursed = precomputed.get("reimbursed", {}).get(self.id, 0.0)
+                allocated = precomputed.get("allocated", {}).get(self.id, 0.0)
+            else:
+                reimbursed = self.reimbursed_amount
+                allocated = self.allocated_amount
+
+            if tx_type == "reimbursement":
+                result["allocated_amount"] = round(allocated, 2)
+                result["unallocated_amount"] = max(
+                    0.0, round(self.amount - allocated, 2)
+                )
+                result["is_fully_allocated"] = (self.amount - allocated) <= 0.001
+            else:
+                result["gross_cost"] = self.amount
+                result["reimbursed_amount"] = round(reimbursed, 2)
+                result["remaining_share"] = max(0.0, round(self.amount - reimbursed, 2))
+                result["is_fully_reimbursed"] = (self.amount - reimbursed) <= 0.001
+        return result
+
+
+class ReconciliationAllocation(db.Model):
+    __tablename__ = "reconciliation_allocation"
+
+    id = db.Column(db.Integer, primary_key=True)
+    reimbursement_id = db.Column(
+        db.Integer, db.ForeignKey("expense.id", ondelete="RESTRICT"), nullable=False
+    )
+    expense_id = db.Column(
+        db.Integer, db.ForeignKey("expense.id", ondelete="RESTRICT"), nullable=False
+    )
+    amount = db.Column(db.Float, nullable=False)
+    counterparty = db.Column(db.String(100), nullable=True)
+    notes = db.Column(db.String(255), nullable=True)
+    group_id = db.Column(db.String(50), nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    reimbursement = db.relationship(
+        "Expense",
+        foreign_keys=[reimbursement_id],
+        backref=db.backref("allocations_from", lazy="dynamic"),
+    )
+    expense = db.relationship(
+        "Expense",
+        foreign_keys=[expense_id],
+        backref=db.backref("allocations_to", lazy="dynamic"),
+    )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "reimbursement_id": self.reimbursement_id,
+            "expense_id": self.expense_id,
+            "amount": round(self.amount, 2),
+            "counterparty": self.counterparty,
+            "notes": self.notes,
+            "group_id": self.group_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "reimbursement": (
+                {
+                    "id": self.reimbursement.id,
+                    "amount": self.reimbursement.amount,
+                    "description": self.reimbursement.description,
+                    "date": (
+                        self.reimbursement.date.isoformat()
+                        if self.reimbursement and self.reimbursement.date
+                        else None
+                    ),
+                    "allocated_amount": (
+                        self.reimbursement.allocated_amount
+                        if self.reimbursement
+                        else 0.0
+                    ),
+                    "unallocated_amount": (
+                        self.reimbursement.unallocated_amount
+                        if self.reimbursement
+                        else 0.0
+                    ),
+                }
+                if self.reimbursement
+                else None
+            ),
+            "expense": (
+                {
+                    "id": self.expense.id,
+                    "amount": self.expense.amount,
+                    "gross_cost": self.expense.amount,
+                    "description": self.expense.description,
+                    "category": self.expense.category,
+                    "date": (
+                        self.expense.date.isoformat()
+                        if self.expense and self.expense.date
+                        else None
+                    ),
+                    "reimbursed_amount": (
+                        self.expense.reimbursed_amount if self.expense else 0.0
+                    ),
+                    "remaining_share": (
+                        self.expense.remaining_share if self.expense else 0.0
+                    ),
+                }
+                if self.expense
+                else None
+            ),
         }
 
 
@@ -211,6 +349,21 @@ class RecurringExpense(db.Model):
 try:
     with app.app_context():
         db.create_all()
+        try:
+            inspector = inspect(db.engine)
+            cols = [c["name"] for c in inspector.get_columns("expense")]
+            if "type" not in cols:
+                with db.engine.connect() as conn:
+                    conn.execute(
+                        text(
+                            "ALTER TABLE expense ADD COLUMN type "
+                            "VARCHAR(20) DEFAULT 'expense'"
+                        )
+                    )
+                    conn.commit()
+                logger.info("Added missing 'type' column to expense table")
+        except Exception as col_err:
+            logger.debug(f"Column check note: {col_err}")
         logger.info("Database initialized successfully")
 except Exception as e:
     logger.error(f"Error initializing database: {e}")
@@ -473,6 +626,11 @@ def serve_trends():
     return send_from_directory("static", "trends.html")
 
 
+@app.route("/reconcile")
+def serve_reconcile():
+    return send_from_directory("static", "reconciliation.html")
+
+
 @app.route("/styles.css")
 def serve_css():
     return send_from_directory("static", "styles.css", mimetype="text/css")
@@ -517,17 +675,41 @@ def handle_expenses():
                     400,
                 )
 
+            # Optional type
+            tx_type = data.get("type", "expense")
+            if tx_type:
+                tx_type = tx_type.strip().lower()
+                if tx_type not in ["expense", "reimbursement", "income"]:
+                    return (
+                        jsonify(
+                            {
+                                "error": (
+                                    f"Invalid transaction type '{tx_type}'. "
+                                    "Must be expense, reimbursement, or income."
+                                )
+                            }
+                        ),
+                        400,
+                    )
+            else:
+                tx_type = "expense"
+
             try:
                 expense_date = parse_expense_date(data.get("date"))
             except ValueError as exc:
                 return jsonify({"error": str(exc)}), 400
 
-            expense = Expense(amount=amount, category=category, description=description)
+            expense = Expense(
+                amount=amount,
+                category=category,
+                description=description,
+                type=tx_type,
+            )
             if expense_date is not None:
                 expense.date = expense_date
             db.session.add(expense)
             db.session.commit()
-            logger.info(f"Added new expense: ${amount:.2f} ({category})")
+            logger.info(f"Added new {tx_type}: ${amount:.2f} ({category})")
             return jsonify(expense.to_dict()), 201
 
         except Exception as e:
@@ -542,12 +724,16 @@ def handle_expenses():
         year = int(request.args.get("year", now.year))
         page = request.args.get("page")
         per_page = request.args.get("per_page")
+        type_filter = request.args.get("type")
 
-        query = (
-            Expense.query.filter(extract("year", Expense.date) == year)
-            .filter(extract("month", Expense.date) == month)
-            .order_by(Expense.date.desc())
+        query = Expense.query.filter(extract("year", Expense.date) == year).filter(
+            extract("month", Expense.date) == month
         )
+
+        if type_filter:
+            query = query.filter(Expense.type == type_filter)
+
+        query = query.order_by(Expense.date.desc())
 
         if page and per_page:
             page = int(page)
@@ -558,9 +744,29 @@ def handle_expenses():
             expenses = query.all()
             total = len(expenses)
 
+        # Batch load allocations for efficient serialization
+        precomputed = {"reimbursed": {}, "allocated": {}}
+        if expenses:
+            expense_ids = [e.id for e in expenses]
+            allocations = ReconciliationAllocation.query.filter(
+                or_(
+                    ReconciliationAllocation.expense_id.in_(expense_ids),
+                    ReconciliationAllocation.reimbursement_id.in_(expense_ids),
+                )
+            ).all()
+            reimbursed_map = defaultdict(float)
+            allocated_map = defaultdict(float)
+            for a in allocations:
+                reimbursed_map[a.expense_id] += a.amount
+                allocated_map[a.reimbursement_id] += a.amount
+            precomputed["reimbursed"] = reimbursed_map
+            precomputed["allocated"] = allocated_map
+
         return jsonify(
             {
-                "expenses": [expense.to_dict() for expense in expenses],
+                "expenses": [
+                    expense.to_dict(precomputed=precomputed) for expense in expenses
+                ],
                 "month": month,
                 "year": year,
                 "page": int(page) if page else None,
@@ -824,6 +1030,33 @@ def get_months():
 def delete_expense(expense_id):
     try:
         expense = Expense.query.get_or_404(expense_id)
+        from_count = expense.allocations_from.count()
+        to_count = expense.allocations_to.count()
+        total_allocations = from_count + to_count
+        force = request.args.get("force", "false").lower() == "true"
+
+        if total_allocations > 0 and not force:
+            role = "reimbursement" if from_count > 0 else "expense"
+            return (
+                jsonify(
+                    {
+                        "error": (
+                            f"Cannot delete {role} #{expense_id}: "
+                            f"it has {total_allocations} active reconciliation "
+                            "allocation(s). Please remove all allocations first "
+                            "or use ?force=true."
+                        )
+                    }
+                ),
+                400,
+            )
+
+        if total_allocations > 0 and force:
+            for a in expense.allocations_from.all():
+                db.session.delete(a)
+            for a in expense.allocations_to.all():
+                db.session.delete(a)
+
         db.session.delete(expense)
         db.session.commit()
         logger.info(f"Deleted expense {expense_id}")
@@ -862,6 +1095,76 @@ def update_expense(expense_id):
         if not category or not description:
             return jsonify({"error": "Category and description cannot be empty"}), 400
 
+        # Safety checks for amount reduction
+        if expense.type == "reimbursement":
+            total_allocated = sum(a.amount for a in expense.allocations_from.all())
+            if round(amount, 2) < round(total_allocated, 2) - 0.001:
+                return (
+                    jsonify(
+                        {
+                            "error": (
+                                f"Cannot reduce reimbursement amount to {amount:.2f}: "
+                                f"total allocated amount is {total_allocated:.2f}."
+                            )
+                        }
+                    ),
+                    400,
+                )
+        else:
+            total_reimbursed = sum(a.amount for a in expense.allocations_to.all())
+            if round(amount, 2) < round(total_reimbursed, 2) - 0.001:
+                return (
+                    jsonify(
+                        {
+                            "error": (
+                                f"Cannot reduce expense amount to {amount:.2f}: "
+                                f"already received {total_reimbursed:.2f} "
+                                "in reimbursements."
+                            )
+                        }
+                    ),
+                    400,
+                )
+
+        # Safety checks for type change
+        if "type" in data:
+            new_type = data["type"].strip().lower()
+            if new_type not in ["expense", "reimbursement", "income"]:
+                return jsonify({"error": f"Invalid type '{new_type}'"}), 400
+            if (
+                expense.type == "reimbursement"
+                and new_type != "reimbursement"
+                and expense.allocations_from.count() > 0
+            ):
+                return (
+                    jsonify(
+                        {
+                            "error": (
+                                "Cannot change transaction type while it has "
+                                "active allocations as a reimbursement."
+                            )
+                        }
+                    ),
+                    400,
+                )
+            if (
+                expense.type == "expense"
+                and new_type != "expense"
+                and expense.allocations_to.count() > 0
+            ):
+                return (
+                    jsonify(
+                        {
+                            "error": (
+                                "Cannot change transaction type while it has "
+                                "active reimbursements linked to it."
+                            )
+                        }
+                    ),
+                    400,
+                )
+            expense.type = new_type
+
         expense.amount = amount
         expense.category = category
         expense.description = description
@@ -881,6 +1184,452 @@ def update_expense(expense_id):
         logger.error(f"Error updating expense {expense_id}: {e}")
         db.session.rollback()
         return jsonify({"error": "Server error updating expense"}), 500
+
+
+# ---------------------------------------------------------------------------
+# Reconciliation Allocations API
+# ---------------------------------------------------------------------------
+
+
+@app.route("/api/allocations", methods=["GET", "POST"])
+@app.route("/api/reconciliations", methods=["GET", "POST"])
+def handle_allocations():
+    if request.method == "POST":
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({"error": "No JSON data received"}), 400
+
+            reimbursement_id = data.get("reimbursement_id")
+            expense_id = data.get("expense_id")
+            raw_amount = data.get("amount")
+            counterparty = (data.get("counterparty") or "").strip() or None
+            notes = (data.get("notes") or "").strip() or None
+            group_id = (data.get("group_id") or "").strip() or None
+
+            if reimbursement_id is None or expense_id is None or raw_amount is None:
+                return (
+                    jsonify(
+                        {
+                            "error": (
+                                "reimbursement_id, expense_id, and amount "
+                                "are required"
+                            )
+                        }
+                    ),
+                    400,
+                )
+
+            try:
+                reimbursement_id = int(reimbursement_id)
+                expense_id = int(expense_id)
+                amount = round(float(raw_amount), 2)
+            except (ValueError, TypeError):
+                return jsonify({"error": "Invalid IDs or amount"}), 400
+
+            if amount <= 0:
+                return (
+                    jsonify({"error": "Allocation amount must be greater than zero"}),
+                    400,
+                )
+
+            if reimbursement_id == expense_id:
+                return (
+                    jsonify({"error": "Cannot allocate a transaction to itself"}),
+                    400,
+                )
+
+            reimbursement = db.session.get(Expense, reimbursement_id)
+            if not reimbursement:
+                return (
+                    jsonify(
+                        {
+                            "error": (
+                                f"Reimbursement transaction {reimbursement_id} "
+                                "not found"
+                            )
+                        }
+                    ),
+                    404,
+                )
+
+            expense = db.session.get(Expense, expense_id)
+            if not expense:
+                return (
+                    jsonify({"error": f"Expense transaction {expense_id} not found"}),
+                    404,
+                )
+
+            # Auto-promote source to reimbursement if it wasn't already marked
+            if reimbursement.type != "reimbursement":
+                reimbursement.type = "reimbursement"
+
+            # Check reimbursement capacity
+            current_allocated = sum(
+                a.amount for a in reimbursement.allocations_from.all()
+            )
+            available_reimbursement = round(reimbursement.amount - current_allocated, 2)
+            if (
+                round(current_allocated + amount, 2)
+                > round(reimbursement.amount, 2) + 0.001
+            ):
+                return (
+                    jsonify(
+                        {
+                            "error": (
+                                f"Allocation amount ({amount:.2f}) exceeds "
+                                f"available reimbursement capacity "
+                                f"({available_reimbursement:.2f}). Total allocations "
+                                f"cannot exceed reimbursement amount "
+                                f"({reimbursement.amount:.2f})."
+                            )
+                        }
+                    ),
+                    400,
+                )
+
+            # Check expense capacity
+            current_reimbursed = sum(a.amount for a in expense.allocations_to.all())
+            remaining_expense_share = round(expense.amount - current_reimbursed, 2)
+            if round(current_reimbursed + amount, 2) > round(expense.amount, 2) + 0.001:
+                return (
+                    jsonify(
+                        {
+                            "error": (
+                                f"Allocation amount ({amount:.2f}) exceeds expense "
+                                f"remaining share ({remaining_expense_share:.2f}). "
+                                f"Total reimbursements cannot exceed expense amount "
+                                f"({expense.amount:.2f})."
+                            )
+                        }
+                    ),
+                    400,
+                )
+
+            allocation = ReconciliationAllocation(
+                reimbursement_id=reimbursement_id,
+                expense_id=expense_id,
+                amount=amount,
+                counterparty=counterparty,
+                notes=notes,
+                group_id=group_id,
+            )
+            db.session.add(allocation)
+            db.session.commit()
+            logger.info(
+                f"Created allocation #{allocation.id}: ${amount:.2f} "
+                f"from #{reimbursement_id} to #{expense_id}"
+            )
+            return jsonify(allocation.to_dict()), 201
+
+        except Exception as e:
+            logger.error(f"Error creating allocation: {e}")
+            db.session.rollback()
+            return jsonify({"error": "Server error creating allocation"}), 500
+
+    # GET request
+    try:
+        reimbursement_id = request.args.get("reimbursement_id")
+        expense_id = request.args.get("expense_id")
+        group_id = request.args.get("group_id")
+        month = request.args.get("month")
+        year = request.args.get("year")
+
+        query = ReconciliationAllocation.query.order_by(
+            ReconciliationAllocation.created_at.desc()
+        )
+
+        if reimbursement_id:
+            query = query.filter(
+                ReconciliationAllocation.reimbursement_id == int(reimbursement_id)
+            )
+        if expense_id:
+            query = query.filter(ReconciliationAllocation.expense_id == int(expense_id))
+        if group_id:
+            query = query.filter(ReconciliationAllocation.group_id == group_id)
+
+        if month and year:
+            m = int(month)
+            y = int(year)
+            query = query.join(
+                Expense, ReconciliationAllocation.expense_id == Expense.id
+            ).filter(
+                extract("month", Expense.date) == m,
+                extract("year", Expense.date) == y,
+            )
+
+        allocations = query.all()
+        return jsonify(
+            {
+                "allocations": [a.to_dict() for a in allocations],
+                "total": len(allocations),
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error fetching allocations: {e}")
+        return jsonify({"error": "Server error fetching allocations"}), 500
+
+
+@app.route("/api/allocations/<int:allocation_id>", methods=["GET", "PUT", "DELETE"])
+@app.route("/api/reconciliations/<int:allocation_id>", methods=["GET", "PUT", "DELETE"])
+def handle_single_allocation(allocation_id):
+    try:
+        allocation = ReconciliationAllocation.query.get_or_404(allocation_id)
+
+        if request.method == "GET":
+            return jsonify(allocation.to_dict())
+
+        elif request.method == "DELETE":
+            db.session.delete(allocation)
+            db.session.commit()
+            logger.info(f"Deleted allocation {allocation_id}")
+            return "", 204
+
+        elif request.method == "PUT":
+            data = request.get_json()
+            if not data:
+                return jsonify({"error": "No JSON data received"}), 400
+
+            if "amount" in data:
+                try:
+                    new_amount = round(float(data["amount"]), 2)
+                except (ValueError, TypeError):
+                    return jsonify({"error": "Invalid amount value"}), 400
+
+                if new_amount <= 0:
+                    return (
+                        jsonify(
+                            {"error": "Allocation amount must be greater than zero"}
+                        ),
+                        400,
+                    )
+
+                # Check reimbursement capacity
+                other_allocated = sum(
+                    a.amount
+                    for a in allocation.reimbursement.allocations_from.all()
+                    if a.id != allocation.id
+                )
+                avail_reimb = round(
+                    allocation.reimbursement.amount - other_allocated, 2
+                )
+                if (
+                    round(other_allocated + new_amount, 2)
+                    > round(allocation.reimbursement.amount, 2) + 0.001
+                ):
+                    return (
+                        jsonify(
+                            {
+                                "error": (
+                                    f"Allocation amount ({new_amount:.2f}) exceeds "
+                                    f"available reimbursement capacity "
+                                    f"({avail_reimb:.2f}). Total allocations cannot "
+                                    f"exceed reimbursement amount "
+                                    f"({allocation.reimbursement.amount:.2f})."
+                                )
+                            }
+                        ),
+                        400,
+                    )
+
+                # Check expense capacity
+                other_reimbursed = sum(
+                    a.amount
+                    for a in allocation.expense.allocations_to.all()
+                    if a.id != allocation.id
+                )
+                rem_share = round(allocation.expense.amount - other_reimbursed, 2)
+                if (
+                    round(other_reimbursed + new_amount, 2)
+                    > round(allocation.expense.amount, 2) + 0.001
+                ):
+                    return (
+                        jsonify(
+                            {
+                                "error": (
+                                    f"Allocation amount ({new_amount:.2f}) exceeds "
+                                    f"expense remaining share ({rem_share:.2f}). "
+                                    f"Total reimbursements cannot exceed expense "
+                                    f"amount ({allocation.expense.amount:.2f})."
+                                )
+                            }
+                        ),
+                        400,
+                    )
+
+                allocation.amount = new_amount
+
+            if "counterparty" in data:
+                allocation.counterparty = (data["counterparty"] or "").strip() or None
+            if "notes" in data:
+                allocation.notes = (data["notes"] or "").strip() or None
+            if "group_id" in data:
+                allocation.group_id = (data["group_id"] or "").strip() or None
+
+            allocation.updated_at = datetime.now(timezone.utc)
+            db.session.commit()
+            logger.info(f"Updated allocation {allocation_id}")
+            return jsonify(allocation.to_dict())
+
+    except Exception as e:
+        logger.error(f"Error handling allocation {allocation_id}: {e}")
+        db.session.rollback()
+        return jsonify({"error": "Server error processing allocation"}), 500
+
+
+@app.route("/api/expenses/<int:expense_id>/reconciliation", methods=["GET"])
+def get_expense_reconciliation(expense_id):
+    try:
+        expense = Expense.query.get_or_404(expense_id)
+        if expense.type == "reimbursement":
+            allocations = [a.to_dict() for a in expense.allocations_from.all()]
+            return jsonify(
+                {
+                    "transaction": expense.to_dict(),
+                    "allocated_amount": expense.allocated_amount,
+                    "unallocated_amount": expense.unallocated_amount,
+                    "allocations": allocations,
+                }
+            )
+        else:
+            allocations = [a.to_dict() for a in expense.allocations_to.all()]
+            return jsonify(
+                {
+                    "transaction": expense.to_dict(),
+                    "gross_cost": expense.amount,
+                    "reimbursed_amount": expense.reimbursed_amount,
+                    "remaining_share": expense.remaining_share,
+                    "allocations": allocations,
+                }
+            )
+    except Exception as e:
+        logger.error(f"Error fetching reconciliation for expense {expense_id}: {e}")
+        return jsonify({"error": "Server error"}), 500
+
+
+@app.route("/api/reconciliations/summary", methods=["GET"])
+@app.route("/api/allocations/summary", methods=["GET"])
+def get_reconciliation_summary():
+    try:
+        month = request.args.get("month")
+        year = request.args.get("year")
+
+        # Unmatched reimbursements (capacity > 0)
+        reimbursements = (
+            Expense.query.filter(Expense.type == "reimbursement")
+            .order_by(Expense.date.desc())
+            .all()
+        )
+        unmatched_reimbursements = []
+        for r in reimbursements:
+            unalloc = r.unallocated_amount
+            if unalloc > 0.001:
+                r_dict = r.to_dict()
+                r_dict["allocations"] = [a.to_dict() for a in r.allocations_from.all()]
+                unmatched_reimbursements.append(r_dict)
+
+        # Expenses
+        expenses_query = Expense.query.filter(Expense.type == "expense")
+        if year and month:
+            expenses_query = expenses_query.filter(
+                extract("year", Expense.date) == int(year),
+                extract("month", Expense.date) == int(month),
+            )
+        expenses = expenses_query.order_by(Expense.date.desc()).all()
+
+        partially_reimbursed = []
+        unreimbursed = []
+        for e in expenses:
+            reimbursed = e.reimbursed_amount
+            rem = e.remaining_share
+            if reimbursed > 0.001 and rem > 0.001:
+                e_dict = e.to_dict()
+                e_dict["allocations"] = [a.to_dict() for a in e.allocations_to.all()]
+                partially_reimbursed.append(e_dict)
+            elif reimbursed <= 0.001:
+                unreimbursed.append(e.to_dict())
+
+        # Smart suggestions
+        suggestions = []
+        for r in unmatched_reimbursements:
+            r_unalloc = r["unallocated_amount"]
+            r_date = datetime.fromisoformat(r["date"]) if r.get("date") else None
+            r_desc = r["description"].lower()
+
+            for e in expenses:
+                rem_share = e.remaining_share
+                if rem_share <= 0.001 or e.id == r["id"]:
+                    continue
+
+                score = 0
+                reasons = []
+                suggested_amount = min(r_unalloc, rem_share)
+
+                # 1. Exact amount match
+                if abs(rem_share - r_unalloc) < 0.01:
+                    score += 50
+                    reasons.append(f"Exact amount match (€{r_unalloc:.2f})")
+                # 2. 50/50 split of gross expense
+                elif abs(e.amount * 0.5 - r_unalloc) < 0.01:
+                    score += 40
+                    reasons.append(f"50% split of €{e.amount:.2f}")
+                elif r_unalloc <= rem_share:
+                    score += 15
+
+                # 3. Date proximity
+                if r_date and e.date:
+                    r_naive = r_date.replace(tzinfo=None)
+                    e_naive = e.date.replace(tzinfo=None)
+                    day_diff = abs((r_naive - e_naive).days)
+                    if day_diff <= 3:
+                        score += 30
+                        reasons.append(f"Within {day_diff} day(s)")
+                    elif day_diff <= 14:
+                        score += 15
+                        reasons.append(f"Within {day_diff} days")
+
+                # 4. Text keyword matching
+                e_desc = e.description.lower()
+                common_words = set(w for w in r_desc.split() if len(w) > 3) & set(
+                    w for w in e_desc.split() if len(w) > 3
+                )
+                if common_words:
+                    score += 25
+                    reasons.append(f"Shared keywords: {', '.join(common_words)}")
+
+                if score >= 30:
+                    suggestions.append(
+                        {
+                            "reimbursement_id": r["id"],
+                            "reimbursement": r,
+                            "expense_id": e.id,
+                            "expense": e.to_dict(),
+                            "suggested_amount": round(suggested_amount, 2),
+                            "score": score,
+                            "confidence": "high" if score >= 60 else "medium",
+                            "reasons": reasons,
+                        }
+                    )
+
+        suggestions.sort(key=lambda s: s["score"], reverse=True)
+
+        return jsonify(
+            {
+                "unmatched_reimbursements": unmatched_reimbursements,
+                "partially_reimbursed_expenses": partially_reimbursed,
+                "unreimbursed_expenses": unreimbursed[:30],
+                "suggestions": suggestions[:15],
+                "total_unallocated_reimbursements": round(
+                    sum(r["unallocated_amount"] for r in unmatched_reimbursements), 2
+                ),
+                "total_partially_reimbursed_remaining": round(
+                    sum(e["remaining_share"] for e in partially_reimbursed), 2
+                ),
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error fetching reconciliation summary: {e}", exc_info=True)
+        return jsonify({"error": "Server error fetching summary"}), 500
 
 
 # ---------------------------------------------------------------------------

@@ -155,6 +155,13 @@ def test_recurring_page(client):
     assert response.status_code == 200
 
 
+def test_reconcile_page(client):
+    """Test /reconcile serves the reconciliation page"""
+    response = client.get("/reconcile")
+    assert response.status_code == 200
+    assert b"Vault" in response.data
+
+
 def test_bank_page(client):
     """Test /bank page route (currently disabled)"""
     response = client.get("/bank")

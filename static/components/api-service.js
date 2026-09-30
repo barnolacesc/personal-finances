@@ -63,10 +63,53 @@ export class ApiService {
     static async getTrends() {
         return await this.request(CONFIG.API.ENDPOINTS.TRENDS);
     }
-    
+
     // Month-related API calls
     static async getMonths() {
         return await this.request(CONFIG.API.ENDPOINTS.MONTHS);
+    }
+
+    // Reconciliation and Allocation API calls
+    static async getAllocations(params = {}) {
+        const query = new URLSearchParams(params).toString();
+        const url = `${CONFIG.API.ENDPOINTS.ALLOCATIONS}${query ? '?' + query : ''}`;
+        return await this.request(url);
+    }
+
+    static async createAllocation(allocationData) {
+        return await this.request(CONFIG.API.ENDPOINTS.ALLOCATIONS, {
+            method: 'POST',
+            body: JSON.stringify(allocationData)
+        });
+    }
+
+    static async updateAllocation(allocationId, allocationData) {
+        const url = `${CONFIG.API.ENDPOINTS.ALLOCATIONS}/${allocationId}`;
+        return await this.request(url, {
+            method: 'PUT',
+            body: JSON.stringify(allocationData)
+        });
+    }
+
+    static async deleteAllocation(allocationId) {
+        const url = `${CONFIG.API.ENDPOINTS.ALLOCATIONS}/${allocationId}`;
+        return await this.request(url, {
+            method: 'DELETE'
+        });
+    }
+
+    static async getReconciliationSummary(month, year) {
+        let url = CONFIG.API.ENDPOINTS.RECONCILIATION_SUMMARY;
+        const params = [];
+        if (month) params.push(`month=${month}`);
+        if (year) params.push(`year=${year}`);
+        if (params.length) url += `?${params.join('&')}`;
+        return await this.request(url);
+    }
+
+    static async getExpenseReconciliation(expenseId) {
+        const url = `${CONFIG.API.ENDPOINTS.EXPENSES}/${expenseId}/reconciliation`;
+        return await this.request(url);
     }
 }
 

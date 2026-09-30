@@ -54,6 +54,7 @@ instance/
 .project
 .pydevproject
 .settings/
+.agents/
 
 # OS
 .DS_Store

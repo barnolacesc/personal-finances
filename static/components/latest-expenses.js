@@ -411,13 +411,49 @@ class LatestExpenses extends BaseComponent {
         }
 
         listContainer.innerHTML = expenses.map(expense => {
-            const categoryColor = CategoryHelper.getCategoryColor(expense.category);
-            const categoryIcon = CategoryHelper.getCategoryIcon(expense.category);
+            const isReimb = expense.type === 'reimbursement';
+            const categoryColor = isReimb ? '#10b981' : CategoryHelper.getCategoryColor(expense.category);
+            const categoryIcon = isReimb ? 'savings' : CategoryHelper.getCategoryIcon(expense.category);
             const sourceBadge = expense.source === 'bank_sync'
                 ? `<span class="source-badge bank"><span class="material-symbols-outlined" style="font-size: 0.625rem;">account_balance</span>Bank</span>`
                 : expense.source === 'manual'
                 ? `<span class="source-badge manual"><span class="material-symbols-outlined" style="font-size: 0.625rem;">edit</span>Manual</span>`
                 : '';
+            const typeBadge = isReimb
+                ? `<span class="source-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-weight: 700;">Reimbursement</span>`
+                : '';
+
+            const hasReconciliation = !isReimb && expense.reimbursed_amount > 0;
+            const hasAllocations = isReimb && expense.allocated_amount > 0;
+
+            const reconciliationMeta = hasReconciliation
+                ? `<div style="font-size: 0.6875rem; color: var(--primary); font-weight: 600; margin-top: 2px; display: flex; align-items: center; gap: 4px;">
+                        <span class="material-symbols-outlined" style="font-size: 0.75rem;">link</span>
+                        <span>Reimbursed: ${CurrencyHelper.format(expense.reimbursed_amount)}</span>
+                        <span class="dot" style="width: 3px; height: 3px; border-radius: 50%; background: currentColor;"></span>
+                        <span>Cesc's share: ${CurrencyHelper.format(expense.remaining_share)}</span>
+                   </div>`
+                : hasAllocations
+                ? `<div style="font-size: 0.6875rem; color: #10b981; font-weight: 600; margin-top: 2px; display: flex; align-items: center; gap: 4px;">
+                        <span class="material-symbols-outlined" style="font-size: 0.75rem;">check_circle</span>
+                        <span>Allocated: ${CurrencyHelper.format(expense.allocated_amount)}</span>
+                        <span class="dot" style="width: 3px; height: 3px; border-radius: 50%; background: currentColor;"></span>
+                        <span>Remaining: ${CurrencyHelper.format(expense.unallocated_amount)}</span>
+                   </div>`
+                : '';
+
+            const amountDisplay = hasReconciliation
+                ? `<div class="expense-amount" style="flex-shrink: 0; text-align: right; white-space: nowrap;">
+                        <div style="color: var(--primary); font-weight: 800;">${CurrencyHelper.format(expense.remaining_share)}</div>
+                        <div style="font-size: 0.6875rem; color: var(--outline); font-weight: 500; font-variant-numeric: tabular-nums;">Gross: ${CurrencyHelper.format(expense.gross_cost || expense.amount)}</div>
+                   </div>`
+                : isReimb
+                ? `<div class="expense-amount" style="flex-shrink: 0; color: #10b981; white-space: nowrap;">
+                        +${CurrencyHelper.format(expense.amount)}
+                   </div>`
+                : `<div class="expense-amount" style="flex-shrink: 0; white-space: nowrap;">
+                        ${CurrencyHelper.format(expense.amount)}
+                   </div>`;
 
             return `
                 <div class="swipe-container" data-expense-id="${expense.id}">
@@ -441,12 +477,12 @@ class LatestExpenses extends BaseComponent {
                                 <div class="expense-date text-muted" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px;">
                                     <span>${this.formatExpenseDate(expense.date)}</span>
                                     ${sourceBadge}
+                                    ${typeBadge}
                                 </div>
+                                ${reconciliationMeta}
                             </div>
                         </div>
-                        <div class="expense-amount" style="flex-shrink: 0; white-space: nowrap;">
-                            ${CurrencyHelper.format(expense.amount)}
-                        </div>
+                        ${amountDisplay}
                     </div>
                 </div>
             `;
@@ -566,8 +602,24 @@ class LatestExpenses extends BaseComponent {
         const confirmed = confirm(`Delete "${Utils.escapeHTML(expense.description)}" (${CurrencyHelper.format(expense.amount)})?`);
         if (confirmed) {
             try {
-                const response = await fetch(`/api/expenses/${expense.id}`, { method: 'DELETE' });
-                if (!response.ok) throw new Error('Failed to delete');
+                let response = await fetch(`/api/expenses/${expense.id}`, { method: 'DELETE' });
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    if (response.status === 400 && errData.error && errData.error.includes('active reconciliation allocation')) {
+                        const forceConfirm = confirm(`${errData.error}\n\nDo you want to force delete this transaction and remove its allocations?`);
+                        if (forceConfirm) {
+                            response = await fetch(`/api/expenses/${expense.id}?force=true`, { method: 'DELETE' });
+                            if (!response.ok) throw new Error('Failed to force delete');
+                        } else {
+                            const expenseItem = container.querySelector('.expense-item');
+                            if (expenseItem) expenseItem.classList.remove('swiped');
+                            this.activeSwipeItem = null;
+                            return;
+                        }
+                    } else {
+                        throw new Error(errData.error || 'Failed to delete');
+                    }
+                }
 
                 container.style.transition = 'all 0.3s ease';
                 container.style.transform = 'translateX(-100%)';
@@ -585,9 +637,9 @@ class LatestExpenses extends BaseComponent {
                     if (window.showToast) window.showToast('Expense deleted', 'success');
                 }, 500);
             } catch (error) {
-                if (window.showToast) window.showToast('Failed to delete expense', 'error');
+                if (window.showToast) window.showToast(error.message || 'Failed to delete expense', 'error');
                 const expenseItem = container.querySelector('.expense-item');
-                expenseItem.classList.remove('swiped');
+                if (expenseItem) expenseItem.classList.remove('swiped');
                 this.activeSwipeItem = null;
             }
         } else {

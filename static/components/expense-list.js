@@ -360,13 +360,42 @@ class ExpenseList extends BaseComponent {
 
             filteredExpenses.forEach((expense, index) => {
                 const isFirst = index === 0;
-                const icon = CategoryHelper.getCategoryIcon(expense.category);
-                const color = CategoryHelper.getCategoryColor(expense.category);
+                const isReimb = expense.type === 'reimbursement';
+                const icon = isReimb ? 'savings' : CategoryHelper.getCategoryIcon(expense.category);
+                const color = isReimb ? '#10b981' : CategoryHelper.getCategoryColor(expense.category);
                 const source = expense.source || 'manual';
+                const hasReconciliation = !isReimb && expense.reimbursed_amount > 0;
+                const hasAllocations = isReimb && expense.allocated_amount > 0;
 
                 const item = document.createElement('div');
                 item.className = 'expense-item';
                 item.dataset.expenseId = expense.id;
+
+                const reconciliationHtml = hasReconciliation
+                    ? `<div style="font-size: 0.6875rem; color: var(--primary); font-weight: 600; margin-top: 0.25rem; display: flex; align-items: center; gap: 4px;">
+                            <span class="material-symbols-outlined" style="font-size: 0.75rem;">link</span>
+                            <span>Reimbursed: ${CurrencyHelper.format(expense.reimbursed_amount)}</span>
+                            <span class="dot"></span>
+                            <span>Cesc's share: ${CurrencyHelper.format(expense.remaining_share)}</span>
+                       </div>`
+                    : hasAllocations
+                    ? `<div style="font-size: 0.6875rem; color: #10b981; font-weight: 600; margin-top: 0.25rem; display: flex; align-items: center; gap: 4px;">
+                            <span class="material-symbols-outlined" style="font-size: 0.75rem;">check_circle</span>
+                            <span>Allocated: ${CurrencyHelper.format(expense.allocated_amount)}</span>
+                            <span class="dot"></span>
+                            <span>Remaining: ${CurrencyHelper.format(expense.unallocated_amount)}</span>
+                       </div>`
+                    : '';
+
+                const amountHtml = hasReconciliation
+                    ? `<div class="expense-amount" style="text-align: right; flex-shrink: 0;">
+                            <div style="color: var(--primary);">${CurrencyHelper.format(expense.remaining_share)}</div>
+                            <div style="font-size: 0.6875rem; color: var(--outline); font-weight: 500; font-variant-numeric: tabular-nums;">Gross: ${CurrencyHelper.format(expense.gross_cost || expense.amount)}</div>
+                       </div>`
+                    : isReimb
+                    ? `<div class="expense-amount" style="color: #10b981; flex-shrink: 0;">+${CurrencyHelper.format(expense.amount)}</div>`
+                    : `<div class="expense-amount">${CurrencyHelper.format(expense.amount)}</div>`;
+
                 item.innerHTML = `
                     <div class="expense-icon-container">
                         <span class="material-symbols-outlined" style="color: ${color};">${icon}</span>
@@ -377,10 +406,12 @@ class ExpenseList extends BaseComponent {
                             <span>${this.formatDate(expense.date)}</span>
                             <span class="dot"></span>
                             <span class="source-badge source-${source}">${source === 'bank_sync' ? 'Bank' : 'Manual'}</span>
+                            ${isReimb ? '<span class="source-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; font-weight: 700;">Reimbursement</span>' : ''}
                             ${isFirst ? '<span class="latest-badge">Latest</span>' : ''}
                         </div>
+                        ${reconciliationHtml}
                     </div>
-                    <div class="expense-amount">${CurrencyHelper.format(expense.amount)}</div>
+                    ${amountHtml}
                 `;
                 expensesList.appendChild(item);
             });
@@ -503,13 +534,26 @@ class ExpenseList extends BaseComponent {
     async deleteExpense(expenseId) {
         if (!confirm('Are you sure you want to delete this expense?')) return;
         try {
-            const response = await fetch(`/api/expenses/${expenseId}`, { method: 'DELETE' });
-            if (!response.ok) throw new Error('Failed to delete expense');
+            let response = await fetch(`/api/expenses/${expenseId}`, { method: 'DELETE' });
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                if (response.status === 400 && errData.error && errData.error.includes('active reconciliation allocation')) {
+                    const forceConfirm = confirm(`${errData.error}\n\nDo you want to force delete this transaction and remove its allocations?`);
+                    if (forceConfirm) {
+                        response = await fetch(`/api/expenses/${expenseId}?force=true`, { method: 'DELETE' });
+                        if (!response.ok) throw new Error('Failed to force delete');
+                    } else {
+                        return;
+                    }
+                } else {
+                    throw new Error(errData.error || 'Failed to delete expense');
+                }
+            }
             window.showToast('Expense deleted successfully', 'success');
             this.loadExpenses();
         } catch (error) {
             console.error('Error deleting expense:', error);
-            window.showToast('Failed to delete expense', 'error');
+            window.showToast(error.message || 'Failed to delete expense', 'error');
         }
     }
 
