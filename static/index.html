@@ -28,54 +28,72 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 
     <!-- Vault Theme -->
-    <link rel="stylesheet" href="/static/styles/vault-theme.css?v=1783245000">
+    <link rel="stylesheet" href="/static/styles/vault-theme.css?v=1783250000">
 </head>
 <body>
     <nav-bar></nav-bar>
     <toast-container></toast-container>
 
-    <div class="container py-3">
-        <!-- Dual Mode Pill Switcher -->
-        <div class="mode-switch-container mb-3">
-            <a href="/" class="mode-switch-btn active" id="modeLogBtn">
-                <span class="material-symbols-outlined" style="font-size: 1.125rem;">bolt</span>
-                <span>Log Expense</span>
-            </a>
-            <a href="/expenses" class="mode-switch-btn" id="modeBrowseBtn">
-                <span class="material-symbols-outlined" style="font-size: 1.125rem;">payments</span>
-                <span>Browse</span>
-            </a>
-        </div>
+    <div class="container py-2" style="max-width: 580px;">
 
-        <!-- Fast Uploader -->
-        <div class="modern-card chart-container-modern mb-4 p-3 p-sm-4">
-            <add-expense-form></add-expense-form>
-        </div>
-
-        <!-- Recent Activity Section -->
-        <div class="mt-4">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <p class="text-label-sm mb-0" style="color: var(--outline);">
-                    <span class="material-symbols-outlined" style="font-size: 0.875rem; vertical-align: text-bottom;">schedule</span>
-                    Recent Activity
-                </p>
-                <a href="/expenses" class="text-label-sm text-decoration-none" style="color: var(--primary); font-weight: 600;">
-                    View all &rarr;
-                </a>
+        <!-- Quick Month Selector & Chart Toggle Bar -->
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <date-navigation></date-navigation>
+            <div class="d-flex align-items-center gap-1">
+                <button type="button" class="btn btn-sm d-flex align-items-center gap-1" id="toggleChartBtn"
+                        style="background: var(--surface-container-high); border: 1px solid var(--outline-variant); color: var(--on-surface-variant); border-radius: 9999px; padding: 0.3rem 0.65rem; font-size: 0.75rem; font-weight: 600; cursor: pointer;">
+                    <span class="material-symbols-outlined" style="font-size: 1rem; color: var(--primary);">donut_small</span>
+                    <span id="chartToggleLabel">Chart</span>
+                </button>
+                <backup-button></backup-button>
             </div>
-            <latest-expenses mode="recent" limit="5"></latest-expenses>
+        </div>
+
+        <!-- Collapsible Category Doughnut Chart -->
+        <div id="chartSection" class="mb-3 d-none">
+            <category-chart></category-chart>
+        </div>
+
+        <!-- 1. The Mobile Book Expense Uploader (Name -> Amount -> Category) -->
+        <add-expense-form></add-expense-form>
+
+        <!-- 2. The Expense Browser / Timeline (All on the same page) -->
+        <div class="mt-3">
+            <latest-expenses period="all"></latest-expenses>
         </div>
     </div>
 
     <!-- Core Modules -->
-    <script type="module" src="/static/components/config.js?v=1783245000"></script>
-    <script type="module" src="/static/components/api-service.js?v=1783245000"></script>
-    <script type="module" src="/static/components/event-manager.js?v=1783245000"></script>
+    <script type="module" src="/static/components/config.js?v=1783250000"></script>
+    <script type="module" src="/static/components/api-service.js?v=1783250000"></script>
+    <script type="module" src="/static/components/event-manager.js?v=1783250000"></script>
 
     <!-- Custom Components -->
-    <script src="/static/components/navbar.js?v=1783245000"></script>
-    <script type="module" src="/static/components/toast.js?v=1783245000"></script>
-    <script type="module" src="/static/components/add-expense-form.js?v=1783245000"></script>
-    <script type="module" src="/static/components/latest-expenses.js?v=1783245000"></script>
+    <script src="/static/components/navbar.js?v=1783250000"></script>
+    <script type="module" src="/static/components/toast.js?v=1783250000"></script>
+    <script type="module" src="/static/components/date-navigation.js?v=1783250000"></script>
+    <script type="module" src="/static/components/category-chart.js?v=1783250000"></script>
+    <script type="module" src="/static/components/backup-button.js?v=1783250000"></script>
+    <script type="module" src="/static/components/add-expense-form.js?v=1783250000"></script>
+    <script type="module" src="/static/components/latest-expenses.js?v=1783250000"></script>
+
+    <!-- Chart Toggle Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const chartBtn = document.getElementById('toggleChartBtn');
+            const chartSection = document.getElementById('chartSection');
+            const label = document.getElementById('chartToggleLabel');
+
+            if (chartBtn && chartSection) {
+                chartBtn.addEventListener('click', () => {
+                    chartSection.classList.toggle('d-none');
+                    const isVisible = !chartSection.classList.contains('d-none');
+                    if (label) label.textContent = isVisible ? 'Hide' : 'Chart';
+                    chartBtn.style.borderColor = isVisible ? 'var(--primary)' : 'var(--outline-variant)';
+                    chartBtn.style.color = isVisible ? 'var(--primary)' : 'var(--on-surface-variant)';
+                });
+            }
+        });
+    </script>
 </body>
 </html>
