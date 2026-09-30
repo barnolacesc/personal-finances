@@ -4,9 +4,8 @@
     <script>
         window.onerror = function(msg, url, line, col, error) {
             console.error("Global error:", msg, url, line);
-            // alert("JS Error: " + msg + " at " + line);
         };
-        </script>
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Vault - Personal Finance Tracker</title>
@@ -29,40 +28,54 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 
     <!-- Vault Theme -->
-    <link rel="stylesheet" href="/static/styles/vault-theme.css?v=1782587681">
+    <link rel="stylesheet" href="/static/styles/vault-theme.css?v=1783245000">
 </head>
 <body>
     <nav-bar></nav-bar>
     <toast-container></toast-container>
 
     <div class="container py-3">
-        <!-- Hero Action Buttons -->
-        <div class="home-hero-actions">
-            <a href="/static/add-expense.html" class="home-hero-btn home-hero-primary">
-                <span class="material-symbols-outlined" style="font-size: 2.5rem;">add_circle</span>
-                <span>Add Expense</span>
+        <!-- Dual Mode Pill Switcher -->
+        <div class="mode-switch-container mb-3">
+            <a href="/" class="mode-switch-btn active" id="modeLogBtn">
+                <span class="material-symbols-outlined" style="font-size: 1.125rem;">bolt</span>
+                <span>Log Expense</span>
             </a>
-            <a href="/expenses" class="home-hero-btn home-hero-secondary">
-                <span class="material-symbols-outlined" style="font-size: 2.5rem; color: var(--primary);">payments</span>
-                <span>View All</span>
+            <a href="/expenses" class="mode-switch-btn" id="modeBrowseBtn">
+                <span class="material-symbols-outlined" style="font-size: 1.125rem;">payments</span>
+                <span>Browse</span>
             </a>
         </div>
 
-        <!-- Recent Expenses -->
+        <!-- Fast Uploader -->
+        <div class="modern-card chart-container-modern mb-4 p-3 p-sm-4">
+            <add-expense-form></add-expense-form>
+        </div>
+
+        <!-- Recent Activity Section -->
         <div class="mt-4">
-            <p class="text-label-sm" style="color: var(--outline); margin-bottom: 0.75rem;">
-                <span class="material-symbols-outlined" style="font-size: 0.875rem; vertical-align: text-bottom;">schedule</span>
-                Recent
-            </p>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <p class="text-label-sm mb-0" style="color: var(--outline);">
+                    <span class="material-symbols-outlined" style="font-size: 0.875rem; vertical-align: text-bottom;">schedule</span>
+                    Recent Activity
+                </p>
+                <a href="/expenses" class="text-label-sm text-decoration-none" style="color: var(--primary); font-weight: 600;">
+                    View all &rarr;
+                </a>
+            </div>
             <latest-expenses mode="recent" limit="5"></latest-expenses>
         </div>
     </div>
 
     <!-- Core Modules -->
-    <script type="module" src="/static/components/config.js?v=1782587681"></script>
+    <script type="module" src="/static/components/config.js?v=1783245000"></script>
+    <script type="module" src="/static/components/api-service.js?v=1783245000"></script>
+    <script type="module" src="/static/components/event-manager.js?v=1783245000"></script>
+
     <!-- Custom Components -->
-    <script src="/static/components/navbar.js?v=1782587681"></script>
-    <script type="module" src="/static/components/toast.js?v=1782587681"></script>
-    <script type="module" src="/static/components/latest-expenses.js?v=1782587681"></script>
+    <script src="/static/components/navbar.js?v=1783245000"></script>
+    <script type="module" src="/static/components/toast.js?v=1783245000"></script>
+    <script type="module" src="/static/components/add-expense-form.js?v=1783245000"></script>
+    <script type="module" src="/static/components/latest-expenses.js?v=1783245000"></script>
 </body>
 </html>

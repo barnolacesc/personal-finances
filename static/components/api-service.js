@@ -45,6 +45,25 @@ export class ApiService {
         });
     }
 
+    static async quickAddExpense(payload) {
+        return await this.request(CONFIG.API.ENDPOINTS.EXPENSES_QUICK, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+    }
+
+    static async parseQuickExpense(text) {
+        return await this.request(CONFIG.API.ENDPOINTS.EXPENSES_QUICK, {
+            method: 'POST',
+            body: JSON.stringify({ text, parse_only: true })
+        });
+    }
+
+    static async getApiInfo() {
+        return await this.request(CONFIG.API.ENDPOINTS.INFO);
+    }
+
+
     static async updateExpense(expenseId, expenseData) {
         const url = `${CONFIG.API.ENDPOINTS.EXPENSES}/${expenseId}`;
         return await this.request(url, {
@@ -63,7 +82,7 @@ export class ApiService {
     static async getTrends() {
         return await this.request(CONFIG.API.ENDPOINTS.TRENDS);
     }
-    
+
     // Month-related API calls
     static async getMonths() {
         return await this.request(CONFIG.API.ENDPOINTS.MONTHS);

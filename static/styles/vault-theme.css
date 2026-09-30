@@ -1334,3 +1334,312 @@ a:hover { color: var(--primary-fixed-dim); }
    32. Tabular numbers (equal-width digits for amounts/dates)
    ============================================================ */
 .tabular-nums { font-variant-numeric: tabular-nums; }
+
+/* ============================================================
+   33. Mode Switcher (Log vs Browse)
+   ============================================================ */
+.mode-switch-container {
+    display: flex;
+    background: var(--surface-container-high);
+    border-radius: 9999px;
+    padding: 4px;
+    margin: 0 auto 1.5rem auto;
+    max-width: 380px;
+    position: relative;
+    border: 1px solid var(--outline-variant);
+}
+
+.mode-switch-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    border: none;
+    background: transparent;
+    color: var(--on-surface-variant);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+}
+
+.mode-switch-btn:hover {
+    color: var(--on-surface);
+}
+
+.mode-switch-btn.active {
+    background: var(--primary-container);
+    color: var(--on-primary);
+    box-shadow: 0 2px 10px rgba(255, 140, 0, 0.35);
+}
+
+/* ============================================================
+   34. Quick Magic Input Bar
+   ============================================================ */
+.quick-magic-card {
+    background: linear-gradient(145deg, var(--surface-container), var(--surface-container-high));
+    border: 1px solid var(--outline-variant);
+    border-radius: 1.25rem;
+    padding: 1.25rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    position: relative;
+    overflow: hidden;
+}
+
+.quick-magic-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--primary-gradient);
+}
+
+.quick-magic-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.quick-magic-input-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.quick-magic-input {
+    width: 100%;
+    background: var(--surface-container-lowest);
+    border: 1.5px solid var(--outline-variant);
+    border-radius: 0.875rem;
+    padding: 0.875rem 3.5rem 0.875rem 2.75rem;
+    color: var(--on-surface);
+    font-size: 1rem;
+    font-weight: 500;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.quick-magic-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.2);
+}
+
+.quick-magic-icon {
+    position: absolute;
+    left: 0.875rem;
+    color: var(--primary);
+    pointer-events: none;
+    font-size: 1.25rem;
+}
+
+.quick-magic-send-btn {
+    position: absolute;
+    right: 0.5rem;
+    width: 38px;
+    height: 38px;
+    border-radius: 0.625rem;
+    border: none;
+    background: var(--primary-container);
+    color: var(--on-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.quick-magic-send-btn:hover {
+    transform: scale(1.05);
+}
+
+.quick-preview-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    min-height: 28px;
+}
+
+.preview-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.65rem;
+    background: var(--surface-container-highest);
+    border: 1px solid var(--outline-variant);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--on-surface);
+    animation: fadeIn 0.15s ease-out;
+}
+
+.preview-chip.amount {
+    background: rgba(255, 140, 0, 0.15);
+    border-color: var(--primary-container);
+    color: var(--primary);
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.8125rem;
+}
+
+/* ============================================================
+   35. Category Quick Chips (1-tap selection)
+   ============================================================ */
+.category-chips-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 2px;
+}
+
+@media (max-width: 576px) {
+    .category-chips-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.4rem;
+    }
+}
+
+.category-chip-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.625rem 0.4rem;
+    border-radius: 0.75rem;
+    background: var(--surface-container);
+    border: 1.5px solid var(--outline-variant);
+    color: var(--on-surface-variant);
+    cursor: pointer;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    text-align: center;
+    gap: 0.25rem;
+}
+
+.category-chip-btn:hover {
+    border-color: var(--outline);
+    color: var(--on-surface);
+    transform: translateY(-1px);
+}
+
+.category-chip-btn.active {
+    background: var(--surface-container-highest);
+    border-color: var(--active-cat-color, var(--primary));
+    color: var(--on-surface);
+    box-shadow: 0 0 12px rgba(255, 140, 0, 0.2);
+}
+
+.category-chip-btn .cat-icon {
+    font-size: 1.25rem;
+    transition: transform 0.15s ease;
+}
+
+.category-chip-btn.active .cat-icon {
+    transform: scale(1.15);
+    color: var(--active-cat-color, var(--primary));
+}
+
+.category-chip-btn .cat-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+/* Quick Date Chips */
+.quick-date-chips {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.quick-date-chip {
+    padding: 0.375rem 0.875rem;
+    border-radius: 9999px;
+    border: 1px solid var(--outline-variant);
+    background: var(--surface-container);
+    color: var(--on-surface-variant);
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.quick-date-chip.active {
+    background: var(--surface-container-high);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+/* ============================================================
+   36. Inline Edit Modal / Drawer
+   ============================================================ */
+.inline-edit-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    z-index: 1100;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+
+@media (min-width: 576px) {
+    .inline-edit-backdrop {
+        align-items: center;
+    }
+}
+
+.inline-edit-backdrop.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.inline-edit-card {
+    background: var(--surface-container);
+    border: 1px solid var(--outline-variant);
+    border-radius: 1.5rem 1.5rem 0 0;
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 1.5rem;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (min-width: 576px) {
+    .inline-edit-card {
+        border-radius: 1.25rem;
+        transform: scale(0.95);
+    }
+}
+
+.inline-edit-backdrop.show .inline-edit-card {
+    transform: translateY(0);
+}
+
+@media (min-width: 576px) {
+    .inline-edit-backdrop.show .inline-edit-card {
+        transform: scale(1);
+    }
+}

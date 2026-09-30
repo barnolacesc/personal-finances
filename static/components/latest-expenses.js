@@ -24,6 +24,8 @@ class LatestExpenses extends BaseComponent {
 
         this.render();
         this.setupDateChangeListener();
+        this.setupEditModal();
+        this.listenToGlobalEvent('expenseadded', () => this.loadAllExpenses());
         this.loadAllExpenses();
     }
 
@@ -83,6 +85,45 @@ class LatestExpenses extends BaseComponent {
                     </div>
                 </div>
             </div>
+
+            <!-- Inline Edit Modal Drawer -->
+            <div id="inlineEditModal" class="inline-edit-backdrop">
+                <div class="inline-edit-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0 font-headline" style="color: var(--on-surface);">Edit Expense</h5>
+                        <button type="button" class="btn btn-sm" id="closeEditModalBtn" style="background: transparent; border: none; color: var(--on-surface-variant); cursor: pointer; padding: 4px;">
+                            <span class="material-symbols-outlined">close</span>
+                        </button>
+                    </div>
+                    <form id="inlineEditForm" novalidate>
+                        <div class="mb-3">
+                            <label class="form-label text-label-sm" style="color: var(--on-surface-variant);">Amount</label>
+                            <div class="input-group">
+                                <span class="input-group-text" style="color: var(--primary); font-weight: 700;">${CONFIG.CURRENCY.symbol}</span>
+                                <input type="text" class="form-control" id="modalEditAmount" inputmode="decimal" required style="font-family: 'Manrope', sans-serif; font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums;">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-label-sm" style="color: var(--on-surface-variant);">Category</label>
+                            <div class="category-chips-grid" id="modalEditCategoryChips" style="max-height: 140px; margin-bottom: 0;"></div>
+                            <input type="hidden" id="modalEditCategory">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-label-sm" style="color: var(--on-surface-variant);">Date</label>
+                            <input type="date" class="form-control" id="modalEditDate" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label text-label-sm" style="color: var(--on-surface-variant);">Description</label>
+                            <input type="text" class="form-control" id="modalEditDescription" required>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary" id="saveEditModalBtn" style="height: 48px; font-weight: 700;">Save Changes</button>
+                            <button type="button" class="btn btn-outline-danger" id="deleteEditModalBtn">Delete Expense</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
 
             <style>
                 .period-selector {
@@ -634,9 +675,157 @@ class LatestExpenses extends BaseComponent {
         }
     }
 
+    setupEditModal() {
+        const modal = this.querySelector('#inlineEditModal');
+        const closeBtn = this.querySelector('#closeEditModalBtn');
+        const form = this.querySelector('#inlineEditForm');
+        const deleteBtn = this.querySelector('#deleteEditModalBtn');
+        const chipContainer = this.querySelector('#modalEditCategoryChips');
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closeEditModal());
+        }
+
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) this.closeEditModal();
+            });
+        }
+
+        if (chipContainer) {
+            chipContainer.addEventListener('click', (e) => {
+                const btn = e.target.closest('.category-chip-btn');
+                if (btn) {
+                    const cat = btn.getAttribute('data-category');
+                    this.selectModalCategory(cat);
+                }
+            });
+        }
+
+        if (form) {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!this.currentEditingExpense) return;
+
+                const amountVal = parseFloat(this.querySelector('#modalEditAmount').value.replace(',', '.'));
+                const categoryVal = this.querySelector('#modalEditCategory').value;
+                const dateVal = this.querySelector('#modalEditDate').value;
+                const descVal = this.querySelector('#modalEditDescription').value.trim();
+
+                if (isNaN(amountVal) || amountVal <= 0) {
+                    if (window.showToast) window.showToast('Please enter a valid amount', 'error');
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/api/expenses/${this.currentEditingExpense.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            amount: amountVal,
+                            category: categoryVal,
+                            description: descVal,
+                            date: dateVal
+                        })
+                    });
+                    if (!response.ok) throw new Error('Failed to update expense');
+                    const updated = await response.json();
+
+                    if (window.showToast) window.showToast('Expense updated', 'success');
+                    this.closeEditModal();
+                    this.loadAllExpenses();
+                    try {
+                        EventManager.emitExpenseAdded(updated);
+                    } catch (err) {}
+                } catch (err) {
+                    console.error('Update error:', err);
+                    if (window.showToast) window.showToast('Failed to update expense', 'error');
+                }
+            });
+        }
+
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', async () => {
+                if (!this.currentEditingExpense) return;
+                if (!confirm(`Delete "${this.currentEditingExpense.description}"?`)) return;
+
+                try {
+                    const response = await fetch(`/api/expenses/${this.currentEditingExpense.id}`, { method: 'DELETE' });
+                    if (!response.ok) throw new Error('Failed to delete expense');
+
+                    if (window.showToast) window.showToast('Expense deleted', 'success');
+                    this.closeEditModal();
+                    this.loadAllExpenses();
+                    try {
+                        EventManager.emitExpenseAdded({ deleted: true });
+                    } catch (err) {}
+                } catch (err) {
+                    console.error('Delete error:', err);
+                    if (window.showToast) window.showToast('Failed to delete expense', 'error');
+                }
+            });
+        }
+    }
+
+    selectModalCategory(catKey) {
+        const hiddenInput = this.querySelector('#modalEditCategory');
+        if (hiddenInput) hiddenInput.value = catKey;
+
+        const chips = this.querySelectorAll('#modalEditCategoryChips .category-chip-btn');
+        chips.forEach(chip => {
+            if (chip.getAttribute('data-category') === catKey) {
+                chip.classList.add('active');
+            } else {
+                chip.classList.remove('active');
+            }
+        });
+    }
+
+    openEditModal(expense) {
+        this.currentEditingExpense = expense;
+        const modal = this.querySelector('#inlineEditModal');
+        const amountInput = this.querySelector('#modalEditAmount');
+        const dateInput = this.querySelector('#modalEditDate');
+        const descInput = this.querySelector('#modalEditDescription');
+        const chipsContainer = this.querySelector('#modalEditCategoryChips');
+
+        if (amountInput) amountInput.value = expense.amount;
+        if (descInput) descInput.value = expense.description || '';
+
+        if (dateInput && expense.date) {
+            const d = new Date(expense.date);
+            dateInput.value = !isNaN(d) ? d.toISOString().split('T')[0] : '';
+        }
+
+        if (chipsContainer) {
+            const categories = CategoryHelper.getAllCategories();
+            chipsContainer.innerHTML = categories.map(cat => {
+                const data = CategoryHelper.getCategoryData(cat);
+                const isActive = cat === expense.category;
+                return `
+                    <button type="button"
+                            class="category-chip-btn ${isActive ? 'active' : ''}"
+                            data-category="${cat}"
+                            style="--active-cat-color: ${data.color}; padding: 0.4rem;">
+                        <span class="material-symbols-outlined cat-icon" style="color: ${data.color}; font-size: 1.1rem;">${data.icon}</span>
+                        <span class="cat-label" style="font-size: 0.625rem;">${data.label}</span>
+                    </button>
+                `;
+            }).join('');
+            this.selectModalCategory(expense.category);
+        }
+
+        if (modal) modal.classList.add('show');
+    }
+
+    closeEditModal() {
+        const modal = this.querySelector('#inlineEditModal');
+        if (modal) modal.classList.remove('show');
+        this.currentEditingExpense = null;
+    }
+
     editExpense(expense) {
-        const editUrl = `/add?edit=${expense.id}&amount=${expense.amount}&category=${expense.category}&description=${encodeURIComponent(expense.description)}&date=${expense.date}`;
-        window.location.href = editUrl;
+        this.openEditModal(expense);
     }
 }
 

@@ -4,9 +4,8 @@
     <script>
         window.onerror = function(msg, url, line, col, error) {
             console.error("Global error:", msg, url, line);
-            // alert("JS Error: " + msg + " at " + line);
         };
-        </script>
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Add Expense - Vault</title>
@@ -29,35 +28,42 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 
     <!-- Vault Theme -->
-    <link rel="stylesheet" href="/static/styles/vault-theme.css?v=1782587681">
-<style>#submitBtn { position: relative; z-index: 9999; pointer-events: auto !important; }</style>
+    <link rel="stylesheet" href="/static/styles/vault-theme.css?v=1783245000">
 </head>
 <body>
     <nav-bar></nav-bar>
     <toast-container></toast-container>
 
-    <div class="container py-4">
-        <!-- Add Expense Form -->
-        <div class="modern-card chart-container-modern">
-            <div class="text-center mb-4">
-                <div class="d-inline-flex align-items-center justify-content-center mb-3"
-                    style="width: 60px; height: 60px; background: var(--primary-gradient); border-radius: 50%;">
-                    <span class="material-symbols-outlined text-white" style="font-size: 1.75rem; color: var(--on-primary);">add</span>
-                </div>
-                <h4 class="chart-title-modern mb-0 font-headline" id="formTitle">Add New Expense</h4>
-                <p class="text-muted" style="font-size: 0.875rem;" id="formSubtitle">Track your spending easily</p>
+    <div class="container py-3">
+        <!-- Dual Mode Pill Switcher -->
+        <div class="mode-switch-container mb-3">
+            <a href="/" class="mode-switch-btn active" id="modeLogBtn">
+                <span class="material-symbols-outlined" style="font-size: 1.125rem;">bolt</span>
+                <span>Log Expense</span>
+            </a>
+            <a href="/expenses" class="mode-switch-btn" id="modeBrowseBtn">
+                <span class="material-symbols-outlined" style="font-size: 1.125rem;">payments</span>
+                <span>Browse</span>
+            </a>
+        </div>
+
+        <!-- Add Expense Form Card -->
+        <div class="modern-card chart-container-modern p-3 p-sm-4">
+            <div class="text-center mb-3">
+                <h4 class="chart-title-modern mb-0 font-headline" id="formTitle">Log Expense</h4>
+                <p class="text-muted" style="font-size: 0.8125rem;" id="formSubtitle">Enter amount and tap category</p>
             </div>
             <div class="form-modern">
                 <add-expense-form></add-expense-form>
             </div>
         </div>
 
-        <!-- Success State (hidden by default) -->
+        <!-- Success State (for automated tests and explicit feedback) -->
         <div id="successCard" class="modern-card chart-container-modern mt-4 d-none">
             <div class="text-center">
                 <div class="d-inline-flex align-items-center justify-content-center mb-3"
-                    style="width: 80px; height: 80px; background: var(--success-gradient); border-radius: 50%;">
-                    <span class="material-symbols-outlined" style="font-size: 2.5rem; color: white;">check</span>
+                    style="width: 72px; height: 72px; background: var(--success-gradient); border-radius: 50%;">
+                    <span class="material-symbols-outlined" style="font-size: 2.25rem; color: white;">check</span>
                 </div>
                 <h5 class="text-success mb-3">Expense Added Successfully!</h5>
                 <div id="expenseDetails" class="mb-4"></div>
@@ -74,15 +80,13 @@
     </div>
 
     <!-- Core Modules -->
-    <script type="module" src="/static/components/config.js?v=1782587681"></script>
-    <script type="module" src="/static/components/api-service.js?v=1782587681"></script>
-    <script type="module" src="/static/components/event-manager.js?v=1782587681"></script>
+    <script type="module" src="/static/components/config.js?v=1783245000"></script>
+    <script type="module" src="/static/components/api-service.js?v=1783245000"></script>
+    <script type="module" src="/static/components/event-manager.js?v=1783245000"></script>
 
     <!-- Custom Components -->
-    <script src="/static/components/navbar.js?v=1782587681"></script>
-    <script type="module" src="/static/components/toast.js?v=1782587681"></script>
-    <script type="module" src="/static/components/add-expense-form.js?v=1783241275"></script>
-
-
+    <script src="/static/components/navbar.js?v=1783245000"></script>
+    <script type="module" src="/static/components/toast.js?v=1783245000"></script>
+    <script type="module" src="/static/components/add-expense-form.js?v=1783245000"></script>
 </body>
 </html>

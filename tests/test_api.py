@@ -272,3 +272,96 @@ def test_trends_api_includes_month_projection(client):
     assert projection["projected_total"] >= projection["current_total"]
     assert projection["confidence"] in {"low", "medium", "high"}
     assert "previous_3_month_average" in projection
+
+
+def test_quick_add_natural_language(client):
+    """Test quick-add endpoint with natural language string."""
+    response = client.post(
+        "/api/expenses/quick", json={"text": "14.50 lunch with friends"}
+    )
+    assert response.status_code == 201
+    data = response.get_json()
+    assert data["amount"] == 14.5
+    assert data["category"] == "food_drink"
+    assert "Lunch with friends" in data["description"]
+    assert data["source"] == "quick_add"
+    assert "id" in data
+
+
+def test_quick_add_structured(client):
+    """Test quick-add endpoint with structured json."""
+    payload = {
+        "amount": 45.20,
+        "category": "super",
+        "description": "Weekly Groceries",
+    }
+    response = client.post("/api/expenses/quick", json=payload)
+    assert response.status_code == 201
+    data = response.get_json()
+    assert data["amount"] == 45.20
+    assert data["category"] == "super"
+    assert data["description"] == "Weekly Groceries"
+
+
+def test_quick_add_parse_only(client):
+    """Test parse_only mode for quick-add (preview without DB insert)."""
+    response = client.post(
+        "/api/expenses/quick",
+        json={"text": "uber to station 18.00 yesterday", "parse_only": True},
+    )
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["amount"] == 18.0
+    assert data["category"] == "transport"
+    assert "Uber to station" in data["description"]
+    assert "id" not in data
+
+
+def test_api_info_endpoint(client):
+    """Test /api/info endpoint returns configuration and documentation."""
+    response = client.get("/api/info")
+    assert response.status_code == 200
+    data = response.get_json()
+    assert "categories" in data
+    assert "endpoints" in data
+    assert "quick_add" in data["endpoints"]
+    assert "auth_configured" in data
+
+
+def test_api_key_auth_enforcement(client, monkeypatch):
+    """Test API key enforcement when configured in environment."""
+    import app as app_module
+
+    monkeypatch.setattr(app_module, "API_KEY", "secret-test-token-123")
+
+    # Direct request without key or origin -> 401
+    resp = client.post(
+        "/api/expenses/quick",
+        json={"text": "10 coffee"},
+        headers={"User-Agent": "curl/7.68.0"},
+    )
+    assert resp.status_code == 401
+
+    # Request with wrong key -> 401
+    resp = client.post(
+        "/api/expenses/quick",
+        json={"text": "10 coffee"},
+        headers={"X-API-Key": "wrong-key"},
+    )
+    assert resp.status_code == 401
+
+    # Request with valid X-API-Key -> 201
+    resp = client.post(
+        "/api/expenses/quick",
+        json={"text": "10 coffee"},
+        headers={"X-API-Key": "secret-test-token-123"},
+    )
+    assert resp.status_code == 201
+
+    # Request with valid Bearer token -> 201
+    resp = client.post(
+        "/api/expenses/quick",
+        json={"text": "12 lunch"},
+        headers={"Authorization": "Bearer secret-test-token-123"},
+    )
+    assert resp.status_code == 201
