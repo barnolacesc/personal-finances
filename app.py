@@ -2092,6 +2092,6 @@ def run_dev_server():
 
 if __name__ == "__main__":
     if os.environ.get("FLASK_ENV") == "production":
-        app.run(host="0.0.0.0", port=5001)
+        app.run(host="0.0.0.0", port=int(os.environ.get("APP_PORT", "5001")))
     else:
         run_dev_server()
