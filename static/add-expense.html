@@ -4,9 +4,8 @@
     <script>
         window.onerror = function(msg, url, line, col, error) {
             console.error("Global error:", msg, url, line);
-            // alert("JS Error: " + msg + " at " + line);
         };
-        </script>
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Add Expense - Vault</title>
@@ -29,60 +28,24 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 
     <!-- Vault Theme -->
-    <link rel="stylesheet" href="/static/styles/vault-theme.css?v=1782587681">
-<style>#submitBtn { position: relative; z-index: 9999; pointer-events: auto !important; }</style>
+    <link rel="stylesheet" href="/static/styles/vault-theme.css?v=1791054000">
 </head>
-<body>
+<body class="expense-entry-body">
     <nav-bar></nav-bar>
     <toast-container></toast-container>
 
-    <div class="container py-4">
-        <!-- Add Expense Form -->
-        <div class="modern-card chart-container-modern">
-            <div class="text-center mb-4">
-                <div class="d-inline-flex align-items-center justify-content-center mb-3"
-                    style="width: 60px; height: 60px; background: var(--primary-gradient); border-radius: 50%;">
-                    <span class="material-symbols-outlined text-white" style="font-size: 1.75rem; color: var(--on-primary);">add</span>
-                </div>
-                <h4 class="chart-title-modern mb-0 font-headline" id="formTitle">Add New Expense</h4>
-                <p class="text-muted" style="font-size: 0.875rem;" id="formSubtitle">Track your spending easily</p>
-            </div>
-            <div class="form-modern">
-                <add-expense-form></add-expense-form>
-            </div>
-        </div>
-
-        <!-- Success State (hidden by default) -->
-        <div id="successCard" class="modern-card chart-container-modern mt-4 d-none">
-            <div class="text-center">
-                <div class="d-inline-flex align-items-center justify-content-center mb-3"
-                    style="width: 80px; height: 80px; background: var(--success-gradient); border-radius: 50%;">
-                    <span class="material-symbols-outlined" style="font-size: 2.5rem; color: white;">check</span>
-                </div>
-                <h5 class="text-success mb-3">Expense Added Successfully!</h5>
-                <div id="expenseDetails" class="mb-4"></div>
-                <div class="d-grid gap-3">
-                    <button id="addAnotherBtn" class="btn-modern btn-modern-primary">
-                        <span class="material-symbols-outlined me-2" style="font-size: 1.25rem;">add_circle</span>Add Another Expense
-                    </button>
-                    <a href="/expenses" class="btn-modern btn-modern-secondary text-center" style="text-decoration: none;">
-                        <span class="material-symbols-outlined me-2" style="font-size: 1.25rem;">payments</span>View All Expenses
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
+    <main class="container py-3 expense-entry-page" aria-label="Log an expense">
+        <add-expense-form></add-expense-form>
+    </main>
 
     <!-- Core Modules -->
-    <script type="module" src="/static/components/config.js?v=1782587681"></script>
-    <script type="module" src="/static/components/api-service.js?v=1782587681"></script>
-    <script type="module" src="/static/components/event-manager.js?v=1782587681"></script>
+    <script type="module" src="/static/components/config.js?v=1783245000"></script>
+    <script type="module" src="/static/components/api-service.js?v=1783245000"></script>
+    <script type="module" src="/static/components/event-manager.js?v=1783245000"></script>
 
     <!-- Custom Components -->
-    <script src="/static/components/navbar.js?v=1782587681"></script>
-    <script type="module" src="/static/components/toast.js?v=1782587681"></script>
-    <script type="module" src="/static/components/add-expense-form.js?v=1783241275"></script>
-
-
+    <script src="/static/components/navbar.js?v=1790799600"></script>
+    <script type="module" src="/static/components/toast.js?v=1783245000"></script>
+    <script type="module" src="/static/components/add-expense-form.js?v=1791054000"></script>
 </body>
 </html>
