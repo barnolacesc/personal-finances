@@ -561,6 +561,7 @@ def test_expense_api_serialization_fields(client):
 
 @pytest.mark.parametrize("target_type", ["reimbursement", "income"])
 def test_allocation_rejects_non_expense_target(client, target_type):
+    """Ensure allocations reject targets that are not expense type with HTTP 400."""
     source = client.post(
         "/api/expenses",
         json={
@@ -592,6 +593,10 @@ def test_allocation_rejects_non_expense_target(client, target_type):
 
 
 def test_allocation_rejects_source_with_incoming_reimbursements(client):
+    """
+    Ensure transactions with incoming reimbursements cannot act as
+    reimbursement sources.
+    """
     records = [
         client.post(
             "/api/expenses",
@@ -634,3 +639,52 @@ def test_allocation_rejects_source_with_incoming_reimbursements(client):
     assert transaction["type"] == "expense"
     assert transaction["reimbursed_amount"] == 50
     assert client.get("/api/allocations").get_json()["total"] == 1
+
+
+@pytest.mark.parametrize("source_type", ["expense", "income"])
+def test_allocation_rejects_non_reimbursement_source(client, source_type):
+    """Ensure allocations reject non-reimbursement sources with HTTP 400."""
+    source = client.post(
+        "/api/expenses",
+        json={
+            "amount": 100,
+            "category": "personal",
+            "description": "Source",
+            "type": source_type,
+        },
+    ).get_json()
+    target = client.post(
+        "/api/expenses",
+        json={
+            "amount": 100,
+            "category": "personal",
+            "description": "Target",
+            "type": "expense",
+        },
+    ).get_json()
+    response = client.post(
+        "/api/allocations",
+        json={
+            "reimbursement_id": source["id"],
+            "expense_id": target["id"],
+            "amount": 10,
+        },
+    )
+    assert response.status_code == 400
+    assert response.get_json()["error"] == "Allocation source must be a reimbursement"
+
+
+def test_allocation_endpoints_return_404_on_missing_id(client):
+    """Ensure missing IDs return 404 rather than 500."""
+    assert client.get("/api/allocations/999999").status_code == 404
+    assert client.put("/api/allocations/999999", json={"amount": 10}).status_code == 404
+    assert client.delete("/api/allocations/999999").status_code == 404
+    assert client.get("/api/expenses/999999/reconciliation").status_code == 404
+
+
+def test_sqlite_foreign_keys_enforced(_db):
+    """Ensure foreign key pragma is enabled on application connections."""
+    from sqlalchemy import text
+
+    res = _db.session.execute(text("PRAGMA foreign_keys")).scalar()
+    assert res == 1

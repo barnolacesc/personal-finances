@@ -404,6 +404,7 @@ class ReconciliationView extends BaseComponent {
                 ${this.renderPartiallyReimbursedSection(summary.partially_reimbursed_expenses)}
             </div>
         `;
+        this.setupFormListeners();
     }
 
     renderSuggestionsSection(suggestions) {
@@ -653,7 +654,7 @@ class ReconciliationView extends BaseComponent {
                                             <span style="color: #10b981; font-weight: 700;">Reimbursed: ${CurrencyHelper.format(reimbursed)} (${reimbPct}%)</span>
                                         </div>
                                         <div style="font-size: 0.8125rem;">
-                                            <span style="color: var(--primary); font-weight: 700;">Cesc's share: ${CurrencyHelper.format(remaining)} (${remainPct}%)</span>
+                                            <span style="color: var(--primary); font-weight: 700;">Your share: ${CurrencyHelper.format(remaining)} (${remainPct}%)</span>
                                         </div>
                                     </div>
 

@@ -114,7 +114,8 @@ class CategoryChart extends BaseComponent {
         const income = expenses
             .filter(e => e.type === 'income')
             .reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
-        const monthlySummary = serverSummary || {
+        const useServer = serverSummary && this.currentWeek === 'all';
+        const monthlySummary = useServer ? serverSummary : {
             gross_expenses: grossExpenses,
             reimbursements,
             net_expenses: netExpenses,

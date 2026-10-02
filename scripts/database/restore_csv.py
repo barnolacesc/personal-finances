@@ -54,25 +54,47 @@ def restore_from_csv(csv_path, target_db_path=None):
     """
     )
 
+    csv_path = os.path.abspath(csv_path)
+
     # Read CSV and insert data
     try:
         with open(csv_path, "r", newline="") as csv_file:
             csv_reader = csv.reader(csv_file)
             header = next(csv_reader, None)  # Skip header row
-            has_type = (
-                header and len(header) >= 5 and header[4].strip().lower() == "type"
+            if not header:
+                return
+
+            has_id = header and len(header) >= 1 and header[0].strip().lower() == "id"
+            has_type = header and (
+                (has_id and len(header) >= 6 and header[5].strip().lower() == "type")
+                or (
+                    not has_id
+                    and len(header) >= 5
+                    and header[4].strip().lower() == "type"
+                )
             )
 
             rows_to_insert = []
             for row in csv_reader:
                 if not row:
                     continue
-                d, amt, cat, desc = row[0], row[1], row[2], row[3]
-                t = (
-                    row[4].strip().lower()
-                    if (has_type and len(row) >= 5 and row[4].strip())
-                    else "expense"
-                )
+                if has_id:
+                    exp_id = int(row[0].strip())
+                    d, amt, cat, desc = row[1], row[2], row[3], row[4]
+                    t = (
+                        row[5].strip().lower()
+                        if (has_type and len(row) >= 6 and row[5].strip())
+                        else "expense"
+                    )
+                else:
+                    exp_id = None
+                    d, amt, cat, desc = row[0], row[1], row[2], row[3]
+                    t = (
+                        row[4].strip().lower()
+                        if (has_type and len(row) >= 5 and row[4].strip())
+                        else "expense"
+                    )
+
                 if t not in {"expense", "income", "reimbursement"}:
                     raise ValueError(f"Invalid transaction type: {t}")
                 num_amt = float(amt)
@@ -82,12 +104,90 @@ def restore_from_csv(csv_path, target_db_path=None):
                     if t == "expense":
                         t = "reimbursement"
                     amt = str(abs(num_amt))
-                rows_to_insert.append((d, amt, cat, desc, t))
+
+                if has_id:
+                    rows_to_insert.append((exp_id, d, amt, cat, desc, t))
+                else:
+                    rows_to_insert.append((d, amt, cat, desc, t))
 
             # Insert all rows
-            sql = "INSERT INTO expense (date, amount, category, description, type) "
-            sql += "VALUES (?, ?, ?, ?, ?)"
+            if has_id:
+                sql = (
+                    "INSERT INTO expense "
+                    "(id, date, amount, category, description, type) "
+                    "VALUES (?, ?, ?, ?, ?, ?)"
+                )
+            else:
+                sql = (
+                    "INSERT INTO expense (date, amount, category, description, type) "
+                    "VALUES (?, ?, ?, ?, ?)"
+                )
             cursor.executemany(sql, rows_to_insert)
+
+            # Restore reconciliation allocations if companion CSV exists
+            alloc_path = (
+                csv_path.replace("expenses_", "allocations_")
+                if "expenses_" in os.path.basename(csv_path)
+                else os.path.splitext(csv_path)[0] + "_allocations.csv"
+            )
+            if os.path.exists(alloc_path):
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS reconciliation_allocation (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        reimbursement_id INTEGER NOT NULL
+                            REFERENCES expense(id) ON DELETE RESTRICT,
+                        expense_id INTEGER NOT NULL
+                            REFERENCES expense(id) ON DELETE RESTRICT,
+                        amount REAL NOT NULL,
+                        counterparty VARCHAR(100),
+                        notes VARCHAR(255),
+                        group_id VARCHAR(50),
+                        created_at TIMESTAMP,
+                        updated_at TIMESTAMP
+                    )
+                    """
+                )
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS ix_reconciliation_reimbursement_id "
+                    "ON reconciliation_allocation(reimbursement_id)"
+                )
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS ix_reconciliation_expense_id "
+                    "ON reconciliation_allocation(expense_id)"
+                )
+                with open(alloc_path, "r", newline="") as alloc_file:
+                    alloc_reader = csv.reader(alloc_file)
+                    next(alloc_reader, None)  # Skip header
+                    alloc_rows = []
+                    for arow in alloc_reader:
+                        if not arow:
+                            continue
+                        alloc_rows.append(
+                            (
+                                int(arow[0]),
+                                int(arow[1]),
+                                int(arow[2]),
+                                float(arow[3]),
+                                arow[4] if len(arow) > 4 and arow[4] != "" else None,
+                                arow[5] if len(arow) > 5 and arow[5] != "" else None,
+                                arow[6] if len(arow) > 6 and arow[6] != "" else None,
+                                arow[7] if len(arow) > 7 and arow[7] != "" else None,
+                                arow[8] if len(arow) > 8 and arow[8] != "" else None,
+                            )
+                        )
+                    if alloc_rows:
+                        alloc_sql = (
+                            "INSERT INTO reconciliation_allocation ("
+                            "id, reimbursement_id, expense_id, amount, "
+                            "counterparty, notes, group_id, created_at, updated_at"
+                            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                        )
+                        cursor.executemany(alloc_sql, alloc_rows)
+                        print(
+                            f"Successfully restored {len(alloc_rows)} "
+                            "reconciliation allocations!"
+                        )
 
             conn.commit()
             rows = cursor.rowcount

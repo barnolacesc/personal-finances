@@ -435,7 +435,7 @@ class LatestExpenses extends BaseComponent {
                         <span class="material-symbols-outlined" style="font-size: 0.75rem;">link</span>
                         <span>Reimbursed: ${CurrencyHelper.format(expense.reimbursed_amount)}</span>
                         <span class="dot" style="width: 3px; height: 3px; border-radius: 50%; background: currentColor;"></span>
-                        <span>Cesc's share: ${CurrencyHelper.format(expense.remaining_share)}</span>
+                        <span>Your share: ${CurrencyHelper.format(expense.remaining_share)}</span>
                    </div>`
                 : hasAllocations
                 ? `<div style="font-size: 0.6875rem; color: #06b6d4; font-weight: 600; margin-top: 2px; display: flex; align-items: center; gap: 4px;">

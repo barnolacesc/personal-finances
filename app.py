@@ -9,7 +9,9 @@ import logging
 import math
 import functools
 from werkzeug.serving import run_simple
-from sqlalchemy import extract, or_, text, func
+from sqlalchemy import extract, or_, text, func, event
+from sqlalchemy.engine import Engine
+import sqlite3
 from subprocess import run, CalledProcessError
 import glob
 from collections import defaultdict
@@ -52,6 +54,15 @@ app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 
 db = SQLAlchemy(app)
+
+
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    """Enable foreign key constraints for SQLite connections."""
+    if isinstance(dbapi_connection, sqlite3.Connection):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys = ON")
+        cursor.close()
 
 
 # ---------------------------------------------------------------------------
@@ -1478,9 +1489,9 @@ def handle_allocations():
                     ),
                     400,
                 )
-            if reimbursement.type == "income":
+            if reimbursement.type != "reimbursement":
                 return (
-                    jsonify({"error": "Income cannot be used as a reimbursement"}),
+                    jsonify({"error": "Allocation source must be a reimbursement"}),
                     400,
                 )
             if reimbursement.allocations_to.count() > 0:
@@ -1490,10 +1501,6 @@ def handle_allocations():
                     ),
                     400,
                 )
-
-            # Auto-promote source to reimbursement if it wasn't already marked
-            if reimbursement.type != "reimbursement":
-                reimbursement.type = "reimbursement"
 
             # Check reimbursement capacity
             current_allocated = sum(
@@ -1605,9 +1612,8 @@ def handle_allocations():
 @app.route("/api/reconciliations/<int:allocation_id>", methods=["GET", "PUT", "DELETE"])
 def handle_single_allocation(allocation_id):
     """Handle single allocation: GET details, PUT update, DELETE link."""
+    allocation = ReconciliationAllocation.query.get_or_404(allocation_id)
     try:
-        allocation = ReconciliationAllocation.query.get_or_404(allocation_id)
-
         if request.method == "GET":
             return jsonify(allocation.to_dict())
 
@@ -1712,8 +1718,8 @@ def handle_single_allocation(allocation_id):
 @app.route("/api/expenses/<int:expense_id>/reconciliation", methods=["GET"])
 def get_expense_reconciliation(expense_id):
     """Return reconciliation details and links for a specific transaction."""
+    expense = Expense.query.get_or_404(expense_id)
     try:
-        expense = Expense.query.get_or_404(expense_id)
         if expense.type == "reimbursement":
             allocations = [a.to_dict() for a in expense.allocations_from.all()]
             return jsonify(

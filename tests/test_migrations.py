@@ -9,6 +9,7 @@ from scripts.database.restore_csv import restore_from_csv
 
 
 def test_migration_preserves_explicit_transaction_types(tmp_path):
+    """Ensure explicit transaction types are preserved and legacy types normalized."""
     db_path = tmp_path / "expenses.db"
     with sqlite3.connect(db_path) as conn:
         conn.execute("CREATE TABLE expense (amount REAL, type TEXT)")
@@ -29,6 +30,7 @@ def test_migration_preserves_explicit_transaction_types(tmp_path):
 
 @pytest.mark.parametrize("txn_type", ["refund", "unknown"])
 def test_csv_restore_rejects_unknown_type_without_partial_data(tmp_path, txn_type):
+    """Ensure restore rejects unknown transaction types and leaves database empty."""
     csv_path = tmp_path / "backup.csv"
     csv_path.write_text(
         "Date,Amount,Category,Description,Type\n"
@@ -43,6 +45,7 @@ def test_csv_restore_rejects_unknown_type_without_partial_data(tmp_path, txn_typ
 
 
 def test_csv_restore_preserves_original_error_without_backup(tmp_path):
+    """Ensure malformed CSV errors are raised when no backup is present."""
     csv_path = tmp_path / "backup.csv"
     csv_path.write_text("Date,Amount,Category,Description\nmalformed\n")
     with pytest.raises(IndexError):
@@ -208,10 +211,10 @@ def test_csv_export_and_restore_cycle():
         with open(csv_path, "r") as f:
             reader = csv.reader(f)
             header = next(reader)
-            assert header == ["Date", "Amount", "Category", "Description", "Type"]
+            assert header == ["Id", "Date", "Amount", "Category", "Description", "Type"]
             rows = list(reader)
             assert len(rows) == 3
-            types = {r[3]: r[4] for r in rows}
+            types = {r[4]: r[5] for r in rows}
             assert types["Store"] == "expense"
             assert types["Refund"] == "reimbursement"
             assert types["Paycheck"] == "income"
@@ -266,5 +269,117 @@ def test_csv_export_and_restore_cycle():
 
     finally:
         for p in [db_path, csv_path, restored_db_path]:
+            if os.path.exists(p):
+                os.remove(p)
+
+
+def test_csv_export_and_restore_with_allocations():
+    """
+    Test exporting database with reconciliation allocations and restoring it.
+    Verifies that expense IDs and allocation records are completely preserved.
+    """
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f_db:
+        db_path = f_db.name
+    with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as f_csv:
+        csv_path = f_csv.name
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f_restored:
+        restored_db_path = f_restored.name
+
+    if "expenses_" in os.path.basename(csv_path):
+        alloc_csv_path = csv_path.replace("expenses_", "allocations_")
+    else:
+        alloc_csv_path = os.path.splitext(csv_path)[0] + "_allocations.csv"
+
+    try:
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        c.execute(
+            """
+            CREATE TABLE expense (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date DATETIME NOT NULL,
+                amount FLOAT NOT NULL,
+                category VARCHAR(50) NOT NULL,
+                description VARCHAR(50) NOT NULL,
+                type VARCHAR(20) DEFAULT 'expense'
+            )
+            """
+        )
+        c.execute(
+            """
+            CREATE TABLE reconciliation_allocation (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                reimbursement_id INTEGER NOT NULL
+                    REFERENCES expense(id) ON DELETE RESTRICT,
+                expense_id INTEGER NOT NULL
+                    REFERENCES expense(id) ON DELETE RESTRICT,
+                amount REAL NOT NULL,
+                counterparty VARCHAR(100),
+                notes VARCHAR(255),
+                group_id VARCHAR(50),
+                created_at TIMESTAMP,
+                updated_at TIMESTAMP
+            )
+            """
+        )
+        c.execute(
+            "INSERT INTO expense (id, date, amount, category, description, type) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                10,
+                "2026-03-01 10:00:00",
+                50.0,
+                "general",
+                "Alice paid back",
+                "reimbursement",
+            ),
+        )
+        c.execute(
+            "INSERT INTO expense (id, date, amount, category, description, type) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                20,
+                "2026-03-01 09:00:00",
+                100.0,
+                "groceries",
+                "Dinner together",
+                "expense",
+            ),
+        )
+        c.execute(
+            "INSERT INTO reconciliation_allocation "
+            "(id, reimbursement_id, expense_id, amount, counterparty, notes) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (1, 10, 20, 35.0, "Alice", "Dinner half share"),
+        )
+        conn.commit()
+        conn.close()
+
+        # Export
+        export_to_csv(target_db_path=db_path, output_path=csv_path)
+        assert os.path.exists(alloc_csv_path)
+
+        # Restore into new db
+        restore_from_csv(csv_path, target_db_path=restored_db_path)
+
+        conn_r = sqlite3.connect(restored_db_path)
+        cr = conn_r.cursor()
+        cr.execute("SELECT id, description, type, amount FROM expense ORDER BY id ASC")
+        restored_expenses = cr.fetchall()
+        assert len(restored_expenses) == 2
+        assert restored_expenses[0] == (10, "Alice paid back", "reimbursement", 50.0)
+        assert restored_expenses[1] == (20, "Dinner together", "expense", 100.0)
+
+        cr.execute(
+            "SELECT id, reimbursement_id, expense_id, amount, "
+            "counterparty, notes FROM reconciliation_allocation"
+        )
+        restored_allocs = cr.fetchall()
+        assert len(restored_allocs) == 1
+        assert restored_allocs[0] == (1, 10, 20, 35.0, "Alice", "Dinner half share")
+        conn_r.close()
+
+    finally:
+        for p in [db_path, csv_path, alloc_csv_path, restored_db_path]:
             if os.path.exists(p):
                 os.remove(p)

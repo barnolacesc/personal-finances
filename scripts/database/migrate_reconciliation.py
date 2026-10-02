@@ -21,6 +21,7 @@ def migrate(db_path=None):
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
     conn = sqlite3.connect(db_path)
+    conn.execute("PRAGMA foreign_keys = ON")
     c = conn.cursor()
 
     # 1. Add type column to expense table if not present

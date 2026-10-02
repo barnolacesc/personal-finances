@@ -16,16 +16,19 @@ export class ApiService {
             const response = await fetch(url, config);
 
             if (!response.ok) {
+                const rawBody = await response.text();
                 let errorData;
                 try {
-                    errorData = await response.json();
+                    errorData = JSON.parse(rawBody);
                 } catch {
-                    errorData = { error: await response.text() };
+                    errorData = { error: rawBody };
                 }
                 const err = new Error(errorData.error || `HTTP ${response.status}`);
                 err.status = response.status;
                 err.data = errorData;
-                err.requiresForce = Boolean(errorData && errorData.requires_force);
+                err.requiresForce = Boolean(
+                    errorData && (errorData.requiresForce || errorData.requires_force)
+                );
                 throw err;
             }
 
@@ -158,12 +161,16 @@ export class ErrorHandler {
 
         if (error.message && error.message.includes('Failed to fetch')) {
             message = 'Network error. Please check your connection.';
+        } else if (error.status && error.message) {
+            message = error.message;
         } else if (error.message && error.message.includes('HTTP 400')) {
             message = 'Invalid data provided';
         } else if (error.message && error.message.includes('HTTP 404')) {
             message = 'Resource not found';
         } else if (error.message && error.message.includes('HTTP 500')) {
             message = 'Server error. Please try again later.';
+        } else if (error.message) {
+            message = error.message;
         }
 
         if (window.showToast) {

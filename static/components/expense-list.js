@@ -350,7 +350,12 @@ class ExpenseList extends BaseComponent {
             const weekKey = `week${weekNumber}`;
 
             if (this.currentWeek === 'all' || this.currentWeek === weekKey) {
-                total += expense.amount;
+                const type = expense.type || 'expense';
+                if (type === 'expense') {
+                    total += expense.amount;
+                } else if (type === 'reimbursement') {
+                    total -= expense.amount;
+                }
                 filteredExpenses.push({ ...expense, date });
             }
         });
@@ -378,7 +383,7 @@ class ExpenseList extends BaseComponent {
                             <span class="material-symbols-outlined" style="font-size: 0.75rem;">link</span>
                             <span>Reimbursed: ${CurrencyHelper.format(expense.reimbursed_amount)}</span>
                             <span class="dot"></span>
-                            <span>Cesc's share: ${CurrencyHelper.format(expense.remaining_share)}</span>
+                            <span>Your share: ${CurrencyHelper.format(expense.remaining_share)}</span>
                        </div>`
                     : hasAllocations
                     ? `<div style="font-size: 0.6875rem; color: #06b6d4; font-weight: 600; margin-top: 0.25rem; display: flex; align-items: center; gap: 4px;">

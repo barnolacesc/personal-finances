@@ -17,8 +17,14 @@ def export_to_csv(target_db_path=None, output_path=None):
         now = datetime.now()
         date_str = now.strftime("%Y%m%d_%H%M%S")
         csv_path = os.path.join(exports_dir, f"expenses_{date_str}.csv")
+        alloc_path = os.path.join(exports_dir, f"allocations_{date_str}.csv")
     else:
-        csv_path = output_path
+        csv_path = os.path.abspath(output_path)
+        alloc_path = (
+            csv_path.replace("expenses_", "allocations_")
+            if "expenses_" in os.path.basename(csv_path)
+            else os.path.splitext(csv_path)[0] + "_allocations.csv"
+        )
 
     # Export data to CSV
     conn = None
@@ -27,16 +33,52 @@ def export_to_csv(target_db_path=None, output_path=None):
         cursor = conn.cursor()
         cursor.execute(
             """
-            SELECT date, amount, category, description, COALESCE(type, 'expense')
+            SELECT id, date, amount, category, description, COALESCE(type, 'expense')
             FROM expense
             ORDER BY date DESC
         """
         )
         with open(csv_path, "w", newline="") as csv_file:
             csv_writer = csv.writer(csv_file)
-            csv_writer.writerow(["Date", "Amount", "Category", "Description", "Type"])
+            csv_writer.writerow(
+                ["Id", "Date", "Amount", "Category", "Description", "Type"]
+            )
             csv_writer.writerows(cursor.fetchall())
         print(f"Data exported to: {csv_path}")
+
+        # Export reconciliation allocations if table exists
+        cursor.execute(
+            "SELECT name FROM sqlite_master "
+            "WHERE type='table' AND name='reconciliation_allocation'"
+        )
+        if cursor.fetchone():
+            cursor.execute(
+                """
+                SELECT id, reimbursement_id, expense_id, amount,
+                       counterparty, notes, group_id, created_at, updated_at
+                FROM reconciliation_allocation
+                ORDER BY id ASC
+                """
+            )
+            alloc_rows = cursor.fetchall()
+            with open(alloc_path, "w", newline="") as alloc_file:
+                alloc_writer = csv.writer(alloc_file)
+                alloc_writer.writerow(
+                    [
+                        "Id",
+                        "ReimbursementId",
+                        "ExpenseId",
+                        "Amount",
+                        "Counterparty",
+                        "Notes",
+                        "GroupId",
+                        "CreatedAt",
+                        "UpdatedAt",
+                    ]
+                )
+                alloc_writer.writerows(alloc_rows)
+            print(f"Allocations exported to: {alloc_path}")
+
         return csv_path
     except Exception as e:
         print(f"Error exporting data: {e}")
