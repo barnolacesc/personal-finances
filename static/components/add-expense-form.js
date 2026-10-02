@@ -22,6 +22,7 @@ class AddExpenseForm extends BaseComponent {
         this.parseUrlParameters();
         this.render();
         this.setupEventListeners();
+        this.setupViewportListeners();
         if (this.editMode) {
             this.prefillForm();
         } else {
@@ -73,12 +74,12 @@ class AddExpenseForm extends BaseComponent {
                     </div>
                     <div class="book-nav-row">
                         <button type="button" class="book-back-btn d-none" id="bookBackBtn">
-                            <span class="material-symbols-outlined" style="font-size: 0.875rem;">arrow_back</span>
+                            <span class="material-symbols-outlined">arrow_back</span>
                             <span id="bookBackText">Back</span>
                         </button>
-                        <div class="book-step-title" id="bookStepTitle">Step 1: What was it?</div>
+                        <div class="book-step-title" id="bookStepTitle">What was it?</div>
                         <button type="button" class="book-date-toggle" id="bookDateToggle">
-                            <span class="material-symbols-outlined" style="font-size: 0.875rem;">calendar_today</span>
+                            <span class="material-symbols-outlined">calendar_today</span>
                             <span id="bookDateLabel">Today</span>
                         </button>
                     </div>
@@ -95,8 +96,10 @@ class AddExpenseForm extends BaseComponent {
                                 <input type="text"
                                        id="bookNameInput"
                                        class="book-text-input"
-                                       placeholder="e.g. Coffee or groceries"
+                                       placeholder="Coffee or groceries"
                                        aria-label="Expense description"
+                                       enterkeyhint="next"
+                                       autocapitalize="sentences"
                                        autocomplete="off">
                             </div>
                             <!-- Quick Thumb Chips -->
@@ -125,6 +128,8 @@ class AddExpenseForm extends BaseComponent {
                                        class="book-amount-input tabular-nums"
                                        inputmode="decimal"
                                        aria-label="Expense amount"
+                                       enterkeyhint="next"
+                                       autocomplete="off"
                                        placeholder="0.00">
                             </div>
                             <!-- Quick Increments -->
@@ -146,13 +151,13 @@ class AddExpenseForm extends BaseComponent {
                             <div class="book-summary-pill mb-2">
                                 <span id="summaryName">Item</span> &bull; <strong id="summaryAmount" style="color: var(--primary);">€0.00</strong>
                             </div>
-                            <!-- Compact Mini Category Chips Grid (3 cols, small 14px icons) -->
+                            <!-- Responsive category choices -->
                             <div class="compact-category-grid" id="compactCategoryGrid">
                                 ${miniCategoryChipsHtml}
                             </div>
                             <div class="d-grid mt-2">
                                 <button type="button" class="btn btn-gradient book-action-btn" id="btnFinalLog">
-                                    <span class="material-symbols-outlined" style="font-size: 1.125rem;">check_circle</span>
+                                    <span class="material-symbols-outlined">check_circle</span>
                                     ${this.editMode ? 'Update Expense' : 'Log Expense'}
                                 </button>
                             </div>
@@ -316,6 +321,26 @@ class AddExpenseForm extends BaseComponent {
         }
     }
 
+    setupViewportListeners() {
+        const viewport = window.visualViewport;
+        if (!viewport || !document.body.classList.contains('expense-entry-body')) return;
+
+        const updateViewport = () => {
+            document.body.style.setProperty('--entry-viewport-height', `${viewport.height}px`);
+            const activeInput = this.contains(document.activeElement)
+                && document.activeElement.matches('input, textarea');
+            const keyboardOpen = activeInput && Math.abs(viewport.scale - 1) < 0.05
+                && window.innerHeight - viewport.height > 120;
+            document.body.classList.toggle('entry-keyboard-open', keyboardOpen);
+        };
+
+        this.addEventListenerWithCleanup(viewport, 'resize', updateViewport);
+        this.addEventListenerWithCleanup(window, 'resize', updateViewport);
+        this.addEventListenerWithCleanup(this, 'focusin', updateViewport);
+        this.addEventListenerWithCleanup(this, 'focusout', updateViewport);
+        updateViewport();
+    }
+
     goToStep(step, focusInput = true) {
         this.currentStep = step;
         const track = this.querySelector('#bookPagesTrack');
@@ -325,6 +350,10 @@ class AddExpenseForm extends BaseComponent {
         const backBtn = this.querySelector('#bookBackBtn');
         const title = this.querySelector('#bookStepTitle');
         this.querySelector('.book-header').hidden = step === 4;
+
+        if (step >= 3 && this.contains(document.activeElement)) {
+            document.activeElement.blur();
+        }
 
         // Slide the pages track like a book page
         this.querySelectorAll('.book-page').forEach(page => {
@@ -347,7 +376,7 @@ class AddExpenseForm extends BaseComponent {
         // Step-specific logic
         if (step === 1) {
             if (backBtn) backBtn.classList.add('d-none');
-            if (title) title.textContent = 'Step 1: What was it?';
+            if (title) title.textContent = 'What was it?';
             const nameInput = this.querySelector('#bookNameInput');
             if (focusInput && nameInput) nameInput.focus({ preventScroll: true });
         } else if (step === 2) {
@@ -366,7 +395,7 @@ class AddExpenseForm extends BaseComponent {
             }
 
             if (backBtn) backBtn.classList.remove('d-none');
-            if (title) title.textContent = 'Step 2: How much?';
+            if (title) title.textContent = 'How much?';
             const amountInput = this.querySelector('#bookAmountInput');
             if (focusInput && amountInput) amountInput.focus({ preventScroll: true });
         } else if (step === 3) {
@@ -381,7 +410,7 @@ class AddExpenseForm extends BaseComponent {
             this.expenseAmount = amtVal;
 
             if (backBtn) backBtn.classList.remove('d-none');
-            if (title) title.textContent = 'Step 3: Category';
+            if (title) title.textContent = 'Category & date';
 
             const summaryName = this.querySelector('#summaryName');
             const summaryAmount = this.querySelector('#summaryAmount');

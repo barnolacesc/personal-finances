@@ -90,6 +90,63 @@ def test_entry_page_is_focused_on_expense_input(page_with_errors, live_server, p
     assert browsing_controls.count() == 0
 
 
+def test_iphone15_wizard_keeps_actions_reachable(page_with_errors, live_server):
+    """Phone entry actions fit above navigation and a simulated keyboard."""
+    page, errors = page_with_errors
+    page.set_viewport_size({"width": 393, "height": 852})
+    page.goto(live_server + "/")
+    description = page.get_by_role("textbox", name="Expense description")
+    description.fill("Coffee")
+
+    # Simulate Safari's visual viewport shrinking while the input is focused.
+    page.evaluate(
+        """() => {
+            Object.defineProperty(window.visualViewport, 'height', {
+                configurable: true, value: 480
+            });
+            window.visualViewport.dispatchEvent(new Event('resize'));
+        }"""
+    )
+    expect(page.locator(".bottom-nav")).to_be_hidden()
+    expect(page.locator("#thumbChipsContainer")).to_be_hidden()
+
+    def assert_action_fits(selector, visible_height):
+        page.wait_for_function(
+            """() => {
+                const viewport = document.querySelector('.book-pages-viewport');
+                const active = document.querySelector('.book-page.active');
+                return Math.abs(viewport.getBoundingClientRect().left
+                    - active.getBoundingClientRect().left) < 1;
+            }"""
+        )
+        box = page.locator(selector).bounding_box()
+        assert box is not None
+        assert box["height"] >= 44
+        assert box["y"] + box["height"] <= visible_height
+        assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
+
+    assert_action_fits("#btnNextToAmount", 480)
+    page.locator("#btnNextToAmount").click()
+    page.get_by_role("textbox", name="Expense amount").fill("3.50")
+    assert_action_fits("#btnNextToCategory", 480)
+    page.locator("#btnNextToCategory").click()
+    assert page.evaluate("document.activeElement.tagName") != "INPUT"
+
+    # Safari restores the visual viewport after dismissing the keyboard.
+    page.evaluate(
+        """() => {
+            Object.defineProperty(window.visualViewport, 'height', {
+                configurable: true, value: 852
+            });
+            window.visualViewport.dispatchEvent(new Event('resize'));
+        }"""
+    )
+    expect(page.locator(".bottom-nav")).to_be_visible()
+    navigation = page.locator(".bottom-nav").bounding_box()
+    assert_action_fits("#btnFinalLog", navigation["y"])
+    assert errors == [], f"JS errors during phone entry: {errors}"
+
+
 # ---------------------------------------------------------------------------
 # Expenses page (expense-list + category-chart)
 # ---------------------------------------------------------------------------

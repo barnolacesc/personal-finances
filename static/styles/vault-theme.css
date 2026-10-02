@@ -1653,14 +1653,20 @@ add-expense-form {
 }
 
 .expense-entry-page {
-    max-width: 480px;
+    max-width: 1120px;
+    padding-inline: clamp(0.75rem, 3vw, 2rem);
+}
+
+.expense-entry-body .top-nav-inner {
+    max-width: 1120px;
+    padding-inline: clamp(0.75rem, 3vw, 2rem);
 }
 
 .expense-book-card {
     background: var(--surface-container);
     border: 1px solid var(--outline-variant);
     border-radius: 1.25rem;
-    padding: 1rem;
+    padding: clamp(1.25rem, 3vw, 2.5rem);
     margin-bottom: 1.25rem;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
     position: relative;
@@ -1678,7 +1684,7 @@ add-expense-form {
 }
 
 .book-header {
-    margin-bottom: 0.75rem;
+    margin-bottom: 1.25rem;
 }
 
 .book-progress-bar {
@@ -1707,14 +1713,16 @@ add-expense-form {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    min-height: 28px;
+    min-height: 44px;
+    gap: 0.75rem;
 }
 
 .book-back-btn {
     background: transparent;
     border: none;
     color: var(--primary);
-    font-size: 0.75rem;
+    font-size: 1rem;
+    min-height: 44px;
     font-weight: 600;
     display: inline-flex;
     align-items: center;
@@ -1734,20 +1742,29 @@ add-expense-form {
 }
 
 .book-step-title {
-    font-size: 0.8125rem;
+    font-size: clamp(1.125rem, 2vw, 1.5rem);
     font-weight: 700;
     color: var(--on-surface);
+    min-width: 0;
+}
+
+.book-back-btn .material-symbols-outlined,
+.book-date-toggle .material-symbols-outlined,
+.book-action-btn .material-symbols-outlined {
+    font-size: 1.25rem;
 }
 
 .book-date-toggle {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
-    padding: 0.2rem 0.6rem;
+    padding: 0.5rem 0.875rem;
+    min-height: 44px;
+    flex-shrink: 0;
     border-radius: 9999px;
     background: var(--surface-container-high);
     border: 1px solid var(--outline-variant);
-    font-size: 0.6875rem;
+    font-size: 0.875rem;
     font-weight: 600;
     color: var(--on-surface-variant);
     cursor: pointer;
@@ -1786,6 +1803,19 @@ add-expense-form {
     visibility: hidden;
 }
 
+.book-page.active[data-page="1"],
+.book-page.active[data-page="2"] {
+    display: flex;
+    flex-direction: column;
+    min-height: clamp(220px, calc(100dvh - var(--nav-height) - var(--bottom-nav-height) - 12rem), 400px);
+}
+
+.book-page.active[data-page="1"] > .d-grid,
+.book-page.active[data-page="2"] > .d-grid {
+    margin-top: auto;
+    padding-top: 1.25rem;
+}
+
 /* Page 1: Name */
 .book-input-wrapper {
     position: relative;
@@ -1799,9 +1829,10 @@ add-expense-form {
     background: var(--surface-container-lowest);
     border: 1.5px solid var(--outline-variant);
     border-radius: 0.875rem;
-    padding: 0.625rem 1rem 0.625rem 2.25rem;
+    min-height: 72px;
+    padding: 1rem 1rem 1rem 3rem;
     color: var(--on-surface);
-    font-size: 0.9375rem;
+    font-size: clamp(1.125rem, 2.5vw, 2rem);
     font-weight: 500;
 }
 
@@ -1813,16 +1844,16 @@ add-expense-form {
 
 .book-input-icon {
     position: absolute;
-    left: 0.65rem;
+    left: 1rem;
     color: var(--primary);
     pointer-events: none;
-    font-size: 1.125rem;
+    font-size: 1.5rem;
 }
 
 .book-quick-chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.35rem;
+    gap: 0.625rem;
     margin-bottom: 0.5rem;
 }
 
@@ -1830,15 +1861,16 @@ add-expense-form {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
-    padding: 0.25rem 0.6rem;
+    padding: 0.625rem 1rem;
+    min-height: 48px;
     background: var(--surface-container-high);
     border: 1px solid var(--outline-variant);
     border-radius: 9999px;
-    font-size: 0.725rem;
+    font-size: 1rem;
     font-weight: 600;
     color: var(--on-surface);
     cursor: pointer;
-    transition: all 0.12s ease;
+    transition: background-color 0.12s ease, border-color 0.12s ease, transform 0.12s ease;
 }
 
 .thumb-chip:hover {
@@ -1856,23 +1888,25 @@ add-expense-form {
     background: var(--surface-container-lowest);
     border: 1.5px solid var(--outline-variant);
     border-radius: 0.875rem;
-    padding: 0.5rem 1rem;
+    padding: 1.25rem 1rem;
+    min-height: 120px;
     margin-bottom: 0.625rem;
 }
 
 .book-currency-symbol {
     font-family: 'Manrope', sans-serif;
-    font-size: 1.5rem;
+    font-size: clamp(2rem, 4vw, 3rem);
     font-weight: 800;
     color: var(--primary);
 }
 
 .book-amount-input {
-    width: 140px;
+    width: min(100%, 320px);
+    min-width: 0;
     background: transparent;
     border: none;
     font-family: 'Manrope', sans-serif;
-    font-size: 1.875rem;
+    font-size: clamp(3rem, 6vw, 4.5rem);
     font-weight: 800;
     color: var(--on-surface);
     text-align: left;
@@ -1885,23 +1919,24 @@ add-expense-form {
 .book-quick-amounts {
     display: flex;
     justify-content: center;
-    gap: 0.4rem;
+    gap: 0.625rem;
     margin-bottom: 0.5rem;
 }
 
 .amount-preset-chip {
     flex: 1;
-    max-width: 65px;
-    padding: 0.3rem 0.4rem;
+    min-width: 0;
+    min-height: 48px;
+    padding: 0.625rem 0.4rem;
     background: var(--surface-container-high);
     border: 1px solid var(--outline-variant);
     border-radius: 0.5rem;
-    font-size: 0.75rem;
+    font-size: 1rem;
     font-weight: 700;
     color: var(--on-surface);
     cursor: pointer;
     text-align: center;
-    transition: all 0.12s ease;
+    transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 
 .amount-preset-chip:hover {
@@ -1913,7 +1948,7 @@ add-expense-form {
 .compact-category-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.35rem;
+    gap: 0.625rem;
     margin-bottom: 0.625rem;
     padding: 1px;
 }
@@ -1922,16 +1957,16 @@ add-expense-form {
     display: flex;
     align-items: center;
     gap: 0.35rem;
-    padding: 0.35rem 0.5rem;
+    padding: 0.75rem;
     border-radius: 0.5rem;
     background: var(--surface-container-lowest);
     border: 1px solid var(--outline-variant);
     color: var(--on-surface-variant);
     cursor: pointer;
-    transition: all 0.12s ease;
+    transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
     user-select: none;
     min-width: 0;
-    min-height: 40px;
+    min-height: 52px;
 }
 
 .mini-category-chip:hover {
@@ -1948,16 +1983,15 @@ add-expense-form {
 
 .mini-category-chip .mini-cat-icon {
     flex-shrink: 0;
-    font-size: 1rem;
+    font-size: 1.25rem;
     color: var(--chip-cat-color, var(--primary));
 }
 
 .mini-category-chip .mini-cat-label {
-    font-size: 0.6875rem;
+    font-size: 0.875rem;
     font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .book-summary-pill {
@@ -1965,10 +1999,10 @@ add-expense-form {
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    padding: 0.3rem 0.75rem;
+    padding: 0.75rem 1rem;
     border-radius: 9999px;
     background: var(--surface-container-highest);
-    font-size: 0.75rem;
+    font-size: 1rem;
     color: var(--on-surface);
 }
 
@@ -1983,7 +2017,7 @@ add-expense-form {
     flex-shrink: 0;
 }
 
-@media (max-width: 400px) {
+@media (max-width: 575px) {
     .compact-category-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -2027,8 +2061,190 @@ add-expense-form {
 }
 
 .book-action-btn {
-    height: 44px;
-    font-size: 0.875rem;
+    height: 60px;
+    font-size: 1.125rem;
     font-weight: 700;
     border-radius: 0.75rem;
+}
+
+@media (min-width: 900px) {
+    .compact-category-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+/* Phone entry layout: sized around the iPhone 15's 393px viewport. */
+@media (max-width: 600px) {
+    .expense-entry-body {
+        --nav-height: 56px;
+        --bottom-nav-height: 68px;
+        --entry-bottom-inset: env(safe-area-inset-bottom, 0px);
+    }
+
+    .expense-entry-page {
+        display: flex;
+        flex-direction: column;
+        min-height: calc(var(--entry-viewport-height, 100dvh) - var(--nav-height) - var(--bottom-nav-height) - env(safe-area-inset-top, 0px) - var(--entry-bottom-inset));
+        padding: 12px max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px));
+    }
+
+    .expense-entry-body .top-nav-inner {
+        padding-inline: 16px;
+    }
+
+    .expense-entry-page add-expense-form,
+    .expense-entry-page .expense-book-card,
+    .expense-entry-page .book-pages-viewport {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .expense-entry-page .expense-book-card {
+        padding: 0;
+        margin: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .expense-entry-page .expense-book-card::before {
+        display: none;
+    }
+
+    .expense-entry-page .book-header {
+        flex-shrink: 0;
+        margin-bottom: 20px;
+    }
+
+    .expense-entry-page .book-progress-bar {
+        margin-bottom: 12px;
+        gap: 8px;
+    }
+
+    .expense-entry-page .book-nav-row {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: 8px;
+    }
+
+    .expense-entry-page .book-back-btn {
+        grid-column: 1;
+        grid-row: 1;
+        padding-left: 0;
+    }
+
+    .expense-entry-page .book-date-toggle,
+    .expense-entry-page .book-nav-row:has(.book-back-btn.d-none) .book-date-toggle {
+        grid-column: 3;
+        grid-row: 1;
+    }
+
+    .expense-entry-page .book-step-title,
+    .expense-entry-page .book-nav-row:has(.book-back-btn.d-none) .book-step-title {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        font-size: 28px;
+        line-height: 1.2;
+        text-align: left;
+        text-wrap: balance;
+    }
+
+    .expense-entry-page .book-pages-track {
+        flex: 1;
+        align-items: stretch;
+    }
+
+    .expense-entry-page .book-page.active {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .expense-entry-page .book-page.active > .d-grid {
+        margin-top: auto;
+        padding-top: 16px;
+    }
+
+    .expense-entry-page .book-text-input {
+        min-height: 68px;
+        font-size: 22px;
+        line-height: 1.3;
+    }
+
+    .expense-entry-page .book-quick-chips {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 4px;
+    }
+
+    .expense-entry-page .thumb-chip {
+        min-height: 52px;
+        border-radius: 14px;
+        font-size: 16px;
+    }
+
+    .expense-entry-page .book-amount-input {
+        width: min(100%, 240px);
+        font-size: 56px;
+    }
+
+    .expense-entry-page .compact-category-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .expense-entry-page .mini-category-chip {
+        flex-direction: column;
+        justify-content: center;
+        min-height: 64px;
+        padding: 8px 4px;
+        gap: 4px;
+    }
+
+    .expense-entry-page .mini-cat-label {
+        font-size: 14px;
+        line-height: 1.2;
+        text-align: center;
+    }
+
+    .expense-entry-page .book-action-btn {
+        height: 56px;
+        font-size: 18px;
+    }
+
+    .expense-entry-body.entry-keyboard-open {
+        --bottom-nav-height: 0px;
+        --entry-bottom-inset: 0px;
+        padding-bottom: 0;
+    }
+
+    .entry-keyboard-open .bottom-nav,
+    .entry-keyboard-open .book-quick-chips {
+        display: none;
+    }
+
+    .entry-keyboard-open .book-header {
+        margin-bottom: 12px;
+    }
+
+    .entry-keyboard-open .book-amount-display {
+        min-height: 96px;
+        padding-block: 8px;
+    }
+}
+
+@media (max-width: 360px) {
+    .expense-entry-page .compact-category-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .expense-entry-page .book-pages-track {
+        transition: none;
+    }
 }
