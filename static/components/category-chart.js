@@ -75,7 +75,7 @@ class CategoryChart extends BaseComponent {
             const response = await fetch(`/api/expenses?month=${this.currentMonth}&year=${this.currentYear}`);
             if (!response.ok) throw new Error('Failed to fetch expenses');
 
-            const { expenses } = await response.json();
+            const { expenses, summary } = await response.json();
 
             const filteredExpenses = this.currentWeek === 'all' ? expenses : expenses.filter(expense => {
                 const date = new Date(expense.date);
@@ -86,7 +86,7 @@ class CategoryChart extends BaseComponent {
                 return `week${weekNumber}` === this.currentWeek;
             });
 
-            this.renderChart(filteredExpenses);
+            this.renderChart(filteredExpenses, summary);
         } catch (error) {
             console.error('Error updating chart:', error);
             if (this.isInitialized && document.readyState === 'complete') {
@@ -95,96 +95,154 @@ class CategoryChart extends BaseComponent {
         }
     }
 
-    renderChart(expenses) {
+    renderChart(expenses, serverSummary) {
+        expenses = expenses || [];
         this.currentExpenses = expenses;
 
         const totalEl = this.querySelector('#chartTotal');
         const donutContainer = this.querySelector('#donutChart');
         const legendContainer = this.querySelector('#chartLegend');
+        const summaryBar = this.querySelector('#monthlySummaryBar');
 
-        if (!expenses || expenses.length === 0) {
-            if (totalEl) totalEl.textContent = this.formatAmount(0);
-            if (donutContainer) donutContainer.innerHTML = this.renderEmptyDonut();
-            if (legendContainer) legendContainer.innerHTML = `
-                <div style="text-align: center; padding: 1rem; color: var(--outline);">
-                    No expenses for this period
-                </div>`;
-            return;
+        const grossExpenses = expenses
+            .filter(e => (e.type || 'expense') === 'expense')
+            .reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+        const reimbursements = expenses
+            .filter(e => e.type === 'reimbursement')
+            .reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+        const netExpenses = grossExpenses - reimbursements;
+        const income = expenses
+            .filter(e => e.type === 'income')
+            .reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+        const monthlySummary = serverSummary || {
+            gross_expenses: grossExpenses,
+            reimbursements,
+            net_expenses: netExpenses,
+            income
+        };
+
+        if (totalEl) totalEl.textContent = this.formatAmount(netExpenses);
+
+        if (summaryBar) {
+            summaryBar.innerHTML = `
+                <div class="summary-pill gross">
+                    <span class="pill-label">Gross</span>
+                    <span class="pill-value">${this.formatAmount(monthlySummary.gross_expenses)}</span>
+                </div>
+                <div class="summary-pill reimbursements">
+                    <span class="pill-label">Reimb.</span>
+                    <span class="pill-value">-${this.formatAmount(monthlySummary.reimbursements)}</span>
+                </div>
+                <div class="summary-pill net">
+                    <span class="pill-label">Net</span>
+                    <span class="pill-value">${this.formatAmount(monthlySummary.net_expenses)}</span>
+                </div>
+                <div class="summary-pill income">
+                    <span class="pill-label">Income</span>
+                    <span class="pill-value">+${this.formatAmount(monthlySummary.income)}</span>
+                </div>
+            `;
         }
 
-        const total = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
-        if (totalEl) totalEl.textContent = this.formatAmount(total);
+        // Group and sort by category:
+        // Reimbursements reduce net category spending.
+        // Income is NEVER included in category spending!
+        const categoryGross = {};
+        const categoryReimb = {};
+        expenses.forEach(exp => {
+            const t = exp.type || 'expense';
+            if (t === 'expense') {
+                categoryGross[exp.category] = (categoryGross[exp.category] || 0) + parseFloat(exp.amount);
+            } else if (t === 'reimbursement') {
+                categoryReimb[exp.category] = (categoryReimb[exp.category] || 0) + parseFloat(exp.amount);
+            }
+        });
 
-        // Group and sort by category
-        const categoryTotals = expenses.reduce((acc, exp) => {
-            acc[exp.category] = (acc[exp.category] || 0) + parseFloat(exp.amount);
-            return acc;
-        }, {});
+        const categoryTotals = {};
+        const allCats = new Set([...Object.keys(categoryGross), ...Object.keys(categoryReimb)]);
+        allCats.forEach(cat => {
+            const net = (categoryGross[cat] || 0) - (categoryReimb[cat] || 0);
+            if (net > 0) {
+                categoryTotals[cat] = net;
+            }
+        });
 
         const sortedCategories = Object.entries(categoryTotals).sort(([,a], [,b]) => b - a);
         this.currentCategories = sortedCategories;
+        const totalNet = sortedCategories.reduce((s, [, a]) => s + a, 0);
 
         // Render SVG donut
         if (donutContainer) {
-            donutContainer.innerHTML = this.renderDonut(sortedCategories, total);
-            this.setupSegmentListeners();
+            if (sortedCategories.length === 0) {
+                donutContainer.innerHTML = this.renderEmptyDonut(netExpenses);
+            } else {
+                donutContainer.innerHTML = this.renderDonut(sortedCategories, totalNet, netExpenses);
+                this.setupSegmentListeners();
+            }
         }
 
         // Render legend
         if (legendContainer) {
-            legendContainer.innerHTML = sortedCategories.map(([category, amount]) => {
-                const color = CategoryHelper.getCategoryColor(category);
-                const pct = Math.round((amount / total) * 100);
-                const icon = CategoryHelper.getCategoryIcon(category);
-                return `
-                    <div class="legend-item" data-category="${category}">
-                        <div class="legend-left">
-                            <div class="legend-icon-dot" style="background: ${color};">
-                                <span class="material-symbols-outlined" style="font-size: 0.75rem; color: #0E0E0E;">${icon}</span>
+            if (sortedCategories.length === 0) {
+                legendContainer.innerHTML = `
+                    <div style="text-align: center; padding: 1rem; color: var(--outline);">
+                        No net spending in categories
+                    </div>`;
+            } else {
+                legendContainer.innerHTML = sortedCategories.map(([category, amount]) => {
+                    const color = CategoryHelper.getCategoryColor(category);
+                    const pct = totalNet > 0 ? Math.round((amount / totalNet) * 100) : 0;
+                    const icon = CategoryHelper.getCategoryIcon(category);
+                    return `
+                        <div class="legend-item" data-category="${category}">
+                            <div class="legend-left">
+                                <div class="legend-icon-dot" style="background: ${color};">
+                                    <span class="material-symbols-outlined" style="font-size: 0.75rem; color: #0E0E0E;">${icon}</span>
+                                </div>
+                                <span class="legend-label">${CategoryHelper.getCategoryLabel(category)}</span>
                             </div>
-                            <span class="legend-label">${CategoryHelper.getCategoryLabel(category)}</span>
+                            <div class="legend-right">
+                                <span class="legend-amount">${this.formatAmount(amount)}</span>
+                                <span class="legend-pct">${pct}%</span>
+                            </div>
                         </div>
-                        <div class="legend-right">
-                            <span class="legend-amount">${this.formatAmount(amount)}</span>
-                            <span class="legend-pct">${pct}%</span>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
 
-            // Legend click handlers
-            legendContainer.querySelectorAll('.legend-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    const category = item.dataset.category;
-                    this.activeCategory = category;
-                    this.updateDonutHighlight();
-                    this.showCategoryDetails(category, this.currentExpenses);
-                    legendContainer.querySelectorAll('.legend-item').forEach(i => {
-                        i.classList.toggle('active', i.dataset.category === category);
+                // Legend click handlers
+                legendContainer.querySelectorAll('.legend-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const category = item.dataset.category;
+                        this.activeCategory = category;
+                        this.updateDonutHighlight();
+                        this.showCategoryDetails(category, this.currentExpenses);
+                        legendContainer.querySelectorAll('.legend-item').forEach(i => {
+                            i.classList.toggle('active', i.dataset.category === category);
+                        });
                     });
                 });
-            });
+            }
         }
     }
 
-    renderEmptyDonut() {
+    renderEmptyDonut(amount = 0) {
         return `
             <svg viewBox="0 0 200 200" class="donut-svg">
                 <circle cx="100" cy="100" r="78" fill="none" stroke="var(--surface-container-highest)" stroke-width="22"/>
-                <text x="100" y="96" text-anchor="middle" fill="var(--outline)" font-family="Inter" font-size="11">No data</text>
-                <text x="100" y="114" text-anchor="middle" fill="var(--on-surface)" font-family="Manrope" font-weight="800" font-size="14">${this.formatAmount(0)}</text>
+                <text x="100" y="96" text-anchor="middle" fill="var(--outline)" font-family="Inter" font-size="9" letter-spacing="0.08em">NET SPENDING</text>
+                <text x="100" y="114" text-anchor="middle" fill="var(--on-surface)" font-family="Manrope" font-weight="800" font-size="14">${this.formatAmount(amount)}</text>
             </svg>
         `;
     }
 
-    renderDonut(categories, total) {
+    renderDonut(categories, total, centerTotal) {
         const cx = 100, cy = 100, r = 78;
         const circumference = 2 * Math.PI * r;
         let offset = 0;
         const gap = 2; // gap in degrees between segments
 
         const segments = categories.map(([category, amount]) => {
-            const pct = amount / total;
+            const pct = total > 0 ? (amount / total) : 0;
             const gapPct = gap / 360;
             const segPct = Math.max(pct - gapPct, 0.005);
             const dashLength = segPct * circumference;
@@ -209,12 +267,14 @@ class CategoryChart extends BaseComponent {
             return segment;
         });
 
+        const displayedTotal = centerTotal !== undefined ? centerTotal : total;
+
         return `
             <svg viewBox="0 0 200 200" class="donut-svg">
                 ${segments.join('')}
                 <circle cx="${cx}" cy="${cy}" r="56" fill="var(--surface-container-lowest)"/>
-                <text x="${cx}" y="${cy - 6}" text-anchor="middle" fill="var(--outline)" font-family="Inter" font-size="9" letter-spacing="0.12em">TOTAL</text>
-                <text x="${cx}" y="${cy + 12}" text-anchor="middle" fill="var(--on-surface)" font-family="Manrope" font-weight="800" font-size="13">${this.formatAmount(total)}</text>
+                <text x="${cx}" y="${cy - 6}" text-anchor="middle" fill="var(--outline)" font-family="Inter" font-size="8" letter-spacing="0.1em">NET SPENDING</text>
+                <text x="${cx}" y="${cy + 12}" text-anchor="middle" fill="var(--on-surface)" font-family="Manrope" font-weight="800" font-size="13">${this.formatAmount(displayedTotal)}</text>
             </svg>
         `;
     }
@@ -253,14 +313,22 @@ class CategoryChart extends BaseComponent {
     }
 
     showCategoryDetails(category, expenses) {
+        // Exclude income from category spending details
         const categoryExpenses = expenses
-            .filter(exp => exp.category === category)
+            .filter(exp => exp.category === category && (exp.type || 'expense') !== 'income')
             .sort((a, b) => new Date(b.date) - new Date(a.date));
-        const total = categoryExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+
+        const gross = categoryExpenses
+            .filter(e => (e.type || 'expense') === 'expense')
+            .reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+        const reimb = categoryExpenses
+            .filter(e => e.type === 'reimbursement')
+            .reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+        const net = gross - reimb;
 
         this.querySelector('#categoryDetailsTitle').textContent = CategoryHelper.getCategoryLabel(category);
         this.querySelector('#categoryDetailsIcon').textContent = CategoryHelper.getCategoryIcon(category);
-        this.querySelector('#categoryTotal').textContent = this.formatAmount(total);
+        this.querySelector('#categoryTotal').textContent = this.formatAmount(net);
 
         const listEl = this.querySelector('#categoryExpensesList');
 
@@ -268,11 +336,19 @@ class CategoryChart extends BaseComponent {
             listEl.innerHTML = `
                 <div style="text-align: center; padding: 2rem; color: var(--outline);">
                     <span class="material-symbols-outlined" style="font-size: 2rem; display: block; margin-bottom: 0.5rem;">inbox</span>
-                    No expenses in this category
+                    No spending in this category
                 </div>
             `;
         } else {
-            listEl.innerHTML = categoryExpenses.map(exp => `
+            listEl.innerHTML = categoryExpenses.map(exp => {
+                const isReimb = exp.type === 'reimbursement';
+                const sign = isReimb ? '-' : '';
+                const amountClass = isReimb ? 'reimbursement-amount' : '';
+                const typeBadge = isReimb
+                    ? `<span class="badge type-badge type-reimbursement" style="font-size: 0.625rem; padding: 2px 6px;">Reimbursement</span>`
+                    : '';
+
+                return `
                 <div class="expense-card" data-expense-id="${exp.id}">
                     <div class="expense-card-left">
                         <div class="expense-card-desc">${exp.description}</div>
@@ -280,18 +356,20 @@ class CategoryChart extends BaseComponent {
                             <span>${this.formatDateCompact(exp.date)}</span>
                             <span class="meta-dot"></span>
                             <span class="source-badge source-${exp.source || 'manual'}">${(exp.source || 'manual') === 'bank_sync' ? 'Bank' : 'Manual'}</span>
+                            ${typeBadge}
                         </div>
                     </div>
-                    <div class="expense-card-amount">${this.formatAmount(exp.amount)}</div>
+                    <div class="expense-card-amount ${amountClass}">${sign}${this.formatAmount(exp.amount)}</div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
         }
 
         this.querySelector('#categoryDetails').classList.add('show');
     }
 
     editExpense(expense) {
-        const editUrl = `/add?edit=${expense.id}&amount=${expense.amount}&category=${expense.category}&description=${encodeURIComponent(expense.description)}&date=${expense.date}`;
+        const editUrl = `/add?edit=${expense.id}&amount=${expense.amount}&category=${expense.category}&description=${encodeURIComponent(expense.description)}&date=${expense.date}&type=${expense.type || 'expense'}`;
         window.location.href = editUrl;
     }
 
@@ -308,7 +386,7 @@ class CategoryChart extends BaseComponent {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    margin-bottom: 1rem;
+                    margin-bottom: 0.75rem;
                 }
                 .chart-header-left {
                     display: flex;
@@ -324,6 +402,42 @@ class CategoryChart extends BaseComponent {
                     font-size: 1.25rem;
                     color: var(--primary);
                 }
+                .monthly-summary-bar {
+                    display: grid;
+                    grid-template-columns: repeat(4, 1fr);
+                    gap: 0.5rem;
+                    margin-bottom: 1.25rem;
+                    padding: 0.5rem;
+                    background: var(--surface-container-high);
+                    border-radius: 0.75rem;
+                }
+                .summary-pill {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    text-align: center;
+                    padding: 0.25rem;
+                    border-radius: 0.5rem;
+                }
+                .summary-pill .pill-label {
+                    font-size: 0.65rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                    color: var(--outline);
+                    font-weight: 600;
+                }
+                .summary-pill .pill-value {
+                    font-family: 'Manrope', sans-serif;
+                    font-size: 0.8125rem;
+                    font-weight: 800;
+                    color: var(--on-surface);
+                    font-variant-numeric: tabular-nums;
+                }
+                .summary-pill.gross .pill-value { color: var(--on-surface-variant); }
+                .summary-pill.reimbursements .pill-value { color: #06b6d4; }
+                .summary-pill.net .pill-value { color: var(--primary); }
+                .summary-pill.income .pill-value { color: #10b981; }
+                .reimbursement-amount { color: #06b6d4 !important; }
                 .chart-body {
                     display: flex;
                     flex-direction: column;
@@ -550,6 +664,7 @@ class CategoryChart extends BaseComponent {
                     </div>
                     <div class="chart-header-total" id="chartTotal">${this.formatAmount(0)}</div>
                 </div>
+                <div class="monthly-summary-bar" id="monthlySummaryBar" aria-label="Monthly summary"></div>
                 <div class="chart-body">
                     <div class="donut-container" id="donutChart">
                         ${this.renderEmptyDonut()}

@@ -1,20 +1,22 @@
-import { CONFIG, CategoryHelper, CurrencyHelper , Utils} from './config.js';
-import { ApiService, ErrorHandler } from './api-service.js';
 import { BaseComponent, EventManager } from './event-manager.js';
+import { CONFIG, CategoryHelper, CurrencyHelper, TransactionTypeHelper, Utils } from './config.js';
+import { ApiService, ErrorHandler } from './api-service.js';
 
 class AddExpenseForm extends BaseComponent {
     constructor() {
         super();
-        this.isSubmitting = false;
         this.editMode = false;
         this.editExpenseId = null;
         this.editData = null;
+        this.isSubmitting = false;
+        this.selectedType = 'expense';
     }
 
     connectedCallback() {
         this.parseUrlParameters();
         this.render();
         this.setupEventListeners();
+
         if (this.editMode) {
             this.prefillForm();
         } else {
@@ -29,12 +31,17 @@ class AddExpenseForm extends BaseComponent {
         if (urlParams.has('edit')) {
             this.editMode = true;
             this.editExpenseId = urlParams.get('edit');
+            const requestedType = urlParams.get('type');
+            const transactionType = TransactionTypeHelper.getAllTypes().includes(requestedType)
+                ? requestedType : 'expense';
             this.editData = {
                 amount: urlParams.get('amount'),
                 category: urlParams.get('category'),
                 description: urlParams.get('description'),
-                date: urlParams.get('date')
+                date: urlParams.get('date'),
+                type: transactionType
             };
+            this.selectedType = this.editData.type;
         }
     }
 
@@ -43,8 +50,30 @@ class AddExpenseForm extends BaseComponent {
             .map(cat => `<option value="${cat}">${CategoryHelper.getCategoryLabel(cat)}</option>`)
             .join('');
 
+        const typeLabel = TransactionTypeHelper.getTypeLabel(this.selectedType);
+        const actionLabel = this.editMode ? `Update ${typeLabel}` : `Add ${typeLabel}`;
+
         this.innerHTML = `
             <form id="addExpenseForm" novalidate>
+                <div class="mb-3">
+                    <label class="form-label">Transaction Type</label>
+                    <div class="transaction-type-selector">
+                        <button type="button" class="type-btn ${this.selectedType === 'expense' ? 'active' : ''}" data-type="expense">
+                            <span class="material-symbols-outlined">payments</span>
+                            <span>Expense</span>
+                        </button>
+                        <button type="button" class="type-btn ${this.selectedType === 'income' ? 'active' : ''}" data-type="income">
+                            <span class="material-symbols-outlined">savings</span>
+                            <span>Income</span>
+                        </button>
+                        <button type="button" class="type-btn ${this.selectedType === 'reimbursement' ? 'active' : ''}" data-type="reimbursement">
+                            <span class="material-symbols-outlined">assignment_return</span>
+                            <span>Reimbursement</span>
+                        </button>
+                    </div>
+                    <input type="hidden" id="transactionType" name="type">
+                </div>
+
                 <div class="mb-3">
                     <label for="amount" class="form-label">Amount *</label>
                     <div class="input-group input-group-lg">
@@ -68,7 +97,7 @@ class AddExpenseForm extends BaseComponent {
                     </select>
                 </div>
 
-                                <div class="mb-3">
+                <div class="mb-3">
                     <label for="date" class="form-label">Date *</label>
                     <input type="date"
                            class="form-control"
@@ -92,7 +121,7 @@ class AddExpenseForm extends BaseComponent {
                     <button type="button" class="btn btn-gradient" id="submitBtn" style="height: 56px; font-size: 1rem; font-weight: 700;">
                         <span class="btn-text d-flex align-items-center justify-content-center gap-2">
                             <span class="material-symbols-outlined">${this.editMode ? 'check' : 'add_circle'}</span>
-                            ${this.editMode ? 'Update Expense' : 'Add Expense'}
+                            ${actionLabel}
                         </span>
                         <span class="btn-spinner d-none d-flex align-items-center justify-content-center gap-2">
                             <span class="spinner-border spinner-border-sm"></span>
@@ -129,6 +158,19 @@ class AddExpenseForm extends BaseComponent {
             this.handleSubmit(fakeEvent);
         });
 
+        const typeBtns = this.querySelectorAll('.type-btn');
+        const typeInput = this.querySelector('#transactionType');
+        typeInput.value = this.selectedType;
+        typeBtns.forEach(btn => {
+            this.addEventListenerWithCleanup(btn, 'click', () => {
+                typeBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.selectedType = btn.dataset.type;
+                typeInput.value = this.selectedType;
+                this.updateTypeUI(this.selectedType);
+            });
+        });
+
         const amountInput = this.querySelector('#amount');
         this.addEventListenerWithCleanup(amountInput, 'input', this.handleAmountInput.bind(this));
 
@@ -151,11 +193,52 @@ class AddExpenseForm extends BaseComponent {
         amountInput.focus();
     }
 
+    updateTypeUI(type) {
+        const submitTextEl = this.querySelector('#submitBtn .btn-text');
+        const descInput = this.querySelector('#description');
+        const typeLabel = TransactionTypeHelper.getTypeLabel(type);
+        if (submitTextEl) {
+            const actionText = this.editMode ? `Update ${typeLabel}` : `Add ${typeLabel}`;
+            submitTextEl.innerHTML = `
+                <span class="material-symbols-outlined">${this.editMode ? 'check' : 'add_circle'}</span>
+                ${actionText}
+            `;
+        }
+        if (descInput) {
+            if (type === 'income') {
+                descInput.placeholder = 'e.g. Monthly salary, bonus, dividend';
+            } else if (type === 'reimbursement') {
+                descInput.placeholder = 'What was reimbursed? (e.g. race registration)';
+            } else {
+                descInput.placeholder = 'What did you buy?';
+            }
+        }
+        const titleEl = document.getElementById('formTitle');
+        const subtitleEl = document.getElementById('formSubtitle');
+        if (titleEl && !this.editMode) {
+            titleEl.textContent = `Add New ${typeLabel}`;
+        }
+        if (subtitleEl && !this.editMode) {
+            subtitleEl.textContent = type === 'income' ? 'Track incoming funds' : type === 'reimbursement' ? 'Record a reimbursement' : 'Track your spending easily';
+        }
+    }
+
     prefillForm() {
         if (this.editData) {
             this.querySelector('#amount').value = this.editData.amount;
             this.querySelector('#category').value = this.editData.category;
             this.querySelector('#description').value = decodeURIComponent(this.editData.description);
+
+            if (this.editData.type) {
+                this.selectedType = this.editData.type;
+                const typeInput = this.querySelector('#transactionType');
+                if (typeInput) typeInput.value = this.selectedType;
+                const typeBtns = this.querySelectorAll('.type-btn');
+                typeBtns.forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.type === this.selectedType);
+                });
+                this.updateTypeUI(this.selectedType);
+            }
 
             if (this.editData.date && this.editData.date !== 'undefined' && this.editData.date !== 'null') {
                 // Parse the date to YYYY-MM-DD for the date input
@@ -167,10 +250,11 @@ class AddExpenseForm extends BaseComponent {
 
             const titleEl = document.getElementById('formTitle');
             const subtitleEl = document.getElementById('formSubtitle');
-            if (titleEl) titleEl.textContent = 'Edit Expense';
-            if (subtitleEl) subtitleEl.textContent = 'Update your expense details';
+            const typeLabel = TransactionTypeHelper.getTypeLabel(this.selectedType);
+            if (titleEl) titleEl.textContent = `Edit ${typeLabel}`;
+            if (subtitleEl) subtitleEl.textContent = `Update your ${typeLabel.toLowerCase()} details`;
 
-            document.title = 'Edit Expense - Vault';
+            document.title = `Edit ${typeLabel} - Vault`;
         }
     }
 
@@ -180,7 +264,6 @@ class AddExpenseForm extends BaseComponent {
 
     async handleSubmit(e) {
         e.preventDefault();
-        console.log('handleSubmit fired!');
 
         if (this.isSubmitting) return;
 
@@ -204,9 +287,6 @@ class AddExpenseForm extends BaseComponent {
         }
 
         // Dismiss the mobile keyboard now, not after the request resolves.
-        // Left focused, some mobile browsers keep the on-screen keyboard up
-        // through the success-card transition, which can shift/hide the
-        // fixed bottom nav underneath it and eat the next tap.
         if (document.activeElement && document.activeElement.blur) {
             document.activeElement.blur();
         }
@@ -214,26 +294,20 @@ class AddExpenseForm extends BaseComponent {
         this.isSubmitting = true;
         this.setSubmittingState(true);
 
+        const type = formData.get('type') || this.selectedType || 'expense';
         const data = {
             amount: CurrencyHelper.parseAmount(amountStr),
             category: category,
             description: description,
-            date: dateVal
+            date: dateVal,
+            type: type
         };
 
         try {
             let result;
             if (this.editMode) {
-                const response = await fetch(`/api/expenses/${this.editExpenseId}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-
-                if (!response.ok) throw new Error('Failed to update expense');
-                result = await response.json();
-
-                window.showToast('Expense updated successfully', 'success');
+                result = await ApiService.updateExpense(this.editExpenseId, data);
+                window.showToast('Updated successfully', 'success');
 
                 setTimeout(() => {
                     window.location.href = '/expenses';
@@ -268,11 +342,20 @@ class AddExpenseForm extends BaseComponent {
         }
 
         try {
-            const response = await fetch(`/api/expenses/${this.editExpenseId}`, {
-                method: 'DELETE'
-            });
-
-            if (!response.ok) throw new Error('Failed to delete expense');
+            try {
+                await ApiService.deleteExpense(this.editExpenseId);
+            } catch (err) {
+                if (err.requiresForce) {
+                    const forceConfirm = confirm(`${err.message}\n\nDo you want to force delete this transaction and remove its allocations?`);
+                    if (forceConfirm) {
+                        await ApiService.deleteExpense(this.editExpenseId, true);
+                    } else {
+                        return;
+                    }
+                } else {
+                    throw err;
+                }
+            }
 
             window.showToast('Expense deleted successfully', 'success');
 
@@ -282,7 +365,7 @@ class AddExpenseForm extends BaseComponent {
 
         } catch (error) {
             console.error('Delete expense error:', error);
-            window.showToast('Failed to delete expense', 'error');
+            window.showToast(error.message || 'Failed to delete expense', 'error');
         }
     }
 
@@ -317,8 +400,17 @@ class AddExpenseForm extends BaseComponent {
             return;
         }
 
+        const txnType = expense.type || 'expense';
+
         expenseDetails.innerHTML = `
             <div class="card-vault" style="text-align: left;">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Type</span>
+                    <span class="badge type-badge type-${txnType}">
+                        <span class="material-symbols-outlined" style="font-size: 0.875rem;">${TransactionTypeHelper.getTypeIcon(txnType)}</span>
+                        ${TransactionTypeHelper.getTypeLabel(txnType)}
+                    </span>
+                </div>
                 <div class="d-flex justify-content-between mb-2">
                     <span class="text-muted">Amount</span>
                     <span class="fw-bold tabular-nums" style="color: var(--primary);">${CurrencyHelper.format(expense.amount)}</span>

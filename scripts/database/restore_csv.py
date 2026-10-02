@@ -1,11 +1,12 @@
 import os
 import csv
 import sqlite3
+import math
 from datetime import datetime
 
 
 def list_backups():
-    """List all available CSV backups"""
+    """List all available CSV backups."""
     exports_dir = os.path.join(os.path.dirname(__file__), "exports")
     if not os.path.exists(exports_dir):
         print("No backups directory found.")
@@ -22,12 +23,14 @@ def list_backups():
     return sorted(backups, reverse=True)  # Most recent first
 
 
-def restore_from_csv(csv_path):
-    """Restore database from CSV file"""
+def restore_from_csv(csv_path, target_db_path=None):
+    """Restore database from CSV file."""
     # Create a backup of current database first
-    db_dir = os.path.join(os.path.dirname(__file__), "instance")
-    db_path = os.path.join(db_dir, "expenses.db")
-    if os.path.exists(db_path):
+    db_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../instance"))
+    db_path = target_db_path or os.path.join(db_dir, "expenses.db")
+    os.makedirs(os.path.dirname(os.path.abspath(db_path)), exist_ok=True)
+    backup_path = None
+    if target_db_path is None and os.path.exists(db_path):
         backup_name = f"expenses_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
         backup_path = os.path.join(db_dir, backup_name)
         os.rename(db_path, backup_path)
@@ -45,7 +48,8 @@ def restore_from_csv(csv_path):
             date DATETIME NOT NULL,
             amount FLOAT NOT NULL,
             category VARCHAR(50) NOT NULL,
-            description VARCHAR(50) NOT NULL
+            description VARCHAR(50) NOT NULL,
+            type VARCHAR(20) DEFAULT 'expense'
         )
     """
     )
@@ -54,12 +58,36 @@ def restore_from_csv(csv_path):
     try:
         with open(csv_path, "r", newline="") as csv_file:
             csv_reader = csv.reader(csv_file)
-            next(csv_reader)  # Skip header row
+            header = next(csv_reader, None)  # Skip header row
+            has_type = (
+                header and len(header) >= 5 and header[4].strip().lower() == "type"
+            )
+
+            rows_to_insert = []
+            for row in csv_reader:
+                if not row:
+                    continue
+                d, amt, cat, desc = row[0], row[1], row[2], row[3]
+                t = (
+                    row[4].strip().lower()
+                    if (has_type and len(row) >= 5 and row[4].strip())
+                    else "expense"
+                )
+                if t not in {"expense", "income", "reimbursement"}:
+                    raise ValueError(f"Invalid transaction type: {t}")
+                num_amt = float(amt)
+                if not math.isfinite(num_amt) or num_amt == 0:
+                    raise ValueError("Amount must be finite and greater than zero")
+                if num_amt < 0:
+                    if t == "expense":
+                        t = "reimbursement"
+                    amt = str(abs(num_amt))
+                rows_to_insert.append((d, amt, cat, desc, t))
 
             # Insert all rows
-            sql = "INSERT INTO expense (date, amount, category, description) "
-            sql += "VALUES (?, ?, ?, ?)"
-            cursor.executemany(sql, csv_reader)
+            sql = "INSERT INTO expense (date, amount, category, description, type) "
+            sql += "VALUES (?, ?, ?, ?, ?)"
+            cursor.executemany(sql, rows_to_insert)
 
             conn.commit()
             rows = cursor.rowcount
@@ -69,15 +97,17 @@ def restore_from_csv(csv_path):
         print(f"Error restoring data: {e}")
         conn.rollback()
         # If restore fails, try to recover original database
-        if os.path.exists(backup_path):
+        if backup_path and os.path.exists(backup_path):
             os.remove(db_path)
             os.rename(backup_path, db_path)
             print("Restored original database due to error")
+        raise
     finally:
         conn.close()
 
 
 def main():
+    """Interactive CLI runner for restoring CSV backups."""
     # List available backups
     print("\nAvailable backups:")
     backups = list_backups()

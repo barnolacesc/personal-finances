@@ -9,7 +9,32 @@ export const CONFIG = {
             TRENDS: '/api/trends',
             RECURRING: '/api/recurring',
             RECURRING_APPLY: '/api/recurring/apply',
-            RECURRING_PENDING: '/api/recurring/pending'
+            RECURRING_PENDING: '/api/recurring/pending',
+            RECONCILIATIONS: '/api/reconciliations',
+            ALLOCATIONS: '/api/allocations',
+            RECONCILIATION_SUMMARY: '/api/reconciliations/summary'
+        }
+    },
+
+    // Transaction types
+    TRANSACTION_TYPES: {
+        expense: {
+            label: 'Expense',
+            icon: 'payments',
+            color: 'var(--on-surface-variant)',
+            badgeClass: 'type-expense'
+        },
+        reimbursement: {
+            label: 'Reimbursement',
+            icon: 'assignment_return',
+            color: '#06b6d4',
+            badgeClass: 'type-reimbursement'
+        },
+        income: {
+            label: 'Income',
+            icon: 'savings',
+            color: '#10b981',
+            badgeClass: 'type-income'
         }
     },
 
@@ -107,6 +132,29 @@ export const CONFIG = {
         AMOUNT_PATTERN: '[0-9]*[.,]?[0-9]*'
     }
 };
+
+// Helper functions for transaction types
+export class TransactionTypeHelper {
+    static getAllTypes() {
+        return Object.keys(CONFIG.TRANSACTION_TYPES);
+    }
+
+    static getTypeData(typeKey) {
+        return CONFIG.TRANSACTION_TYPES[typeKey] || CONFIG.TRANSACTION_TYPES.expense;
+    }
+
+    static getTypeLabel(typeKey) {
+        return this.getTypeData(typeKey).label;
+    }
+
+    static getTypeIcon(typeKey) {
+        return this.getTypeData(typeKey).icon;
+    }
+
+    static getTypeBadgeClass(typeKey) {
+        return this.getTypeData(typeKey).badgeClass;
+    }
+}
 
 // Helper functions for configuration
 export class CategoryHelper {

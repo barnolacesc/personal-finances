@@ -1,13 +1,13 @@
+// Centralized API service for the expense tracking app
 import { CONFIG } from './config.js';
 
-// Centralized API service for all HTTP requests
 export class ApiService {
+    // Generic request helper with error handling
     static async request(url, options = {}) {
         const defaultOptions = {
             headers: {
                 'Content-Type': 'application/json',
-                ...options.headers
-            }
+            },
         };
 
         const config = { ...defaultOptions, ...options };
@@ -16,8 +16,17 @@ export class ApiService {
             const response = await fetch(url, config);
 
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`HTTP ${response.status}: ${errorText}`);
+                let errorData;
+                try {
+                    errorData = await response.json();
+                } catch {
+                    errorData = { error: await response.text() };
+                }
+                const err = new Error(errorData.error || `HTTP ${response.status}`);
+                err.status = response.status;
+                err.data = errorData;
+                err.requiresForce = Boolean(errorData && errorData.requires_force);
+                throw err;
             }
 
             // Handle empty responses (like DELETE)
@@ -33,8 +42,13 @@ export class ApiService {
     }
 
     // Expense-related API calls
-    static async getExpenses(month, year) {
-        const url = `${CONFIG.API.ENDPOINTS.EXPENSES}?month=${month}&year=${year}`;
+    static async getExpenses(month, year, type = null) {
+        const params = new URLSearchParams();
+        if (month) params.set('month', month);
+        if (year) params.set('year', year);
+        if (type) params.set('type', type);
+        const query = params.toString();
+        const url = `${CONFIG.API.ENDPOINTS.EXPENSES}${query ? '?' + query : ''}`;
         return await this.request(url);
     }
 
@@ -45,45 +59,110 @@ export class ApiService {
         });
     }
 
-    static async updateExpense(expenseId, expenseData) {
-        const url = `${CONFIG.API.ENDPOINTS.EXPENSES}/${expenseId}`;
-        return await this.request(url, {
+    static async updateExpense(id, expenseData) {
+        return await this.request(`${CONFIG.API.ENDPOINTS.EXPENSES}/${id}`, {
             method: 'PUT',
             body: JSON.stringify(expenseData)
         });
     }
 
-    static async deleteExpense(expenseId) {
-        const url = `${CONFIG.API.ENDPOINTS.EXPENSES}/${expenseId}`;
+    static async deleteExpense(id, force = false) {
+        const url = `${CONFIG.API.ENDPOINTS.EXPENSES}/${id}${force ? '?force=true' : ''}`;
         return await this.request(url, {
             method: 'DELETE'
         });
     }
 
+    static async getCategories() {
+        return await this.request(`${CONFIG.API.ENDPOINTS.EXPENSES}/categories`);
+    }
+
+    // Trends-related API calls
     static async getTrends() {
         return await this.request(CONFIG.API.ENDPOINTS.TRENDS);
     }
-    
+
     // Month-related API calls
     static async getMonths() {
         return await this.request(CONFIG.API.ENDPOINTS.MONTHS);
     }
+
+    static async getSummary(month, year) {
+        const params = new URLSearchParams();
+        if (month) params.set('month', month);
+        if (year) params.set('year', year);
+        const query = params.toString();
+        const url = `/api/summary${query ? '?' + query : ''}`;
+        return await this.request(url);
+    }
+
+    // Reconciliation and Allocation API calls
+    static async getAllocations(params = {}) {
+        const query = new URLSearchParams(params).toString();
+        const url = `${CONFIG.API.ENDPOINTS.ALLOCATIONS}${query ? '?' + query : ''}`;
+        return await this.request(url);
+    }
+
+    static async createAllocation(allocationData) {
+        return await this.request(CONFIG.API.ENDPOINTS.ALLOCATIONS, {
+            method: 'POST',
+            body: JSON.stringify(allocationData)
+        });
+    }
+
+    static async updateAllocation(allocationId, allocationData) {
+        const url = `${CONFIG.API.ENDPOINTS.ALLOCATIONS}/${allocationId}`;
+        return await this.request(url, {
+            method: 'PUT',
+            body: JSON.stringify(allocationData)
+        });
+    }
+
+    static async deleteAllocation(allocationId) {
+        const url = `${CONFIG.API.ENDPOINTS.ALLOCATIONS}/${allocationId}`;
+        return await this.request(url, {
+            method: 'DELETE'
+        });
+    }
+
+    static async getReconciliationSummary(month, year) {
+        const params = new URLSearchParams();
+        if (month) params.set('month', month);
+        if (year) params.set('year', year);
+        const query = params.toString();
+        const url = `${CONFIG.API.ENDPOINTS.RECONCILIATION_SUMMARY}${query ? '?' + query : ''}`;
+        return await this.request(url);
+    }
+
+    static async getExpenseReconciliation(expenseId) {
+        const url = `${CONFIG.API.ENDPOINTS.EXPENSES}/${expenseId}/reconciliation`;
+        return await this.request(url);
+    }
 }
 
 // Error handling utility
+export class ApiError extends Error {
+    constructor(message, status, details = null) {
+        super(message);
+        this.name = 'ApiError';
+        this.status = status;
+        this.details = details;
+    }
+}
+
 export class ErrorHandler {
     static handle(error, context = '') {
         console.error(`Error in ${context}:`, error);
 
         let message = 'An unexpected error occurred';
 
-        if (error.message.includes('Failed to fetch')) {
+        if (error.message && error.message.includes('Failed to fetch')) {
             message = 'Network error. Please check your connection.';
-        } else if (error.message.includes('HTTP 400')) {
+        } else if (error.message && error.message.includes('HTTP 400')) {
             message = 'Invalid data provided';
-        } else if (error.message.includes('HTTP 404')) {
+        } else if (error.message && error.message.includes('HTTP 404')) {
             message = 'Resource not found';
-        } else if (error.message.includes('HTTP 500')) {
+        } else if (error.message && error.message.includes('HTTP 500')) {
             message = 'Server error. Please try again later.';
         }
 

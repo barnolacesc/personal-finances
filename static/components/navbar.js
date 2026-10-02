@@ -50,6 +50,7 @@ class NavBar extends HTMLElement {
         if (path.includes('add-expense')) return 'add';
         if (path.includes('expenses')) return 'expenses';
         if (path.includes('trends')) return 'trends';
+        if (path.includes('reconcil')) return 'reconcile';
         // if (path === '/bank') return 'bank';
         if (path === '/recurring') return 'recurring';
         if (path === '/unclassified') return 'unclassified';
@@ -89,11 +90,15 @@ class NavBar extends HTMLElement {
 
         this.innerHTML = `
             <nav class="top-nav">
-                <div class="top-nav-inner">
+                <div class="top-nav-inner" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                     <a class="vault-brand d-flex align-items-center" href="/" style="text-decoration: none;">
                         <span class="font-headline" style="font-size: 1.25rem; font-weight: 800; color: var(--primary-container); letter-spacing: -0.03em; text-transform: uppercase;">Vault</span>
                     </a>
-                    </div>
+                    <a href="/reconcile" class="top-nav-reconcile-link ${page === 'reconcile' ? 'active' : ''}" style="text-decoration: none; font-size: 0.75rem; font-weight: 700; color: ${page === 'reconcile' ? 'var(--primary)' : 'var(--on-surface)'}; display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.3rem 0.6rem; border-radius: 9999px; background: ${page === 'reconcile' ? 'rgba(255, 140, 0, 0.2)' : 'var(--surface-container-high)'}; transition: all 0.2s;">
+                        <span class="material-symbols-outlined" style="font-size: 0.875rem;">link</span>
+                        <span>Reconcile</span>
+                    </a>
+                </div>
             </nav>
             <nav class="bottom-nav">
                 ${tabsHtml}
