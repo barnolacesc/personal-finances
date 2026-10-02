@@ -29,7 +29,6 @@ pytest.importorskip(
 )
 
 from playwright.sync_api import Page, expect  # noqa: E402
-import re  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -76,14 +75,19 @@ def test_home_no_js_errors(page_with_errors, live_server):
     assert errors == [], f"JS errors on /: {errors}"
 
 
-def test_home_expense_list_renders(page_with_errors, live_server):
-    """latest-expenses component must be present and not error-state."""
+@pytest.mark.parametrize("path", ["/", "/add"])
+def test_entry_page_is_focused_on_expense_input(page_with_errors, live_server, path):
+    """Entry pages show the expense wizard without browsing or API controls."""
     page, errors = page_with_errors
-    page.goto(live_server + "/")
+    page.goto(live_server + path)
     page.wait_for_load_state("networkidle")
     assert errors == [], f"JS errors on /: {errors}"
-    # The web component must exist in the DOM
-    assert page.locator("latest-expenses").count() > 0
+    expect(page.get_by_role("textbox", name="Expense description")).to_be_visible()
+    expect(page.locator("#bookBackBtn")).to_be_hidden()
+    browsing_controls = page.locator(
+        "date-navigation, category-chart, latest-expenses, backup-button, #navApiBtn"
+    )
+    assert browsing_controls.count() == 0
 
 
 # ---------------------------------------------------------------------------
@@ -133,7 +137,7 @@ def test_expense_item_swipe_no_crash(page_with_errors, live_server, client):
         },
     )
     page, errors = page_with_errors
-    page.goto(live_server + "/")
+    page.goto(live_server + "/expenses")
     page.wait_for_load_state("networkidle")
     assert errors == [], f"JS crash setting up swipe handlers: {errors}"
 
@@ -170,7 +174,7 @@ def test_trends_no_js_errors(page_with_errors, live_server):
 
 
 def test_e2e_add_and_verify_expense(page_with_errors, live_server):
-    """Simulate a user adding an expense and viewing it on the home page."""
+    """Add an expense through the wizard, then view it on Browse."""
     page, errors = page_with_errors
 
     # 1. Navigate to Add page
@@ -178,20 +182,28 @@ def test_e2e_add_and_verify_expense(page_with_errors, live_server):
     page.wait_for_load_state("networkidle")
 
     # 2. Fill out the form
-    page.fill("#amount", "99.99")
-    page.select_option("#category", "transport")
-    page.fill("#description", "E2E Playwright Test")
+    page.get_by_role("textbox", name="Expense description").fill("E2E Playwright Test")
+    page.locator("#btnNextToAmount").click()
+    page.get_by_role("textbox", name="Expense amount").fill("99.99")
+    page.locator("#btnNextToCategory").click()
+    page.locator('.mini-category-chip[data-category="transport"]').click()
 
     # 3. Submit
-    page.click("#submitBtn")
+    with page.expect_response(
+        lambda response: response.url.endswith("/api/expenses")
+        and response.request.method == "POST"
+    ) as saved:
+        page.locator("#btnFinalLog").click()
+    assert saved.value.status == 201
 
-    # 4. Verify Success Card appears
-    expect(page.locator("#successCard")).to_have_class(re.compile(r"^((?!d-none).)*$"))
+    # 4. The form resets for another entry.
+    expect(page.get_by_role("textbox", name="Expense description")).to_have_value("")
 
-    # 5. Navigate to Home Page
-    page.goto(live_server + "/")
+    # 5. Navigate to Browse.
+    page.goto(live_server + "/expenses")
     page.wait_for_load_state("networkidle")
 
     # 6. Verify the new expense is in the recent list
     expect(page.locator("text=E2E Playwright Test").first).to_be_visible()
     expect(page.locator("text=99,99").first).to_be_visible()
+    assert errors == [], f"JS errors during expense entry: {errors}"

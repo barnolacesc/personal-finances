@@ -1647,6 +1647,15 @@ a:hover { color: var(--primary-fixed-dim); }
 /* ============================================================
    37. Mobile-First Expense Book Stepper ("Pages like a book")
    ============================================================ */
+add-expense-form {
+    display: block;
+    min-width: 0;
+}
+
+.expense-entry-page {
+    max-width: 480px;
+}
+
 .expense-book-card {
     background: var(--surface-container);
     border: 1px solid var(--outline-variant);
@@ -1720,6 +1729,10 @@ a:hover { color: var(--primary-fixed-dim); }
     background: var(--surface-container-high);
 }
 
+.book-back-btn.d-none {
+    display: none;
+}
+
 .book-step-title {
     font-size: 0.8125rem;
     font-weight: 700;
@@ -1754,14 +1767,23 @@ a:hover { color: var(--primary-fixed-dim); }
 
 .book-pages-track {
     display: flex;
+    align-items: flex-start;
     transition: transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1);
     width: 400%;
 }
 
 .book-page {
     width: 25%;
+    min-width: 0;
     flex-shrink: 0;
     padding: 0.25rem 0.15rem;
+}
+
+.book-page:not(.active) {
+    height: 0;
+    padding-block: 0;
+    overflow: hidden;
+    visibility: hidden;
 }
 
 /* Page 1: Name */
@@ -1890,11 +1912,9 @@ a:hover { color: var(--primary-fixed-dim); }
 /* Page 3: Category */
 .compact-category-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.35rem;
     margin-bottom: 0.625rem;
-    max-height: 150px;
-    overflow-y: auto;
     padding: 1px;
 }
 
@@ -1910,7 +1930,8 @@ a:hover { color: var(--primary-fixed-dim); }
     cursor: pointer;
     transition: all 0.12s ease;
     user-select: none;
-    min-height: 32px;
+    min-width: 0;
+    min-height: 40px;
 }
 
 .mini-category-chip:hover {
@@ -1926,6 +1947,7 @@ a:hover { color: var(--primary-fixed-dim); }
 }
 
 .mini-category-chip .mini-cat-icon {
+    flex-shrink: 0;
     font-size: 1rem;
     color: var(--chip-cat-color, var(--primary));
 }
@@ -1948,6 +1970,54 @@ a:hover { color: var(--primary-fixed-dim); }
     background: var(--surface-container-highest);
     font-size: 0.75rem;
     color: var(--on-surface);
+}
+
+.book-summary-pill #summaryName {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.book-summary-pill #summaryAmount {
+    flex-shrink: 0;
+}
+
+@media (max-width: 400px) {
+    .compact-category-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .book-nav-row {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 0.5rem;
+    }
+
+    .book-step-title {
+        grid-column: 1 / -1;
+        grid-row: 1;
+        text-align: center;
+    }
+
+    .book-back-btn {
+        grid-column: 1;
+        grid-row: 2;
+    }
+
+    .book-date-toggle {
+        grid-column: 3;
+        grid-row: 2;
+    }
+
+    .book-nav-row:has(.book-back-btn.d-none) .book-step-title {
+        grid-column: 1 / 3;
+        text-align: left;
+    }
+
+    .book-nav-row:has(.book-back-btn.d-none) .book-date-toggle {
+        grid-row: 1;
+    }
 }
 
 /* Page 4: Success state */

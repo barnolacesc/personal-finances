@@ -81,11 +81,11 @@ class NavBar extends HTMLElement {
                     <a class="vault-brand d-flex align-items-center" href="/" style="text-decoration: none;">
                         <span class="font-headline" style="font-size: 1.25rem; font-weight: 800; color: var(--primary-container); letter-spacing: -0.03em; text-transform: uppercase;">Vault</span>
                     </a>
-                    <button type="button" class="btn btn-sm d-flex align-items-center gap-1" id="navApiBtn"
+                    ${page !== 'log' ? `<button type="button" class="btn btn-sm d-flex align-items-center gap-1" id="navApiBtn"
                             style="background: var(--surface-container-high); border: 1px solid var(--outline-variant); color: var(--on-surface-variant); border-radius: 9999px; padding: 0.3rem 0.75rem; font-size: 0.75rem; font-weight: 600; cursor: pointer;">
                         <span class="material-symbols-outlined" style="font-size: 1rem; color: var(--primary);">terminal</span>
                         <span>API</span>
-                    </button>
+                    </button>` : ''}
                 </div>
             </nav>
 
@@ -94,7 +94,7 @@ class NavBar extends HTMLElement {
             </nav>
 
             <!-- API & Shortcuts Integration Modal -->
-            <div id="navApiModal" class="inline-edit-backdrop">
+            ${page !== 'log' ? `<div id="navApiModal" class="inline-edit-backdrop">
                 <div class="inline-edit-card" style="max-width: 520px;">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <div class="d-flex align-items-center gap-2">
@@ -146,7 +146,7 @@ class NavBar extends HTMLElement {
                         </button>
                     </div>
                 </div>
-            </div>
+            </div>` : ''}
         `;
     }
 

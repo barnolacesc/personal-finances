@@ -95,7 +95,8 @@ class AddExpenseForm extends BaseComponent {
                                 <input type="text"
                                        id="bookNameInput"
                                        class="book-text-input"
-                                       placeholder="What did you buy? (e.g. Coffee, Lunch)"
+                                       placeholder="e.g. Coffee or groceries"
+                                       aria-label="Expense description"
                                        autocomplete="off">
                             </div>
                             <!-- Quick Thumb Chips -->
@@ -123,6 +124,7 @@ class AddExpenseForm extends BaseComponent {
                                        id="bookAmountInput"
                                        class="book-amount-input tabular-nums"
                                        inputmode="decimal"
+                                       aria-label="Expense amount"
                                        placeholder="0.00">
                             </div>
                             <!-- Quick Increments -->
@@ -322,8 +324,14 @@ class AddExpenseForm extends BaseComponent {
         const seg3 = this.querySelector('#progSeg3');
         const backBtn = this.querySelector('#bookBackBtn');
         const title = this.querySelector('#bookStepTitle');
+        this.querySelector('.book-header').hidden = step === 4;
 
         // Slide the pages track like a book page
+        this.querySelectorAll('.book-page').forEach(page => {
+            const active = Number(page.dataset.page) === step;
+            page.classList.toggle('active', active);
+            page.inert = !active;
+        });
         if (track) {
             const offset = (step - 1) * -25;
             track.style.transform = `translateX(${offset}%)`;
@@ -341,7 +349,7 @@ class AddExpenseForm extends BaseComponent {
             if (backBtn) backBtn.classList.add('d-none');
             if (title) title.textContent = 'Step 1: What was it?';
             const nameInput = this.querySelector('#bookNameInput');
-            if (focusInput && nameInput) nameInput.focus();
+            if (focusInput && nameInput) nameInput.focus({ preventScroll: true });
         } else if (step === 2) {
             const nameInput = this.querySelector('#bookNameInput');
             this.expenseName = nameInput ? nameInput.value.trim() : '';
@@ -360,7 +368,7 @@ class AddExpenseForm extends BaseComponent {
             if (backBtn) backBtn.classList.remove('d-none');
             if (title) title.textContent = 'Step 2: How much?';
             const amountInput = this.querySelector('#bookAmountInput');
-            if (focusInput && amountInput) amountInput.focus();
+            if (focusInput && amountInput) amountInput.focus({ preventScroll: true });
         } else if (step === 3) {
             const amountInput = this.querySelector('#bookAmountInput');
             const amtStr = amountInput ? amountInput.value.trim() : '';
@@ -462,7 +470,7 @@ class AddExpenseForm extends BaseComponent {
                 result = await ApiService.createExpense(data);
                 if (!result || !result.id) throw new Error('Invalid response from server');
 
-                // Broadcast event immediately so timeline below updates
+                // Notify other expense components when an expense is saved.
                 try {
                     EventManager.emitExpenseAdded(result);
                 } catch (e) {
@@ -477,14 +485,6 @@ class AddExpenseForm extends BaseComponent {
                 this.goToStep(4, false);
 
                 window.showToast(`Logged ${CurrencyHelper.format(result.amount)}`, 'success');
-
-                // Check for test suite #successCard on /static/add-expense.html
-                const testSuccessCard = document.getElementById('successCard');
-                const testDetails = document.getElementById('expenseDetails');
-                if (testSuccessCard && testDetails) {
-                    testDetails.innerHTML = `<p>${result.description} - ${CurrencyHelper.format(result.amount)}</p>`;
-                    testSuccessCard.classList.remove('d-none');
-                }
 
                 // Smoothly reset back to step 1 after 0.8s
                 setTimeout(() => {
