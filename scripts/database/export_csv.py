@@ -20,17 +20,19 @@ def export_to_csv(target_db_path=None, output_path=None):
         alloc_path = os.path.join(exports_dir, f"allocations_{date_str}.csv")
     else:
         csv_path = os.path.abspath(output_path)
-        alloc_path = (
-            csv_path.replace("expenses_", "allocations_")
-            if "expenses_" in os.path.basename(csv_path)
-            else os.path.splitext(csv_path)[0] + "_allocations.csv"
-        )
+        base = os.path.basename(csv_path)
+        if base.startswith("expenses_"):
+            alloc_name = "allocations_" + base[len("expenses_") :]
+        else:
+            alloc_name = os.path.splitext(base)[0] + "_allocations.csv"
+        alloc_path = os.path.join(os.path.dirname(csv_path), alloc_name)
 
     # Export data to CSV
     conn = None
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
+        cursor.execute("BEGIN TRANSACTION")
         cursor.execute(
             """
             SELECT id, date, amount, category, description, COALESCE(type, 'expense')
@@ -38,15 +40,10 @@ def export_to_csv(target_db_path=None, output_path=None):
             ORDER BY date DESC
         """
         )
-        with open(csv_path, "w", newline="") as csv_file:
-            csv_writer = csv.writer(csv_file)
-            csv_writer.writerow(
-                ["Id", "Date", "Amount", "Category", "Description", "Type"]
-            )
-            csv_writer.writerows(cursor.fetchall())
-        print(f"Data exported to: {csv_path}")
+        expense_rows = cursor.fetchall()
 
         # Export reconciliation allocations if table exists
+        alloc_rows = None
         cursor.execute(
             "SELECT name FROM sqlite_master "
             "WHERE type='table' AND name='reconciliation_allocation'"
@@ -61,7 +58,18 @@ def export_to_csv(target_db_path=None, output_path=None):
                 """
             )
             alloc_rows = cursor.fetchall()
-            with open(alloc_path, "w", newline="") as alloc_file:
+        conn.commit()
+
+        with open(csv_path, "w", newline="", encoding="utf-8") as csv_file:
+            csv_writer = csv.writer(csv_file)
+            csv_writer.writerow(
+                ["Id", "Date", "Amount", "Category", "Description", "Type"]
+            )
+            csv_writer.writerows(expense_rows)
+        print(f"Data exported to: {csv_path}")
+
+        if alloc_rows is not None:
+            with open(alloc_path, "w", newline="", encoding="utf-8") as alloc_file:
                 alloc_writer = csv.writer(alloc_file)
                 alloc_writer.writerow(
                     [

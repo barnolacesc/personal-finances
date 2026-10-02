@@ -639,3 +639,38 @@ def test_trends_net_spending_and_projections(client):
     assert projection["metric"] == "net_spending"
     assert projection["metric_label"] == "Net Spending"
     assert projection["current_total"] == 70.0
+
+
+def test_trends_preserves_negative_net_categories(client):
+    """
+    Ensure categories with net reimbursements (> expenses) are preserved in
+    trends.
+    """
+    today = datetime.now().replace(hour=12, minute=0, second=0, microsecond=0)
+    with client.application.app_context():
+        db.session.add(
+            Expense(
+                amount=20.0,
+                category="electronics",
+                description="Cable",
+                type="expense",
+                date=today,
+            )
+        )
+        db.session.add(
+            Expense(
+                amount=50.0,
+                category="electronics",
+                description="Returned gadget",
+                type="reimbursement",
+                date=today,
+            )
+        )
+        db.session.commit()
+
+    resp = client.get("/api/trends")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    current_month_trend = data["monthly"][3]
+    assert current_month_trend["total"] == -30.0
+    assert current_month_trend["categories"]["electronics"] == -30.0

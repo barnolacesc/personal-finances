@@ -38,6 +38,7 @@ def restore_from_csv(csv_path, target_db_path=None):
 
     # Create new database
     conn = sqlite3.connect(db_path)
+    conn.execute("PRAGMA foreign_keys = ON")
     cursor = conn.cursor()
 
     # Create table
@@ -58,7 +59,7 @@ def restore_from_csv(csv_path, target_db_path=None):
 
     # Read CSV and insert data
     try:
-        with open(csv_path, "r", newline="") as csv_file:
+        with open(csv_path, "r", newline="", encoding="utf-8") as csv_file:
             csv_reader = csv.reader(csv_file)
             header = next(csv_reader, None)  # Skip header row
             if not header:
@@ -123,13 +124,16 @@ def restore_from_csv(csv_path, target_db_path=None):
                     "VALUES (?, ?, ?, ?, ?)"
                 )
             cursor.executemany(sql, rows_to_insert)
+            expense_count = len(rows_to_insert)
 
             # Restore reconciliation allocations if companion CSV exists
-            alloc_path = (
-                csv_path.replace("expenses_", "allocations_")
-                if "expenses_" in os.path.basename(csv_path)
-                else os.path.splitext(csv_path)[0] + "_allocations.csv"
-            )
+            base = os.path.basename(csv_path)
+            if base.startswith("expenses_"):
+                alloc_name = "allocations_" + base[len("expenses_") :]
+            else:
+                alloc_name = os.path.splitext(base)[0] + "_allocations.csv"
+            alloc_path = os.path.join(os.path.dirname(csv_path), alloc_name)
+
             if os.path.exists(alloc_path):
                 cursor.execute(
                     """
@@ -156,7 +160,7 @@ def restore_from_csv(csv_path, target_db_path=None):
                     "CREATE INDEX IF NOT EXISTS ix_reconciliation_expense_id "
                     "ON reconciliation_allocation(expense_id)"
                 )
-                with open(alloc_path, "r", newline="") as alloc_file:
+                with open(alloc_path, "r", newline="", encoding="utf-8") as alloc_file:
                     alloc_reader = csv.reader(alloc_file)
                     next(alloc_reader, None)  # Skip header
                     alloc_rows = []
@@ -190,8 +194,7 @@ def restore_from_csv(csv_path, target_db_path=None):
                         )
 
             conn.commit()
-            rows = cursor.rowcount
-            print(f"Successfully restored {rows} expenses from backup!")
+            print(f"Successfully restored {expense_count} expenses from backup!")
 
     except Exception as e:
         print(f"Error restoring data: {e}")

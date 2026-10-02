@@ -101,7 +101,6 @@ class ReconciliationView extends BaseComponent {
             this.allocations = allocsData.allocations || [];
             this.loading = false;
             this.render();
-            this.setupFormListeners();
         } catch (error) {
             console.error('Error loading reconciliation data:', error);
             if (window.showToast) window.showToast('Failed to load reconciliation data', 'error');

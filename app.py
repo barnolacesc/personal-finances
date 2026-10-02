@@ -1131,7 +1131,7 @@ def get_trends():
             all_cats = set(cat_expenses.keys()) | set(cat_reimbs.keys())
             for cat in all_cats:
                 net_cat = cat_expenses.get(cat, 0.0) - cat_reimbs.get(cat, 0.0)
-                if net_cat > 0:
+                if net_cat != 0:
                     categories[cat] = round(float(net_cat), 2)
 
             result = {
