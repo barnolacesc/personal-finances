@@ -16,6 +16,22 @@
             "purpose": "any maskable"
         }
     ],
+    "shortcuts": [
+        {
+            "name": "Log Expense",
+            "short_name": "Log",
+            "description": "Quickly enter a new expense",
+            "url": "/",
+            "icons": [{ "src": "/static/pficon.png", "sizes": "96x96" }]
+        },
+        {
+            "name": "Browse Expenses",
+            "short_name": "Browse",
+            "description": "View and analyze spending",
+            "url": "/expenses",
+            "icons": [{ "src": "/static/pficon.png", "sizes": "96x96" }]
+        }
+    ],
     "theme_color": "#0E0E0E",
     "background_color": "#0E0E0E",
     "display": "standalone",

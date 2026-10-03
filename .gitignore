@@ -58,6 +58,10 @@ instance/
 # OS
 .DS_Store
 Thumbs.db
+
+# Agent metadata
+.agents/
+
 *.log
 *.pot
 *.pyc

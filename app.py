@@ -16,6 +16,7 @@ from subprocess import run, CalledProcessError
 import glob
 from collections import defaultdict
 from apscheduler.schedulers.background import BackgroundScheduler
+from services.nlp_parser import parse_with_optional_llm
 
 # When launched directly (`python app.py`), this module is registered in
 # sys.modules only under the name "__main__". Deferred imports elsewhere
@@ -39,6 +40,35 @@ logger = logging.getLogger(__name__)
 current_dir = os.path.dirname(os.path.abspath(__file__))
 instance_path = os.path.join(current_dir, "instance")
 app = Flask(__name__, static_folder="static", instance_path=instance_path)
+
+# API Authentication Configuration
+API_KEY = os.environ.get("VAULT_API_KEY") or os.environ.get("EXPENSE_API_KEY")
+
+
+def check_api_auth():
+    """Verify API key if configured. Allows same-origin browser calls."""
+    if not API_KEY:
+        return True
+
+    # Check direct API key headers
+    auth_header = request.headers.get("Authorization", "")
+    bearer_token = (
+        auth_header[7:].strip() if auth_header.startswith("Bearer ") else None
+    )
+    header_key = request.headers.get("X-API-Key", "").strip() or bearer_token
+
+    if header_key:
+        return header_key == API_KEY
+
+    # Check same-origin browser requests
+    referer = request.headers.get("Referer", "")
+    host = request.headers.get("Host", "")
+    sec_site = request.headers.get("Sec-Fetch-Site", "")
+    if sec_site in ("same-origin", "same-site") or (host and host in referer):
+        return True
+
+    return False
+
 
 # Ensure instance folder exists
 os.makedirs(app.instance_path, exist_ok=True)
@@ -748,7 +778,58 @@ def serve_reconcile():
 @app.route("/styles.css")
 def serve_styles():
     """Serve the core CSS bundle."""
-    return send_from_directory("static", "styles.css", mimetype="text/css")
+    return send_from_directory("static/styles", "vault-theme.css", mimetype="text/css")
+
+
+# ---------------------------------------------------------------------------
+# API Documentation & Info
+# ---------------------------------------------------------------------------
+
+
+@app.route("/api/info", methods=["GET"])
+def get_api_info():
+    """Return API capabilities, categories, and authentication status."""
+    return jsonify(
+        {
+            "version": APP_VERSION,
+            "auth_configured": bool(API_KEY),
+            "categories": CATEGORIES,
+            "endpoints": {
+                "quick_add": {
+                    "path": "/api/expenses/quick",
+                    "method": "POST",
+                    "description": (
+                        "Log an expense via natural language ('14.50 coffee') or JSON"
+                    ),
+                },
+                "expenses": {
+                    "path": "/api/expenses",
+                    "methods": ["GET", "POST"],
+                    "description": "List or create standard expenses",
+                },
+                "categories": {
+                    "path": "/api/categories",
+                    "method": "GET",
+                    "description": "List all expense categories",
+                },
+                "months": {
+                    "path": "/api/months",
+                    "method": "GET",
+                    "description": "List available expense months",
+                },
+                "trends": {
+                    "path": "/api/trends",
+                    "method": "GET",
+                    "description": "Spending trends and month-end projections",
+                },
+                "reconciliation": {
+                    "path": "/api/allocations",
+                    "methods": ["GET", "POST"],
+                    "description": "Reimbursement-to-expense allocations",
+                },
+            },
+        }
+    )
 
 
 @app.route("/script.js")
@@ -769,11 +850,103 @@ def serve_favicon():
     return send_from_directory("static", "favicon.ico")
 
 
+# ---------------------------------------------------------------------------
 # Expense API endpoints
+# ---------------------------------------------------------------------------
+
+
+@app.route("/api/expenses/quick", methods=["POST"])
+def quick_add_expense():
+    """Quick-add an expense using natural language text or structured fields.
+
+    Accepts:
+      {"text": "14.50 coffee at Starbucks", "parse_only": false}
+      or {"amount": 14.50, "category": "food_drink", "description": "Coffee"}
+    """
+    if not check_api_auth():
+        return (
+            jsonify({"error": "Unauthorized. Provide valid X-API-Key or Bearer token"}),
+            401,
+        )
+
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No JSON data received"}), 400
+
+        parse_only = bool(data.get("parse_only", False))
+        text = str(data.get("text", "")).strip()
+
+        if text:
+            parsed = parse_with_optional_llm(text, CATEGORIES)
+            amount = parsed.get("amount")
+            category = data.get("category") or parsed.get("category") or "other"
+            description = data.get("description") or parsed.get("description") or text
+            date_val = data.get("date") or parsed.get("date")
+        else:
+            amount = data.get("amount")
+            category = data.get("category", "other")
+            description = data.get("description", "")
+            date_val = data.get("date")
+
+        if amount is None:
+            return jsonify({"error": "Could not determine expense amount"}), 400
+
+        try:
+            amount = float(amount)
+        except (ValueError, TypeError):
+            return jsonify({"error": "Invalid amount value"}), 400
+
+        if not category:
+            category = "other"
+        if not description:
+            description = CATEGORIES.get(category, {}).get("label", "Expense")
+
+        if parse_only:
+            return (
+                jsonify(
+                    {
+                        "amount": amount,
+                        "category": category,
+                        "description": description,
+                        "date": date_val
+                        or datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                    }
+                ),
+                200,
+            )
+
+        try:
+            expense_date = parse_expense_date(date_val)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+
+        expense = Expense(
+            amount=amount,
+            category=category,
+            description=description,
+            source="quick_add",
+        )
+        if expense_date is not None:
+            expense.date = expense_date
+
+        db.session.add(expense)
+        db.session.commit()
+        logger.info(f"Quick-added expense: ${amount:.2f} ({category}) - {description}")
+        return jsonify(expense.to_dict()), 201
+
+    except Exception as e:
+        logger.error(f"Error in quick_add_expense: {e}", exc_info=True)
+        db.session.rollback()
+        return jsonify({"error": "Server error processing quick expense"}), 500
+
+
 @app.route("/api/expenses", methods=["GET", "POST"])
 def handle_expenses():
     """Handle expense collection: GET with filtering/pagination, POST to create."""
     if request.method == "POST":
+        if not check_api_auth():
+            return jsonify({"error": "Unauthorized"}), 401
         try:
             data = request.get_json()
             if not data:
@@ -1226,6 +1399,8 @@ def get_months():
 @app.route("/api/expenses/<int:expense_id>", methods=["GET", "PUT", "DELETE"])
 def handle_single_expense(expense_id):
     """Handle single expense operations: GET, PUT, DELETE with reconciliation safety."""
+    if request.method in ("PUT", "DELETE") and not check_api_auth():
+        return jsonify({"error": "Unauthorized"}), 401
     expense = Expense.query.get_or_404(expense_id)
 
     if request.method == "GET":

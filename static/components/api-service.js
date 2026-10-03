@@ -4,13 +4,12 @@ import { CONFIG } from './config.js';
 export class ApiService {
     // Generic request helper with error handling
     static async request(url, options = {}) {
-        const defaultOptions = {
-            headers: {
-                'Content-Type': 'application/json',
-            },
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(options.headers || {})
         };
 
-        const config = { ...defaultOptions, ...options };
+        const config = { ...options, headers };
 
         try {
             const response = await fetch(url, config);
@@ -60,6 +59,24 @@ export class ApiService {
             method: 'POST',
             body: JSON.stringify(expenseData)
         });
+    }
+
+    static async quickAddExpense(payload) {
+        return await this.request(CONFIG.API.ENDPOINTS.EXPENSES_QUICK, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+    }
+
+    static async parseQuickExpense(text) {
+        return await this.request(CONFIG.API.ENDPOINTS.EXPENSES_QUICK, {
+            method: 'POST',
+            body: JSON.stringify({ text, parse_only: true })
+        });
+    }
+
+    static async getApiInfo() {
+        return await this.request(CONFIG.API.ENDPOINTS.INFO);
     }
 
     static async updateExpense(id, expenseData) {

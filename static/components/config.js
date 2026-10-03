@@ -5,6 +5,8 @@ export const CONFIG = {
         BASE_URL: '/api',
         ENDPOINTS: {
             EXPENSES: '/api/expenses',
+            EXPENSES_QUICK: '/api/expenses/quick',
+            INFO: '/api/info',
             MONTHS: '/api/months',
             TRENDS: '/api/trends',
             RECURRING: '/api/recurring',
@@ -184,6 +186,32 @@ export class CategoryHelper {
             .split('_')
             .map(word => word.charAt(0).toUpperCase() + word.slice(1))
             .join(' ');
+    }
+
+    static matchCategoryFromText(text) {
+        if (!text) return 'other';
+        const lower = text.toLowerCase();
+        const map = {
+            food_drink: ['coffee', 'cafe', 'tea', 'lunch', 'dinner', 'breakfast', 'restaurant', 'bar', 'beer', 'pizza', 'burger', 'sushi', 'bakery', 'tapas', 'comida', 'cena', 'starbucks', 'mcdonalds'],
+            super: ['mercadona', 'lidl', 'carrefour', 'aldi', 'dia', 'supermarket', 'super', 'grocery', 'groceries', 'compra', 'market'],
+            transport: ['uber', 'cabify', 'taxi', 'train', 'tren', 'renfe', 'metro', 'bus', 'gas', 'gasolina', 'fuel', 'parking', 'toll', 'flight', 'vuelo'],
+            car: ['taller', 'mechanic', 'itv', 'car', 'coche', 'auto', 'multa'],
+            clothing: ['zara', 'mango', 'pull&bear', 'bershka', 'h&m', 'clothes', 'shoes', 'ropa', 'zapatos'],
+            health: ['pharmacy', 'farmacia', 'doctor', 'medico', 'dentist', 'dentista', 'gym', 'gimnasio', 'health', 'salud'],
+            personal: ['haircut', 'peluqueria', 'barber', 'spa', 'massage', 'book', 'libro'],
+            recurrent: ['rent', 'alquiler', 'netflix', 'spotify', 'hbo', 'disney', 'internet', 'phone', 'telefono', 'subscription', 'luz', 'agua'],
+            taxes: ['tax', 'taxes', 'impuesto', 'irpf', 'autonomo', 'gestoria'],
+            save_inv: ['invest', 'inversion', 'crypto', 'bitcoin', 'stocks', 'ahorro', 'savings'],
+            cobeetrans: ['cobee trans', 'cobeetrans'],
+            cobeefood: ['cobee food', 'cobeefood'],
+            xofa: ['xofa', 'sofa', 'ikea', 'furniture', 'muebles']
+        };
+        for (const [cat, keywords] of Object.entries(map)) {
+            for (const kw of keywords) {
+                if (lower.includes(kw)) return cat;
+            }
+        }
+        return 'other';
     }
 }
 

@@ -1,193 +1,114 @@
-# Personal Finance App - Modular Architecture
+# Personal Finance App - Architecture & Design
 
-## 🏗️ **Architecture Overview**
+## 🏗️ Architecture Overview
 
-This expense tracking application has been refactored into a modular, maintainable architecture. The codebase is now organized into logical layers with clear separation of concerns.
+Vault is a lightweight, low-resource personal expense tracker designed specifically for dual use cases:
+1. **The Expense Uploader** ("I open the app to enter a new expense, I close the app.")
+2. **The Expense Viewer** ("I open the app to browse my expenses.")
 
-## 📁 **Directory Structure**
+The application runs efficiently on low-spec hardware (Raspberry Pi / small container pods) with near-zero latency, minimal RAM (< 50MB), and no heavy build tools or Node.js runtimes.
+
+---
+
+## 📁 Directory Structure
 
 ```
-static/
-├── components/           # Modular web components
-│   ├── config.js        # Centralized configuration
-│   ├── api-service.js   # HTTP API service layer
-│   ├── event-manager.js # Event management system
-│   ├── navbar.js        # Navigation component
-│   ├── toast.js         # Toast notifications
-│   ├── date-navigation.js # Date/week navigation
-│   ├── expense-form.js  # Expense creation form
-│   ├── expense-list.js  # Expense listing
-│   └── category-chart.js # Chart visualization
-├── styles/
-│   └── theme.css        # Centralized styling
-├── index.html           # Home page
-└── expenses.html        # Main app page
+.
+├── app.py                      # Flask server, REST API, SQLite models
+├── services/
+│   ├── nlp_parser.py           # Natural language parser (< 1ms rule-based + optional LLM)
+│   ├── bank_sync.py            # Automated bank sync integration
+│   └── enable_banking.py       # Open banking OAuth integration
+├── static/
+│   ├── components/             # Modular web components
+│   │   ├── config.js           # Central configuration, categories, and helpers
+│   │   ├── api-service.js      # HTTP API client layer
+│   │   ├── event-manager.js    # Decoupled component event bus
+│   │   ├── navbar.js           # 4-tab bottom navigation & API shortcuts modal
+│   │   ├── toast.js            # Non-blocking notification toasts
+│   │   ├── add-expense-form.js # Fast Uploader: smart magic input & 1-tap category grid
+│   │   ├── latest-expenses.js  # Expense Viewer: list with inline drawer edit/delete
+│   │   ├── category-chart.js   # Interactive category doughnut chart
+│   │   ├── date-navigation.js  # Month/week switcher
+│   │   ├── recurring-list.js   # Recurring commitments manager
+│   │   └── spending-trends.js  # Multi-month trends & projections
+│   ├── styles/
+│   │   └── vault-theme.css     # OLED-optimized dark theme (Midnight & Electric Orange)
+│   ├── index.html              # Dual-mode home screen with immediate fast uploader
+│   ├── expenses.html           # Full expense viewer and monthly breakdown
+│   ├── recurring.html          # Recurring expense manager
+│   ├── trends.html             # Multi-month trends and month-end projections
+│   └── site.webmanifest        # PWA manifest with shortcuts
+└── tests/                      # Automated test suite
 ```
 
-## 🔧 **Core Modules**
+---
 
-### 1. **config.js** - Centralized Configuration
-- **Purpose**: Single source of truth for all app configuration
-- **Contains**:
-  - API endpoints
-  - Category definitions with colors and icons
-  - Currency settings
-  - UI constants
-  - Validation rules
-- **Benefits**:
-  - Easy to update categories or colors
-  - No duplication across components
-  - Type-safe configuration access
+## ⚡ Core Use Case 1: The Expense Uploader
 
-```javascript
-// Example usage
-import { CategoryHelper, CurrencyHelper } from './config.js';
+Designed for frictionless expense entry in under 3 seconds:
 
-const amount = CurrencyHelper.format(123.45); // "€123.45"
-const categoryColor = CategoryHelper.getCategoryColor('food_drink'); // "#059669"
+- **Smart Natural Language Bar (`#magicInput`)**:
+  - Accepts natural inputs: e.g. `"14.50 lunch with team"`, `"coffee 3.50"`, `"45 mercadona yesterday"`.
+  - **Live Preview Chips**: Real-time client-side regex parses amount, category, description, and date as the user types.
+  - Pressing **Enter** logs the expense instantly via `POST /api/expenses/quick`.
+- **Tactile Fast-Pad**:
+  - High-visibility amount input with Manrope tabular numbers.
+  - **1-Tap Category Grid**: Grid of category chips with icons and colors. One tap selects the category—no scrolling through dropdown menus.
+  - Quick date toggle chips (`[Today]`, `[Yesterday]`).
+- **Non-Blocking Feedback**:
+  - Submits asynchronously, triggers a toast notification, and resets inputs ready for another entry.
+  - The newly created expense appears immediately at the top of the Recent Activity list below the form.
+
+---
+
+## 📊 Core Use Case 2: The Expense Viewer
+
+Designed for fast, comprehensive browsing:
+
+- **Monthly Summary & KPI Header**: Total spent, daily burn rate, and recurring-aware month-end projection.
+- **Interactive Chart (`<category-chart>`)**: Doughnut visualization with interactive slice selection.
+- **Inline Drawer Editor**:
+  - Clicking any expense opens a bottom-sheet / modal drawer directly in place.
+  - Update amount, category, date, or description, or delete the expense.
+  - Never redirects to separate pages or loses your month/scroll position.
+
+---
+
+## 🤖 API & AI/LLM Integration
+
+Vault provides clean, lightweight API functionality ready for external tools, iOS Shortcuts, and AI assistants:
+
+### 1. Quick-Add Endpoint: `POST /api/expenses/quick`
+Accepts natural language text or structured JSON:
+```bash
+curl -X POST "http://localhost:5001/api/expenses/quick" \
+  -H "Content-Type: application/json" \
+  -d '{"text": "14.50 coffee at Starbucks"}'
 ```
-
-### 2. **api-service.js** - HTTP Service Layer
-- **Purpose**: Centralized API communication
-- **Features**:
-  - Standardized error handling
-  - Consistent request/response format
-  - Automatic JSON parsing
-  - HTTP status code handling
-- **Benefits**:
-  - DRY principle - no duplicate fetch logic
-  - Consistent error handling across app
-  - Easy to modify API behavior globally
-
-```javascript
-// Example usage
-import { ApiService, ErrorHandler } from './api-service.js';
-
-try {
-    const expenses = await ApiService.getExpenses(month, year);
-} catch (error) {
-    ErrorHandler.handle(error, 'ExpenseList.loadExpenses');
+Returns:
+```json
+{
+  "id": 42,
+  "amount": 14.5,
+  "category": "food_drink",
+  "description": "Coffee at Starbucks",
+  "date": "2026-09-30T00:00:00",
+  "source": "quick_add"
 }
 ```
 
-### 3. **event-manager.js** - Event System
-- **Purpose**: Structured component communication
-- **Features**:
-  - Centralized event types
-  - Automatic cleanup with BaseComponent
-  - Type-safe event emission
-  - Global event management
-- **Benefits**:
-  - Loose coupling between components
-  - Memory leak prevention
-  - Predictable event flow
+### 2. Rule-Based NLP + Optional LLM (`services/nlp_parser.py`)
+- **Default (Zero Overhead)**: Runs a comprehensive keyword and regex parser in < 1 millisecond on low-power hardware (Raspberry Pi). Supports English and Spanish common terms.
+- **Optional LLM Fallback**: If `GEMINI_API_KEY` or `OPENAI_API_KEY` is present in the environment, ambiguous inputs can optionally be resolved by the LLM.
 
-```javascript
-// Example usage
-import { EventManager, BaseComponent } from './event-manager.js';
+### 3. API Key Security (Optional)
+- Set `VAULT_API_KEY` or `EXPENSE_API_KEY` in environment.
+- When configured, external callers authenticate via `X-API-Key: <key>` or `Authorization: Bearer <key>`.
+- Same-origin browser UI requests remain seamless.
 
-// Emit events
-EventManager.emitExpenseAdded(expense);
-
-// Listen to events (with automatic cleanup)
-this.listenToGlobalEvent('expenseadded', this.handleExpenseAdded.bind(this));
-```
-
-## 🎨 **Styling Architecture**
-
-### **theme.css** - Centralized Styling
-- **CSS Variables**: Dynamic theming with custom properties
-- **Dark Mode**: Complete dark/light theme support
-- **Component Styles**: All component-specific styles in one place
-- **Responsive Design**: Mobile-first approach
-
-```css
-:root {
-    --primary-bg: #ffffff;
-    --text-color: #212529;
-}
-
-[data-bs-theme="dark"] {
-    --primary-bg: #2b2b2b;
-    --text-color: #e0e0e0;
-}
-```
-
-## 🧩 **Component Architecture**
-
-### **BaseComponent Class**
-All components can extend `BaseComponent` for common functionality:
-- Automatic event listener cleanup
-- Global event management
-- Common utilities (date formatting, error handling)
-
-```javascript
-class MyComponent extends BaseComponent {
-    connectedCallback() {
-        this.render();
-        this.setupEventListeners();
-    }
-
-    setupEventListeners() {
-        // Automatic cleanup when component disconnects
-        this.listenToGlobalEvent('expenseadded', this.handleUpdate.bind(this));
-    }
-}
-```
-
-## 🔄 **Data Flow**
-
-1. **User Action** → Component Event Handler
-2. **API Call** → ApiService methods
-3. **Event Emission** → EventManager.emit()
-4. **Component Updates** → Automatic re-rendering
-5. **Error Handling** → ErrorHandler.handle()
-
-## 📋 **Maintenance Guidelines**
-
-### **Adding New Categories**
-1. Update `CONFIG.CATEGORIES` in `config.js`
-2. Add CSS class in `theme.css` (`.badge.category-newname`)
-3. Categories automatically appear in dropdowns
-
-### **Adding New API Endpoints**
-1. Add endpoint to `CONFIG.API.ENDPOINTS`
-2. Add method to `ApiService` class
-3. Use throughout app with consistent error handling
-
-### **Adding New Events**
-1. Add event type to `EventManager.EVENT_TYPES`
-2. Create specific emitter method
-3. Use in components with automatic cleanup
-
-### **Styling Changes**
-1. Use CSS variables when possible
-2. Add both light and dark mode variants
-3. Keep styles in `theme.css` for consistency
-
-## 🚀 **Benefits of This Architecture**
-
-1. **Maintainability**: Clear separation of concerns
-2. **Scalability**: Easy to add new features
-3. **Testability**: Isolated, pure functions
-4. **Performance**: Efficient event management
-5. **Developer Experience**: Predictable patterns
-6. **Code Reuse**: Shared utilities and base classes
-
-## 🔍 **Debugging**
-
-- **Events**: Use browser dev tools to monitor custom events
-- **API**: Check Network tab for API calls
-- **Configuration**: Import config modules in console for debugging
-- **Styling**: Use CSS custom property inspector
-
-## 📝 **Migration Notes**
-
-The refactoring maintains backward compatibility while introducing:
-- ES6 modules for new core functionality
-- Improved error handling
-- Centralized configuration
-- Better code organization
-- Enhanced maintainability
-
-Future components should follow this modular pattern for consistency.
+### 4. Apple iOS Shortcuts & Siri Integration
+- Built-in modal accessible from the top navbar ("API") provides copy-paste setup for iOS Shortcuts:
+  - Action: *Ask for Text*
+  - Action: *Get Contents of URL* (POST to `/api/expenses/quick`)
+  - Enables voice logging via *"Hey Siri, Log Expense"*.
