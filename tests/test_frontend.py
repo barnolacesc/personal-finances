@@ -29,11 +29,59 @@ pytest.importorskip(
 )
 
 from playwright.sync_api import Page, expect  # noqa: E402
+from datetime import datetime  # noqa: E402
+from urllib.parse import urlencode  # noqa: E402
+
+
+def test_monthly_summary_pills_show_separate_totals(
+    page_with_errors, live_server, client, clean_db
+):
+    for txn_type, amount in [("expense", 100), ("reimbursement", 25), ("income", 500)]:
+        response = client.post(
+            "/api/expenses",
+            json={
+                "amount": amount,
+                "type": txn_type,
+                "category": "other",
+                "description": "Summary test",
+                "date": datetime.now().strftime("%Y-%m-%d"),
+            },
+        )
+        assert response.status_code == 201
+    page, errors = page_with_errors
+    page.goto(live_server + "/expenses")
+    summary = page.locator("#monthlySummaryBar")
+    expect(summary).to_be_visible()
+    for metric, amount in [
+        ("gross", "100,00"),
+        ("reimbursements", "25,00"),
+        ("net", "75,00"),
+        ("income", "500,00"),
+    ]:
+        expect(summary.locator(f".summary-pill.{metric} .pill-value")).to_contain_text(
+            amount
+        )
+    assert errors == []
+
+
+def test_edit_url_rejects_transaction_type_markup(page_with_errors, live_server):
+    page, errors = page_with_errors
+    query = urlencode({"edit": "1", "type": '"><img src=x onerror=alert(1)>'})
+    page.goto(live_server + "/add?" + query)
+    expect(page.locator("#transactionType")).to_have_value("expense")
+    assert page.locator('img[src="x"]').count() == 0
+    assert errors == []
 
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def browser_database(_db):
+    """Keep the schema and transaction data isolated for every browser test."""
+    yield
 
 
 @pytest.fixture(scope="module")
@@ -57,6 +105,10 @@ def live_server(app_instance):
 @pytest.fixture
 def page_with_errors(page: Page):
     """Page fixture that collects JS errors for assertion."""
+    page.route(
+        "https://fonts.googleapis.com/**",
+        lambda route: route.fulfill(body="", content_type="text/css"),
+    )
     errors = []
     page.on("pageerror", lambda err: errors.append(str(err)))
     yield page, errors
@@ -264,3 +316,83 @@ def test_e2e_add_and_verify_expense(page_with_errors, live_server):
     expect(page.locator("text=E2E Playwright Test").first).to_be_visible()
     expect(page.locator("text=99,99").first).to_be_visible()
     assert errors == [], f"JS errors during expense entry: {errors}"
+
+
+def test_e2e_add_and_verify_reimbursement(page_with_errors, live_server):
+    """Simulate a user selecting reimbursement type, adding it,
+    and verifying signed display on Browse."""
+    page, errors = page_with_errors
+
+    # 1. Navigate to Add page
+    page.goto(live_server + "/add")
+    page.wait_for_load_state("networkidle")
+
+    # 2. Select Reimbursement type and enter description
+    page.locator('.type-btn[data-type="reimbursement"]').click()
+    page.get_by_role("textbox", name="Expense description").fill("Train Refund")
+    page.locator("#btnNextToAmount").click()
+
+    # 3. Enter amount
+    page.get_by_role("textbox", name="Expense amount").fill("35.00")
+    page.locator("#btnNextToCategory").click()
+
+    # 4. Select category
+    page.locator('.mini-category-chip[data-category="transport"]').click()
+
+    # 5. Submit
+    with page.expect_response(
+        lambda response: response.url.endswith("/api/expenses")
+        and response.request.method == "POST"
+    ) as saved:
+        page.locator("#btnFinalLog").click()
+    assert saved.value.status == 201
+
+    # 6. Navigate to Browse Page
+    page.goto(live_server + "/expenses")
+    page.wait_for_load_state("networkidle")
+
+    # 7. Verify reimbursement badge and -35,00 display
+    expect(page.locator("text=Train Refund").first).to_be_visible()
+    expect(page.locator(".amount-reimbursement").first).to_be_visible()
+    expect(page.locator(".type-badge.reimbursement").first).to_be_visible()
+    assert errors == []
+
+
+def test_e2e_add_and_verify_income(page_with_errors, live_server):
+    """Simulate a user selecting income type, adding it,
+    and verifying signed display on Browse."""
+    page, errors = page_with_errors
+
+    # 1. Navigate to Add page
+    page.goto(live_server + "/add")
+    page.wait_for_load_state("networkidle")
+
+    # 2. Select Income type and enter description
+    page.locator('.type-btn[data-type="income"]').click()
+    page.get_by_role("textbox", name="Expense description").fill("Freelance Gig")
+    page.locator("#btnNextToAmount").click()
+
+    # 3. Enter amount
+    page.get_by_role("textbox", name="Expense amount").fill("500.00")
+    page.locator("#btnNextToCategory").click()
+
+    # 4. Select category
+    page.locator('.mini-category-chip[data-category="other"]').click()
+
+    # 5. Submit
+    with page.expect_response(
+        lambda response: response.url.endswith("/api/expenses")
+        and response.request.method == "POST"
+    ) as saved:
+        page.locator("#btnFinalLog").click()
+    assert saved.value.status == 201
+
+    # 6. Navigate to Browse Page
+    page.goto(live_server + "/expenses")
+    page.wait_for_load_state("networkidle")
+
+    # 7. Verify income badge and +500,00 display
+    expect(page.locator("text=Freelance Gig").first).to_be_visible()
+    expect(page.locator(".amount-income").first).to_be_visible()
+    expect(page.locator(".type-badge.income").first).to_be_visible()
+    assert errors == []

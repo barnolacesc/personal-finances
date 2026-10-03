@@ -95,3 +95,7 @@ coverage.xml
 
 # pyenv
 .python-version venv/
+
+# Dockyard / Antigravity agents
+.agents/
+.factoryfloor.json

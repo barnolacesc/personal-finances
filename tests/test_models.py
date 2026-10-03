@@ -1,6 +1,12 @@
 import pytest
 from datetime import datetime
 from app import Expense
+from sqlalchemy import inspect
+
+
+def test_new_database_indexes_transaction_types(_db):
+    indexes = inspect(_db.engine).get_indexes("expense")
+    assert any(index["column_names"] == ["type"] for index in indexes)
 
 
 def test_expense_creation(test_expenses):
@@ -56,3 +62,71 @@ def test_expense_validation(_db, clean_db):
     with pytest.raises(Exception):
         _db.session.commit()
     _db.session.rollback()
+
+
+def test_expense_type_default_and_to_dict():
+    """Test that expense type defaults to 'expense' and is present in to_dict()"""
+    expense = Expense(
+        amount=50.0,
+        category="Groceries",
+        description="Grocery shopping",
+        date=datetime.now(),
+    )
+    assert expense.type == "expense"
+    d = expense.to_dict()
+    assert d["type"] == "expense"
+
+
+def test_expense_net_spending_contribution():
+    """Test net_spending_contribution property for expense, reimbursement, and income"""
+    exp = Expense(amount=50.0, category="Groceries", description="Food", type="expense")
+    assert exp.net_spending_contribution == 50.0
+
+    reimb = Expense(
+        amount=20.0, category="Groceries", description="Refund", type="reimbursement"
+    )
+    assert reimb.net_spending_contribution == -20.0
+
+    inc = Expense(amount=1000.0, category="Salary", description="Pay", type="income")
+    assert inc.net_spending_contribution == 0.0
+
+
+def test_expense_persistence_with_types(_db, clean_db):
+    """Test persisting expenses with explicit transaction types"""
+    exp = Expense(
+        amount=60.0,
+        category="Groceries",
+        description="Supermarket",
+        date=datetime.now(),
+        type="expense",
+    )
+    reimb = Expense(
+        amount=15.0,
+        category="Groceries",
+        description="Item return",
+        date=datetime.now(),
+        type="reimbursement",
+    )
+    inc = Expense(
+        amount=3000.0,
+        category="Salary",
+        description="Monthly salary",
+        date=datetime.now(),
+        type="income",
+    )
+    _db.session.add_all([exp, reimb, inc])
+    _db.session.commit()
+
+    all_txns = Expense.query.order_by(Expense.amount.asc()).all()
+    assert len(all_txns) == 3
+    assert all_txns[0].type == "reimbursement"
+    assert all_txns[0].amount == 15.0
+    assert all_txns[0].net_spending_contribution == -15.0
+
+    assert all_txns[1].type == "expense"
+    assert all_txns[1].amount == 60.0
+    assert all_txns[1].net_spending_contribution == 60.0
+
+    assert all_txns[2].type == "income"
+    assert all_txns[2].amount == 3000.0
+    assert all_txns[2].net_spending_contribution == 0.0

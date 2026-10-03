@@ -51,6 +51,7 @@ class NavBar extends HTMLElement {
         if (path === '/' || path.includes('add-expense') || path === '/add') return 'log';
         if (path.includes('expenses')) return 'browse';
         if (path.includes('trends')) return 'trends';
+        if (path.includes('reconcil')) return 'reconcile';
         if (path === '/recurring') return 'recurring';
         return 'log';
     }
@@ -81,11 +82,17 @@ class NavBar extends HTMLElement {
                     <a class="vault-brand d-flex align-items-center" href="/" style="text-decoration: none;">
                         <span class="font-headline" style="font-size: 1.25rem; font-weight: 800; color: var(--primary-container); letter-spacing: -0.03em; text-transform: uppercase;">Vault</span>
                     </a>
-                    ${page !== 'log' ? `<button type="button" class="btn btn-sm d-flex align-items-center gap-1" id="navApiBtn"
-                            style="background: var(--surface-container-high); border: 1px solid var(--outline-variant); color: var(--on-surface-variant); border-radius: 9999px; padding: 0.3rem 0.75rem; font-size: 0.75rem; font-weight: 600; cursor: pointer;">
-                        <span class="material-symbols-outlined" style="font-size: 1rem; color: var(--primary);">terminal</span>
-                        <span>API</span>
-                    </button>` : ''}
+                    <div class="d-flex align-items-center gap-2">
+                        <a href="/reconcile" class="top-nav-reconcile-link ${page === 'reconcile' ? 'active' : ''}" style="text-decoration: none; font-size: 0.75rem; font-weight: 700; color: ${page === 'reconcile' ? 'var(--primary)' : 'var(--on-surface)'}; display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.3rem 0.6rem; border-radius: 9999px; background: ${page === 'reconcile' ? 'rgba(255, 140, 0, 0.2)' : 'var(--surface-container-high)'}; transition: all 0.2s;">
+                            <span class="material-symbols-outlined" style="font-size: 0.875rem;">link</span>
+                            <span>Reconcile</span>
+                        </a>
+                        ${page !== 'log' ? `<button type="button" class="btn btn-sm d-flex align-items-center gap-1" id="navApiBtn"
+                                style="background: var(--surface-container-high); border: 1px solid var(--outline-variant); color: var(--on-surface-variant); border-radius: 9999px; padding: 0.3rem 0.75rem; font-size: 0.75rem; font-weight: 600; cursor: pointer;">
+                            <span class="material-symbols-outlined" style="font-size: 1rem; color: var(--primary);">terminal</span>
+                            <span>API</span>
+                        </button>` : ''}
+                    </div>
                 </div>
             </nav>
 

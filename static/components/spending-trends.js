@@ -141,7 +141,7 @@ class SpendingTrends extends BaseComponent {
         }).join('');
 
         // Header stats
-        this.querySelector('#periodLabel').textContent = this.mode === 'weekly' ? 'Last 4 Weeks' : 'Last 4 Months';
+        this.querySelector('#periodLabel').textContent = this.mode === 'weekly' ? 'Last 4 Weeks (Net)' : 'Last 4 Months (Net)';
         this.querySelector('#grandTotal').textContent = CurrencyHelper.format(grandTotal);
         this.querySelector('#deltaText').textContent = prevTotal > 0 ? `${deltaSign}${deltaPercent}% vs prev.` : '';
         this.querySelector('#deltaText').className = `delta-text ${deltaPercent > 0 ? 'delta-up' : 'delta-down'}`;
@@ -155,7 +155,7 @@ class SpendingTrends extends BaseComponent {
         if (this.mode === 'monthly' && projection) {
             const delta = projection.delta_vs_average;
             if (delta === null || delta === undefined) {
-                annotationEl.textContent = 'No 3-month baseline yet';
+                annotationEl.textContent = 'Net spending · No 3-month baseline yet';
                 annotationEl.className = 'stat-annotation';
             } else {
                 const sign = delta > 0 ? '+' : '';

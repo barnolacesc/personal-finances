@@ -24,19 +24,16 @@ import time
 import pytest
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PORT = 5001
 
 
-def _port_in_use(port):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        return s.connect_ex(("127.0.0.1", port)) == 0
-
-
-def _wait_for_port(port, timeout=10):
+def _wait_for_port(port, proc, timeout=30):
     deadline = time.time() + timeout
     while time.time() < deadline:
-        if _port_in_use(port):
-            return True
+        if proc.poll() is not None:
+            return False
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(("127.0.0.1", port)) == 0:
+                return True
         time.sleep(0.1)
     return False
 
@@ -57,20 +54,33 @@ def isolated_app_copy(tmp_path):
 
 
 def test_lazy_self_import_does_not_duplicate_scheduler(isolated_app_copy):
-    if _port_in_use(PORT):
-        pytest.skip(f"port {PORT} already in use, can't run isolated app copy")
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
 
-    env = {**os.environ, "FLASK_ENV": "production"}
+    env = {
+        **os.environ,
+        "FLASK_ENV": "production",
+        "FLASK_DEBUG": "0",
+        "PORT": str(port),
+        "INTERNAL_API_KEY": "isolated-test-key",
+    }
+    for name in ("WERKZEUG_RUN_MAIN", "WERKZEUG_SERVER_FD", "FLASK_RUN_FROM_CLI"):
+        env.pop(name, None)
+    log_path = isolated_app_copy / "server.log"
+    log_file = log_path.open("w")
     proc = subprocess.Popen(
         [sys.executable, "app.py"],
         cwd=str(isolated_app_copy),
         env=env,
-        stdout=subprocess.PIPE,
+        stdout=log_file,
         stderr=subprocess.STDOUT,
         text=True,
     )
     try:
-        assert _wait_for_port(PORT), "app did not start listening on port 5001"
+        assert _wait_for_port(port, proc), (
+            f"app did not start listening on port {port}\n\n" + log_path.read_text()
+        )
 
         # Give the scheduler a moment to finish its startup log lines.
         time.sleep(0.5)
@@ -79,7 +89,9 @@ def test_lazy_self_import_does_not_duplicate_scheduler(isolated_app_copy):
         import urllib.request
 
         req = urllib.request.Request(
-            f"http://127.0.0.1:{PORT}/api/bank/sync", method="POST"
+            f"http://127.0.0.1:{port}/api/bank/sync",
+            method="POST",
+            headers={"X-Internal-Key": "isolated-test-key"},
         )
         with urllib.request.urlopen(req, timeout=5) as resp:
             assert resp.status == 200
@@ -88,10 +100,12 @@ def test_lazy_self_import_does_not_duplicate_scheduler(isolated_app_copy):
     finally:
         proc.terminate()
         try:
-            output = proc.communicate(timeout=5)[0]
+            proc.wait(timeout=5)
         except subprocess.TimeoutExpired:
             proc.kill()
-            output = proc.communicate()[0]
+            proc.wait()
+        log_file.close()
+        output = log_path.read_text()
 
     assert output.count("Database initialized successfully") == 1, (
         "app.py's module-level code ran more than once — the deferred "

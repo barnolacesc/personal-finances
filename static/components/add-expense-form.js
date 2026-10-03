@@ -1,4 +1,4 @@
-import { CONFIG, CategoryHelper, CurrencyHelper, Utils } from './config.js';
+import { CONFIG, CategoryHelper, CurrencyHelper, TransactionTypeHelper, Utils } from './config.js';
 import { ApiService, ErrorHandler } from './api-service.js';
 import { BaseComponent, EventManager } from './event-manager.js';
 
@@ -11,6 +11,7 @@ class AddExpenseForm extends BaseComponent {
         this.editExpenseId = null;
         this.editData = null;
 
+        this.selectedType = 'expense';
         this.expenseName = '';
         this.expenseAmount = '';
         this.expenseCategory = 'food_drink';
@@ -35,12 +36,19 @@ class AddExpenseForm extends BaseComponent {
         if (urlParams.has('edit')) {
             this.editMode = true;
             this.editExpenseId = urlParams.get('edit');
+            const requestedType = urlParams.get('type');
+            const transactionType = (typeof TransactionTypeHelper !== 'undefined' && TransactionTypeHelper.getAllTypes().includes(requestedType))
+                ? requestedType : 'expense';
             this.editData = {
                 amount: urlParams.get('amount'),
                 category: urlParams.get('category'),
                 description: urlParams.get('description'),
-                date: urlParams.get('date')
+                date: urlParams.get('date'),
+                type: transactionType
             };
+            this.selectedType = this.editData.type;
+        } else {
+            this.selectedType = 'expense';
         }
     }
 
@@ -91,6 +99,21 @@ class AddExpenseForm extends BaseComponent {
 
                         <!-- Page 1: Description / Name -->
                         <div class="book-page" data-page="1">
+                            <div class="transaction-type-selector mb-3" role="radiogroup" aria-label="Transaction Type">
+                                <button type="button" class="type-btn ${this.selectedType === 'expense' ? 'active' : ''}" data-type="expense">
+                                    <span class="material-symbols-outlined">payments</span>
+                                    <span>Expense</span>
+                                </button>
+                                <button type="button" class="type-btn ${this.selectedType === 'income' ? 'active' : ''}" data-type="income">
+                                    <span class="material-symbols-outlined">savings</span>
+                                    <span>Income</span>
+                                </button>
+                                <button type="button" class="type-btn ${this.selectedType === 'reimbursement' ? 'active' : ''}" data-type="reimbursement">
+                                    <span class="material-symbols-outlined">assignment_return</span>
+                                    <span>Reimbursement</span>
+                                </button>
+                            </div>
+                            <input type="hidden" id="transactionType" name="type" value="${this.selectedType}">
                             <div class="book-input-wrapper">
                                 <span class="material-symbols-outlined book-input-icon">shopping_bag</span>
                                 <input type="text"
@@ -199,6 +222,24 @@ class AddExpenseForm extends BaseComponent {
             e.preventDefault();
             this.handleFinalSubmit();
         });
+
+        const typeBtns = this.querySelectorAll('.type-btn');
+        const typeInput = this.querySelector('#transactionType');
+        typeBtns.forEach(btn => {
+            this.addEventListenerWithCleanup(btn, 'click', () => {
+                typeBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.selectedType = btn.dataset.type;
+                if (typeInput) typeInput.value = this.selectedType;
+            });
+        });
+
+        const vp = this.querySelector('.book-pages-viewport');
+        if (vp) {
+            this.addEventListenerWithCleanup(vp, 'scroll', () => {
+                if (vp.scrollLeft !== 0) vp.scrollLeft = 0;
+            });
+        }
 
         // Step 1: Name input and Enter key
         const nameInput = this.querySelector('#bookNameInput');
@@ -327,9 +368,9 @@ class AddExpenseForm extends BaseComponent {
 
         const updateViewport = () => {
             document.body.style.setProperty('--entry-viewport-height', `${viewport.height}px`);
-            const activeInput = this.contains(document.activeElement)
-                && document.activeElement.matches('input, textarea');
-            const keyboardOpen = activeInput && Math.abs(viewport.scale - 1) < 0.05
+            const activeInForm = this.contains(document.activeElement)
+                && (this.currentStep < 3 || document.activeElement.matches('input, textarea'));
+            const keyboardOpen = activeInForm && Math.abs(viewport.scale - 1) < 0.05
                 && window.innerHeight - viewport.height > 120;
             document.body.classList.toggle('entry-keyboard-open', keyboardOpen);
         };
@@ -337,7 +378,9 @@ class AddExpenseForm extends BaseComponent {
         this.addEventListenerWithCleanup(viewport, 'resize', updateViewport);
         this.addEventListenerWithCleanup(window, 'resize', updateViewport);
         this.addEventListenerWithCleanup(this, 'focusin', updateViewport);
-        this.addEventListenerWithCleanup(this, 'focusout', updateViewport);
+        this.addEventListenerWithCleanup(this, 'focusout', () => {
+            requestAnimationFrame(updateViewport);
+        });
         updateViewport();
     }
 
@@ -354,6 +397,9 @@ class AddExpenseForm extends BaseComponent {
         if (step >= 3 && this.contains(document.activeElement)) {
             document.activeElement.blur();
         }
+
+        const vp = this.querySelector('.book-pages-viewport');
+        if (vp) vp.scrollLeft = 0;
 
         // Slide the pages track like a book page
         this.querySelectorAll('.book-page').forEach(page => {
@@ -482,6 +528,7 @@ class AddExpenseForm extends BaseComponent {
 
         const data = {
             amount: amount,
+            type: this.selectedType || 'expense',
             category: category,
             description: description,
             date: dateVal
@@ -534,6 +581,11 @@ class AddExpenseForm extends BaseComponent {
         const amountInput = this.querySelector('#bookAmountInput');
         if (nameInput) nameInput.value = '';
         if (amountInput) amountInput.value = '';
+        this.selectedType = 'expense';
+        const typeInput = this.querySelector('#transactionType');
+        if (typeInput) typeInput.value = 'expense';
+        const typeBtns = this.querySelectorAll('.type-btn');
+        typeBtns.forEach(b => b.classList.toggle('active', b.dataset.type === 'expense'));
         this.expenseName = '';
         this.expenseAmount = '';
         this.expenseDateMode = 'today';
@@ -547,14 +599,27 @@ class AddExpenseForm extends BaseComponent {
     async handleDelete() {
         if (!confirm('Are you sure you want to delete this expense?')) return;
         try {
-            await ApiService.deleteExpense(this.editExpenseId);
+            try {
+                await ApiService.deleteExpense(this.editExpenseId);
+            } catch (err) {
+                if (err.requiresForce) {
+                    const forceConfirm = confirm(`${err.message}\n\nDo you want to force delete this transaction and remove its allocations?`);
+                    if (forceConfirm) {
+                        await ApiService.deleteExpense(this.editExpenseId, true);
+                    } else {
+                        return;
+                    }
+                } else {
+                    throw err;
+                }
+            }
             window.showToast('Expense deleted', 'success');
             setTimeout(() => {
                 window.location.href = '/';
             }, 600);
         } catch (error) {
             console.error('Delete error:', error);
-            window.showToast('Failed to delete expense', 'error');
+            window.showToast(error.message || 'Failed to delete expense', 'error');
         }
     }
 
@@ -565,6 +630,13 @@ class AddExpenseForm extends BaseComponent {
             if (nameInput) nameInput.value = decodeURIComponent(this.editData.description);
             if (amountInput) amountInput.value = this.editData.amount;
             if (this.editData.category) this.selectCategory(this.editData.category);
+            if (this.editData.type) {
+                this.selectedType = this.editData.type;
+                const typeInput = this.querySelector('#transactionType');
+                if (typeInput) typeInput.value = this.selectedType;
+                const typeBtns = this.querySelectorAll('.type-btn');
+                typeBtns.forEach(b => b.classList.toggle('active', b.dataset.type === this.selectedType));
+            }
             this.goToStep(3, false);
         }
     }
