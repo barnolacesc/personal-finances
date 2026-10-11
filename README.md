@@ -139,6 +139,16 @@ For detailed architecture information, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Deployment
 
+### Automatic Deployment
+
+Pushes to `main` deploy to the production Raspberry Pi. Pushes to `develop` do not deploy; pull requests targeting `develop` or `main` still run tests and checks.
+
+The development VPS is retired. Removing its deployment workflow does not stop the existing service. To free the server and prevent the service from starting on reboot, run this on the development VPS:
+
+```bash
+sudo systemctl disable --now personal-finances-test
+```
+
 ### 🐳 Docker (Recommended)
 ```bash
 # Quick start with Docker Compose
