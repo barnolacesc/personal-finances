@@ -143,7 +143,7 @@ For detailed architecture information, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 Pushes to `main` deploy to the production Raspberry Pi. Pushes to `develop` do not deploy; pull requests targeting `develop` or `main` still run tests and checks.
 
-The development VPS is retired. Removing its deployment workflow does not stop the existing service. To free the server and prevent the service from starting on reboot, run this on the development VPS:
+The development VPS is retired. Its deployment job is disabled with `if: false`, preserving the workflow for future reuse. Disabling deployment does not stop the existing service. To free the server and prevent the service from starting on reboot, run this on the development VPS:
 
 ```bash
 sudo systemctl disable --now personal-finances-test
